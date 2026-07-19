@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0d1219">
 <title>NM Plotter — iPhone Layout Demo</title>
 <!-- ============================================================
@@ -12,6 +12,11 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v2  2026-07-19  Fix standalone touch offset (status-bar style
+                       black-translucent -> black; .app fixed -> 100dvh).
+                       Reclaim 12px from the home-indicator band via
+                       --sab-trim. Tab-bar selection pill -> standard
+                       6px rounded rectangle.
        v1  2026-07-19  Initial shell. ForeFlight-measured geometry
                        (6.5 gutter / 16 edge / 6 panel edge /
                        32 + 44 modules / 26 GPS gap / safe-area+12),
@@ -78,10 +83,12 @@
 
   --sat:env(safe-area-inset-top,0px);
   --sab:env(safe-area-inset-bottom,0px);
+  --sab-trim:12px;                                    /* reclaimed from the home-indicator band */
+  --sabp:max(calc(var(--sab) - var(--sab-trim)), 8px);/* bottom padding used everywhere */
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;margin:0;overscroll-behavior:none}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
 body{
   background:var(--bg);color:var(--text);
   font-family:var(--sans);font-size:var(--t-md);
@@ -91,7 +98,7 @@ body{
 button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
 
 .app{
-  position:fixed;inset:0;
+  height:100dvh;
   display:flex;flex-direction:column;
   overflow:hidden;
 }
@@ -227,8 +234,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    ============================================================ */
 .tabs{
   flex:0 0 auto;
-  height:calc(var(--tabbar) + var(--sab));
-  padding-bottom:var(--sab);
+  height:calc(var(--tabbar) + var(--sabp));
+  padding-bottom:var(--sabp);
   display:flex;
   background:var(--panel);border-top:1px solid var(--border);
 }
@@ -237,7 +244,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   color:var(--text-muted);
 }
 .tab .ic{
-  width:38px;height:24px;border-radius:12px;
+  width:38px;height:26px;border-radius:var(--radius);
   display:flex;align-items:center;justify-content:center;
 }
 .tab svg{width:21px;height:21px;display:block}
@@ -354,7 +361,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   transform:translateX(100%);transition:transform .2s ease;
   display:flex;flex-direction:column;
   padding-top:calc(var(--sat) + var(--top-pad));
-  padding-bottom:var(--sab);
+  padding-bottom:var(--sabp);
 }
 .sheet.on{transform:translateX(0)}
 .sheet .top{display:flex;gap:1px;margin:0 10px 16px;background:var(--border);
@@ -389,7 +396,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   max-height:70%;
   background:var(--bg-2);
   border-top:1px solid var(--border-strong);
-  padding-bottom:var(--sab);
+  padding-bottom:var(--sabp);
 }
 .card.on{transform:translateY(0)}
 .chead{
@@ -492,7 +499,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   position:fixed;inset:0;z-index:800;background:var(--bg);display:none;
   flex-direction:column;
   padding-top:calc(var(--sat) + var(--top-pad));
-  padding-bottom:calc(var(--tabbar) + var(--sab));
+  padding-bottom:calc(var(--tabbar) + var(--sabp));
 }
 .stub.on{display:flex}
 .stubh{display:flex;align-items:center;height:var(--mod-b);padding:0 var(--edge);
@@ -511,7 +518,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
 /* ---- Toast ------------------------------------------------- */
 .toast{
-  position:fixed;left:50%;bottom:calc(var(--tabbar) + var(--sab) + 56px);
+  position:fixed;left:50%;bottom:calc(var(--tabbar) + var(--sabp) + 56px);
   transform:translateX(-50%) translateY(8px);
   z-index:1400;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;
   background:var(--inset);border:1px solid var(--border-strong);border-radius:16px;
@@ -824,7 +831,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v1';
+  var VERSION = 'v2';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
