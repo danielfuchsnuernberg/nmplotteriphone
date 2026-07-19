@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1219">
+<title>NM Plotter — iPhone Layout Demo</title>
+<!-- ============================================================
+     NM PLOTTER — iPhone layout demo shell
+     Separate repo. Does NOT touch the live NM Plotter build.
+
+     CHANGELOG (newest first):
+       v1  2026-07-19  Initial shell. ForeFlight-measured geometry
+                       (6.5 gutter / 16 edge / 6 panel edge /
+                       32 + 44 modules / 26 GPS gap / safe-area+12),
+                       NM Plotter palette + type. Layers popover,
+                       FPL drop-down, collapsible left rail,
+                       activity bar with paging + toggle, GPS window,
+                       airport card, More sheet, 3-tab bar.
+     ============================================================ -->
+<style>
+/* ============================================================
+   NM PLOTTER — iPhone layout demo shell
+   Chrome-only. Placeholder map. No app logic.
+
+   GEOMETRY  = measured from ForeFlight iPhone screenshots
+               (1125x2436 @3x -> 375x812pt; verified against the
+               iOS home indicator at exactly 134.0 x 5.0 pt).
+   STYLING   = NM Plotter palette, type and component language.
+               No ForeFlight colours or fonts are used.
+
+   Every geometric constant is a CSS variable in :root so values
+   can be tuned in one place.
+   ============================================================ */
+
+:root{
+  /* ---- NM Plotter palette (verbatim from index.html) ---- */
+  --bg:#0a0e13;
+  --bg-2:#0f141b;
+  --panel:#0d1219;
+  --inset:#12191f;
+  --border:#1a2330;
+  --border-strong:#2a3744;
+  --text:#dce6f0;
+  --text-2:#b8c5d1;
+  --text-dim:#8a9bb0;
+  --text-muted:#7d93a8;
+  --text-faint:#5f7186;
+  --text-fainter:#46566a;
+  --accent:#ffb020;         /* control is ON  (ForeFlight #009BE1) */
+  --accent-2:#7fb3d5;       /* row selected / tappable (ForeFlight #4498DB) */
+  --good:#34d399;
+  --bad:#f0506e;
+  --route:#f0a500;
+  --magenta:#e0479e;
+  --navaid:#c792ea;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ---- Measured geometry ---- */
+  --gut:6.5px;              /* gap between every button AND every row */
+  --edge:16px;              /* toolbar / search side margin */
+  --pedge:6px;              /* panel + rail side margin */
+  --mod-a:32px;             /* dense chrome row height */
+  --mod-b:44px;             /* touch-primary control height */
+  --top-pad:12px;           /* below the status-bar safe area */
+  --gps-gap:26px;           /* isolating gap before the GPS button */
+  --radius:6px;
+  --tabbar:58px;            /* tab-bar content height, excl. home inset */
+
+  /* ---- Type scale: only 10 / 13 / 15 / 17 exist ---- */
+  --t-xs:10px;
+  --t-sm:13px;
+  --t-md:15px;
+  --t-lg:17px;
+
+  --sat:env(safe-area-inset-top,0px);
+  --sab:env(safe-area-inset-bottom,0px);
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--sans);font-size:var(--t-md);
+  -webkit-font-smoothing:antialiased;
+  user-select:none;-webkit-user-select:none;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
+
+.app{
+  position:fixed;inset:0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ============================================================
+   TOP CHROME
+   Background runs to y=0 behind the status bar; the first
+   interactive pixel is at safe-area-top + 12px.
+   ============================================================ */
+.chrome{
+  flex:0 0 auto;
+  background:var(--panel);
+  border-bottom:1px solid var(--border);
+  padding:calc(var(--sat) + var(--top-pad)) var(--edge) var(--gut);
+}
+.toolbar{display:flex;align-items:center;gap:var(--gut)}
+.tb{
+  flex:1 1 0;height:var(--mod-a);
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg-2);border:1px solid var(--border);
+  border-radius:var(--radius);
+  color:var(--text-2);
+}
+.tb:active{background:var(--inset)}
+.tb.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.tb.gps{margin-left:calc(var(--gps-gap) - var(--gut))}
+.tb svg{width:18px;height:18px;display:block}
+.tb .txt{font-size:var(--t-sm);font-weight:700;letter-spacing:.02em}
+
+.searchrow{margin-top:var(--gut)}
+.search{
+  height:var(--mod-a);width:100%;
+  display:flex;align-items:center;gap:8px;
+  padding:0 10px;
+  background:var(--inset);border:1px solid var(--border);
+  border-radius:var(--radius);
+  color:var(--text-faint);font-size:14px;
+}
+.search svg{width:15px;height:15px;flex:0 0 auto}
+
+/* ============================================================
+   MAP (placeholder)
+   ============================================================ */
+.map{
+  position:relative;flex:1 1 auto;min-height:0;
+  background:
+    radial-gradient(120% 90% at 30% 20%, #101821 0%, #0a0e13 70%);
+  overflow:hidden;
+}
+.grat{position:absolute;inset:0;opacity:.5;
+  background-image:
+    linear-gradient(to right, #17202b 1px, transparent 1px),
+    linear-gradient(to bottom, #17202b 1px, transparent 1px);
+  background-size:52px 52px;
+}
+.mapnote{
+  position:absolute;left:0;right:0;top:44%;
+  text-align:center;font-size:var(--t-sm);
+  color:var(--text-fainter);letter-spacing:.12em;text-transform:uppercase;
+  pointer-events:none;
+}
+.fld{position:absolute;transform:translate(-50%,-50%);pointer-events:auto}
+.fld i{display:block;width:9px;height:9px;border-radius:50%;
+  background:var(--accent-2);margin:0 auto;box-shadow:0 0 0 2px rgba(10,14,19,.9)}
+.fld b{display:block;margin-top:3px;font-size:var(--t-xs);font-weight:600;
+  color:var(--text-dim);letter-spacing:.04em;white-space:nowrap}
+.leg{position:absolute;height:2px;background:var(--route);transform-origin:0 50%;opacity:.9}
+
+/* ---- Left rail --------------------------------------------
+   44px lane, 6px off the left edge, bottom-anchored,
+   translucent over the map, hairline-separated, grouped.      */
+.rail{
+  position:absolute;left:var(--pedge);bottom:var(--gut);
+  width:var(--mod-b);
+  display:flex;flex-direction:column;gap:var(--gut);
+  z-index:20;
+}
+.rgrp{
+  display:flex;flex-direction:column;
+  background:rgba(13,18,25,.84);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  overflow:hidden;
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+}
+.rb{
+  height:var(--mod-b);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;color:var(--text-2);
+}
+.rb + .rb{border-top:1px solid var(--border)}
+.rb:active{background:var(--inset)}
+.rb.on{background:var(--accent);color:#0a0e13}
+.rb svg{width:20px;height:20px;display:block}
+.rb .lab{font-size:var(--t-xs);font-weight:700;letter-spacing:.05em}
+.rb.tall{height:58px}
+.rb .tick{font-family:var(--mono);font-size:var(--t-xs);color:var(--text-dim)}
+.rb.on .tick{color:#0a0e13}
+
+.rail.open{top:27px;bottom:auto}
+.rail.open .collapsed-only{display:none}
+.rail:not(.open) .open-only{display:none}
+
+/* ============================================================
+   ACTIVITY BAR — 44px, 5 columns, pages horizontally
+   ============================================================ */
+.acty{
+  flex:0 0 auto;height:var(--mod-b);
+  display:flex;align-items:stretch;
+  background:var(--bg);border-top:1px solid var(--border);
+}
+.acty.off{display:none}
+.acty .pages{flex:1 1 auto;display:flex;overflow:hidden}
+.acty .page{flex:0 0 100%;display:flex;transition:transform .18s ease}
+.acol{
+  flex:1 1 0;min-width:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  padding:0 2px;
+}
+.acol .k{font-size:var(--t-xs);font-weight:600;color:var(--text-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.acol .v{font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text);
+  white-space:nowrap}
+.acol .v.dash{color:var(--text-fainter);letter-spacing:.08em}
+.apage{
+  flex:0 0 22px;display:flex;align-items:center;justify-content:center;
+  color:var(--text-faint);border-left:1px solid var(--border);
+}
+.apage svg{width:12px;height:12px}
+
+/* ============================================================
+   TAB BAR — 3 items, selected = filled pill behind the icon
+   ============================================================ */
+.tabs{
+  flex:0 0 auto;
+  height:calc(var(--tabbar) + var(--sab));
+  padding-bottom:var(--sab);
+  display:flex;
+  background:var(--panel);border-top:1px solid var(--border);
+}
+.tab{
+  flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:var(--text-muted);
+}
+.tab .ic{
+  width:38px;height:24px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+}
+.tab svg{width:21px;height:21px;display:block}
+.tab .lab{font-size:11px;font-weight:600}
+.tab.on{color:var(--text)}
+.tab.on .ic{background:var(--accent);color:#0a0e13}
+
+/* ============================================================
+   OVERLAYS
+   ============================================================ */
+.scrim{position:fixed;inset:0;background:rgba(3,5,8,.5);z-index:900;display:none}
+.scrim.on{display:block}
+
+/* ---- Popover (Layers): anchored, caret, 1px outline -------- */
+.pop{
+  position:fixed;z-index:1000;display:none;
+  background:var(--panel);
+  border:1px solid var(--border-strong);
+  border-radius:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);
+  overflow:hidden;
+}
+.pop.on{display:block}
+.pop .caret{
+  position:absolute;top:-7px;width:12px;height:12px;
+  background:var(--panel);
+  border-left:1px solid var(--border-strong);
+  border-top:1px solid var(--border-strong);
+  transform:rotate(45deg);
+}
+.pop2{display:flex;max-height:60vh}
+.pcol{flex:1 1 0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pcol + .pcol{border-left:1px solid var(--border)}
+.pcol.l{flex:0 0 168px}
+.prow{
+  height:40px;display:flex;align-items:center;gap:8px;
+  padding:0 12px;font-size:var(--t-sm);font-weight:600;color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.prow + .prow{border-top:1px solid var(--border)}
+.prow:active{background:var(--inset)}
+.prow.sel{background:var(--accent-2);color:#0a0e13}
+.prow .ck{width:14px;flex:0 0 14px;color:var(--accent)}
+.prow .ck svg{width:14px;height:14px;display:block}
+.psec{
+  padding:8px 12px 6px;font-size:var(--t-xs);font-weight:700;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--text-fainter);
+  border-top:1px solid var(--border);
+}
+
+/* ---- Drop-down panel (FPL) -------------------------------- */
+.drop{
+  position:fixed;left:0;right:0;z-index:950;display:none;
+  background:var(--panel);
+  border-bottom:1px solid var(--border-strong);
+  box-shadow:0 12px 26px rgba(0,0,0,.55);
+  padding:var(--gut) var(--pedge) 0;
+}
+.drop.on{display:block}
+.drow{display:flex;gap:var(--gut);margin-bottom:var(--gut)}
+.dbtn{
+  flex:1 1 0;height:var(--mod-a);
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;
+}
+.dbtn:active{background:var(--inset)}
+.chips{
+  display:flex;flex-wrap:wrap;gap:var(--gut);
+  max-height:104px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-bottom:var(--gut);
+}
+.chip{
+  flex:1 1 calc(50% - var(--gut));min-width:0;
+  height:var(--mod-a);border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--inset);border:1px solid var(--border-strong);
+  font-family:var(--mono);font-size:var(--t-sm);color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px;
+}
+.chip.act{border-color:var(--route);color:var(--route)}
+.strip{
+  display:flex;align-items:stretch;height:48px;
+  margin:0 calc(var(--pedge) * -1);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  background:var(--bg);
+}
+.stripchev{flex:0 0 22px;display:flex;align-items:center;justify-content:center;color:var(--text-faint)}
+.stripchev svg{width:12px;height:12px}
+.dtabs{
+  display:flex;align-items:center;gap:var(--gut);
+  height:50px;margin:0 calc(var(--pedge) * -1);padding:0 var(--pedge);
+}
+.dtabs .spacer{flex:1 1 auto}
+.dtool{
+  width:34px;height:var(--mod-a);border-radius:var(--radius);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-muted);background:var(--bg-2);border:1px solid var(--border);
+}
+.dtool svg{width:16px;height:16px}
+.dtab{
+  height:var(--mod-a);padding:0 12px;border-radius:var(--radius);
+  display:flex;align-items:center;
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
+  background:var(--bg-2);border:1px solid var(--border);
+}
+.dtab.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+
+/* ---- Right sheet (More) ----------------------------------- */
+.sheet{
+  position:fixed;top:0;bottom:0;right:0;width:59%;z-index:1000;
+  background:var(--panel);border-left:1px solid var(--border-strong);
+  transform:translateX(100%);transition:transform .2s ease;
+  display:flex;flex-direction:column;
+  padding-top:calc(var(--sat) + var(--top-pad));
+  padding-bottom:var(--sab);
+}
+.sheet.on{transform:translateX(0)}
+.sheet .top{display:flex;gap:1px;margin:0 10px 16px;background:var(--border);
+  border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.stile{flex:1 1 0;background:var(--bg-2);padding:12px 0;
+  display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-2)}
+.stile svg{width:20px;height:20px}
+.stile .lab{font-size:var(--t-sm);font-weight:600}
+.shead{display:flex;align-items:baseline;justify-content:space-between;padding:0 12px 6px}
+.shead .k{font-size:var(--t-xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.shead .a{font-size:var(--t-sm);font-weight:600;color:var(--accent-2)}
+.slist{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  border-top:1px solid var(--border)}
+.srow{height:var(--mod-b);display:flex;align-items:center;gap:12px;padding:0 12px;
+  font-size:var(--t-md);color:var(--text)}
+.srow + .srow{border-top:1px solid var(--border)}
+.srow:active{background:var(--inset)}
+.srow .sq{
+  width:26px;height:26px;border-radius:6px;flex:0 0 26px;
+  display:flex;align-items:center;justify-content:center;color:#0a0e13;
+}
+.srow .sq svg{width:15px;height:15px}
+.sver{flex:0 0 auto;padding:10px 12px;border-top:1px solid var(--border);
+  font-family:var(--mono);font-size:var(--t-xs);color:var(--text-fainter);letter-spacing:.04em}
+
+/* ---- Airport card ----------------------------------------- */
+.card{
+  position:fixed;left:0;right:0;bottom:0;z-index:1000;
+  transform:translateY(100%);transition:transform .22s ease;
+  display:flex;flex-direction:column;
+  max-height:70%;
+  background:var(--bg-2);
+  border-top:1px solid var(--border-strong);
+  padding-bottom:var(--sab);
+}
+.card.on{transform:translateY(0)}
+.chead{
+  flex:0 0 var(--mod-b);display:flex;align-items:center;gap:8px;padding:0 10px;
+  background:var(--panel);border-bottom:1px solid var(--border);
+}
+.chead .back{
+  height:26px;padding:0 10px;border-radius:13px;
+  display:flex;align-items:center;gap:4px;
+  background:var(--bg-2);border:1px solid var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-2);
+}
+.chead .ttl{flex:1 1 auto;min-width:0;text-align:center}
+.chead .ttl b{display:block;font-size:var(--t-md);font-weight:700;line-height:1.1}
+.chead .ttl span{display:block;font-size:var(--t-xs);color:var(--text-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chead .star{width:30px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
+.chead .star svg{width:16px;height:16px}
+.cact{
+  flex:0 0 52px;display:flex;background:var(--bg);
+  border-bottom:1px solid var(--border);
+}
+.cact button{
+  flex:1 1 0;font-size:var(--t-sm);font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px;
+}
+.cact button + button{border-left:1px solid var(--border)}
+.cbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px}
+.cinfo{display:flex;gap:12px}
+.cthumb{width:64px;height:64px;flex:0 0 64px;border-radius:6px;
+  background:var(--inset);border:1px solid var(--border-strong)}
+.cinfo .m b{display:block;font-size:var(--t-md);font-weight:700}
+.cinfo .m span{display:block;font-size:var(--t-sm);color:var(--text-dim);margin-top:2px}
+.cchips{display:flex;gap:var(--gut);margin-top:12px}
+.cchips button{
+  flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg);border:1px solid var(--border);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;
+}
+.ctabs{flex:0 0 42px;display:flex;background:var(--panel);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.ctabs button{flex:1 1 0;font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}
+.ctabs button + button{border-left:1px solid var(--border)}
+.ctabs button.on{background:var(--bg-2);color:var(--text)}
+.csub{flex:0 0 42px;display:flex;align-items:center;gap:var(--gut);
+  padding:0 10px;background:var(--bg);border-bottom:1px solid var(--border)}
+.csub button{
+  height:26px;padding:0 12px;border-radius:13px;
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
+  background:transparent;border:1px solid transparent;
+}
+.csub button.on{background:var(--accent-2);color:#0a0e13}
+.metar{margin-top:2px}
+.metar .hdr{display:flex;align-items:center;gap:6px;font-size:var(--t-sm);font-weight:700}
+.metar .dot{width:9px;height:9px;border-radius:50%;background:var(--good)}
+.metar .age{margin-left:auto;font-size:var(--t-sm);color:var(--accent-2);font-weight:600}
+.metar .raw{margin-top:8px;font-family:var(--mono);font-size:var(--t-sm);
+  line-height:1.45;color:var(--good);word-break:break-word}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;
+  border-top:1px solid var(--border);font-size:var(--t-sm)}
+.kv .k{color:var(--text-muted)}
+.kv .v{font-family:var(--mono);color:var(--accent-2)}
+
+/* ---- GPS window (NM Plotter's own component) --------------- */
+.gpsov{position:fixed;inset:0;z-index:1200;display:none;
+  align-items:center;justify-content:center;padding:16px;
+  background:rgba(3,5,8,.66);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.gpsov.on{display:flex}
+.gpswin{width:100%;max-width:340px;background:var(--panel);
+  border:1px solid var(--border-strong);border-radius:10px;overflow:hidden}
+.gpsh{display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;height:var(--mod-b);
+  background:var(--bg-2);border-bottom:1px solid var(--border)}
+.gpsh .t{flex:1 1 auto;font-size:var(--t-sm);color:var(--text-dim)}
+.gpsh .t b{color:var(--text);font-weight:700}
+.gpsfmt{display:flex;gap:4px}
+.gpsfmt button{height:26px;padding:0 8px;border-radius:var(--radius);
+  font-size:var(--t-xs);font-weight:700;color:var(--text-muted);
+  background:var(--bg);border:1px solid var(--border);font-family:var(--mono)}
+.gpsfmt button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.gpsx{width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:var(--text-muted)}
+.gpsb{padding:16px 14px}
+.gpsname{font-size:var(--t-sm);color:var(--text-dim);margin-bottom:10px}
+.gpsname b{color:var(--text)}
+.gpsline{font-family:var(--mono);font-size:20px;font-weight:700;
+  color:var(--accent);letter-spacing:.02em;line-height:1.5}
+.gpsprog{margin-top:10px;font-size:var(--t-xs);color:var(--text-fainter);
+  letter-spacing:.06em;text-transform:uppercase}
+.gpstabs{display:flex;gap:var(--gut);padding:0 10px 10px;overflow-x:auto}
+.gpstabs button{flex:0 0 auto;height:var(--mod-a);padding:0 10px;border-radius:var(--radius);
+  background:var(--bg);border:1px solid var(--border);
+  font-size:var(--t-sm);color:var(--text-muted);white-space:nowrap}
+.gpstabs button.on{border-color:var(--accent);color:var(--accent)}
+
+/* ---- Full-screen stub view -------------------------------- */
+.stub{
+  position:fixed;inset:0;z-index:800;background:var(--bg);display:none;
+  flex-direction:column;
+  padding-top:calc(var(--sat) + var(--top-pad));
+  padding-bottom:calc(var(--tabbar) + var(--sab));
+}
+.stub.on{display:flex}
+.stubh{display:flex;align-items:center;height:var(--mod-b);padding:0 var(--edge);
+  border-bottom:1px solid var(--border)}
+.stubh b{font-size:var(--t-lg);font-weight:700}
+.stubb{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
+  color:var(--text-fainter);font-size:var(--t-sm);letter-spacing:.1em;text-transform:uppercase}
+
+/* ---- Metrics overlay -------------------------------------- */
+.mx{position:fixed;inset:0;z-index:1500;display:none;pointer-events:none}
+.mx.on{display:block}
+.mxb{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,176,32,.55);
+  border-bottom:1px dashed rgba(255,176,32,.55);background:rgba(255,176,32,.07)}
+.mxl{position:absolute;right:6px;font-family:var(--mono);font-size:9px;
+  color:var(--accent);background:rgba(10,14,19,.85);padding:1px 4px;border-radius:3px}
+
+/* ---- Toast ------------------------------------------------- */
+.toast{
+  position:fixed;left:50%;bottom:calc(var(--tabbar) + var(--sab) + 56px);
+  transform:translateX(-50%) translateY(8px);
+  z-index:1400;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;
+  background:var(--inset);border:1px solid var(--border-strong);border-radius:16px;
+  padding:8px 14px;font-size:var(--t-sm);color:var(--text-2);white-space:nowrap;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ===================== TOP CHROME ===================== -->
+  <header class="chrome" id="chrome">
+    <div class="toolbar">
+      <button class="tb" id="tbLayers" aria-label="Layers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+      </button>
+      <button class="tb" id="tbFpl" aria-label="Flight plan"><span class="txt">FPL</span></button>
+      <button class="tb" id="tbSet" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2L5.4 5.4"/></svg>
+      </button>
+      <button class="tb" id="tbProf" aria-label="Terrain profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 18l5-7 4 4 4-6 7 9z"/></svg>
+      </button>
+      <button class="tb on" id="tbActy" aria-label="Activity bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.4"/><path d="M12 12l4-3.4"/></svg>
+      </button>
+      <button class="tb" id="tbRec" aria-label="Recent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>
+      </button>
+      <button class="tb gps" id="tbGps" aria-label="GPS window">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.4"/><path d="M12 1.8v3.4M12 18.8v3.4M22.2 12h-3.4M5.2 12H1.8"/></svg>
+      </button>
+    </div>
+    <div class="searchrow">
+      <div class="search" id="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.6"/><path d="M15.4 15.4L21 21"/></svg>
+        <span>Search field, waypoint, navaid, airspace</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== MAP ===================== -->
+  <main class="map" id="map">
+    <div class="grat"></div>
+    <div class="mapnote">Placeholder map</div>
+
+    <div class="fld" style="left:26%;top:32%" data-fld="AYNZ"><i></i><b>AYNZ</b></div>
+    <div class="fld" style="left:57%;top:22%" data-fld="AYGA"><i></i><b>AYGA</b></div>
+    <div class="fld" style="left:79%;top:47%" data-fld="AYMH"><i></i><b>AYMH</b></div>
+    <div class="fld" style="left:44%;top:66%" data-fld="AYMD"><i></i><b>AYMD</b></div>
+
+    <!-- Left rail -->
+    <div class="rail" id="rail">
+
+      <!-- open state: layer toggles -->
+      <div class="rgrp open-only">
+        <button class="rb on" id="rbVfrOpen"><span class="lab">VFR</span></button>
+        <button class="rb lyr on" data-lyr="Airports">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l8 15H4z"/></svg>
+        </button>
+        <button class="rb lyr" data-lyr="Airspace">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l7.4 4.3v8.6L12 20.6 4.6 16.3V7.7z"/></svg>
+        </button>
+        <button class="rb lyr on" data-lyr="Waypoints">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.2l2.3 6.5 6.5 2.3-6.5 2.3-2.3 6.5-2.3-6.5L3.2 12l6.5-2.3z"/></svg>
+        </button>
+        <button class="rb lyr on" data-lyr="Routes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="6" r="2.4"/><path d="M6.9 16.3L17.1 7.7"/></svg>
+        </button>
+        <button class="rb lyr" data-lyr="Terrain">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 19l6-9 4 5.5 2.5-3.5L21 19z"/></svg>
+        </button>
+      </div>
+
+      <!-- collapsed state -->
+      <div class="rgrp collapsed-only">
+        <button class="rb tall" id="rbVfr">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="8" cy="17" r="2.1" fill="currentColor" stroke="none"/></svg>
+          <span class="lab">VFR</span>
+        </button>
+      </div>
+
+      <div class="rgrp collapsed-only">
+        <button class="rb" id="rbMark" aria-label="Mark position">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21.5s7-6.3 7-11.4A7 7 0 0 0 5 10.1c0 5.1 7 11.4 7 11.4z"/><circle cx="12" cy="10" r="2.4"/></svg>
+        </button>
+      </div>
+
+      <div class="rgrp collapsed-only">
+        <button class="rb tall" id="rbRec">
+          <span class="lab">REC</span><span class="tick">00:00</span>
+        </button>
+      </div>
+
+      <div class="rgrp collapsed-only">
+        <button class="rb" id="rbRoute" aria-label="Current route">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="6" r="2.4"/><path d="M6.9 16.3L17.1 7.7"/></svg>
+        </button>
+        <button class="rb" id="rbIn" aria-label="Zoom in">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="rb" id="rbOut" aria-label="Zoom out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===================== ACTIVITY BAR ===================== -->
+  <div class="acty" id="acty">
+    <div class="pages"><div class="page" id="actyPage"></div></div>
+    <button class="apage" id="actyNext" aria-label="Next page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+
+  <!-- ===================== TAB BAR ===================== -->
+  <nav class="tabs">
+    <button class="tab" data-tab="airports">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.2l1.4 6.6 6.6 1.4v1.6l-6.6 1.4L12 20.8l-1.4-6.6L4 12.8v-1.6l6.6-1.4z"/></svg></span>
+      <span class="lab">Airports</span>
+    </button>
+    <button class="tab on" data-tab="map">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg></span>
+      <span class="lab">Map</span>
+    </button>
+    <button class="tab" data-tab="more">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+      <span class="lab">More</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ===================== OVERLAYS ===================== -->
+<div class="scrim" id="scrim"></div>
+
+<!-- Layers popover -->
+<div class="pop" id="popLayers">
+  <div class="caret" id="popCaret"></div>
+  <div class="pop2">
+    <div class="pcol l">
+      <div class="prow sel">PNG vector (offline)</div>
+      <div class="prow">CARTO dark</div>
+      <div class="prow">Satellite</div>
+      <div class="psec">Overlays</div>
+      <div class="prow"><span class="ck"></span>Terrain</div>
+      <div class="prow"><span class="ck"></span>Labels</div>
+    </div>
+    <div class="pcol">
+      <div class="prow"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg></span>Airfields</div>
+      <div class="prow"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg></span>My waypoints</div>
+      <div class="prow"><span class="ck"></span>Navaids</div>
+      <div class="prow"><span class="ck"></span>Enroute fixes</div>
+      <div class="prow"><span class="ck"></span>Danger / Restricted</div>
+      <div class="prow"><span class="ck"></span>MBZ</div>
+      <div class="prow"><span class="ck"></span>Flight category</div>
+      <div class="prow"><span class="ck"></span>Procedure fixes</div>
+    </div>
+  </div>
+</div>
+
+<!-- FPL drop-down -->
+<div class="drop" id="dropFpl">
+  <div class="drow">
+    <button class="dbtn">P2-LAW</button>
+    <button class="dbtn">BK117</button>
+    <button class="dbtn">9,500'</button>
+  </div>
+  <div class="drow">
+    <button class="dbtn">Procedure</button>
+    <button class="dbtn">Routes (3)</button>
+    <button class="dbtn">ETD</button>
+  </div>
+  <div class="chips">
+    <div class="chip act">AYNZ</div>
+    <div class="chip">06 34.2S</div>
+    <div class="chip">146 43.6E</div>
+    <div class="chip">AYGA</div>
+    <div class="chip">05 49.3S</div>
+    <div class="chip">AYMH</div>
+  </div>
+  <div class="strip" id="fplStrip">
+    <button class="stripchev" aria-label="Previous">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="acol"><span class="k">DIST</span><span class="v">128</span></div>
+    <div class="acol"><span class="k">ETE</span><span class="v">1:04</span></div>
+    <div class="acol"><span class="k">ETA</span><span class="v">0412</span></div>
+    <div class="acol"><span class="k">FUEL</span><span class="v">214</span></div>
+    <button class="stripchev" aria-label="Next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+  <div class="dtabs">
+    <button class="dtool" aria-label="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 15V4"/><path d="M8 7.6L12 3.6l4 4"/><path d="M5 14v5.4h14V14"/></svg></button>
+    <button class="dtool" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg></button>
+    <span class="spacer"></span>
+    <button class="dtab on">Edit</button>
+    <button class="dtab">NavLog</button>
+    <button class="dtab">Profile</button>
+  </div>
+</div>
+
+<!-- More sheet -->
+<div class="sheet" id="sheetMore">
+  <div class="top">
+    <button class="stile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
+    <button class="stile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2L5.4 5.4"/></svg><span class="lab">Settings</span></button>
+  </div>
+  <div class="shead"><span class="k">Views</span><span class="a">Edit order</span></div>
+  <div class="slist" id="moreList"></div>
+  <div class="sver" id="sver"></div>
+</div>
+
+<!-- Airport card -->
+<div class="card" id="card">
+  <div class="chead">
+    <button class="back" id="cardBack">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" style="width:11px;height:11px"><path d="M15 5l-7 7 7 7"/></svg>
+      Map
+    </button>
+    <div class="ttl"><b id="cardIcao">AYNZ</b><span id="cardName">Nadzab Tomodachi International</span></div>
+    <button class="star" aria-label="Favourite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg></button>
+  </div>
+  <div class="cact">
+    <button style="color:var(--route)">Direct to</button>
+    <button style="color:var(--magenta)">Add to route</button>
+    <button style="color:var(--accent-2)">Charts</button>
+    <button style="color:var(--navaid)">Freqs</button>
+  </div>
+  <div class="ctabs">
+    <button>Info</button>
+    <button class="on">Weather</button>
+    <button>Runway</button>
+    <button>Procedure</button>
+    <button>NOTAM</button>
+  </div>
+  <div class="csub">
+    <button class="on">METAR</button>
+    <button>TAF</button>
+    <button>Forecast</button>
+    <button>Winds</button>
+  </div>
+  <div class="cbody">
+    <div class="cinfo">
+      <div class="cthumb"></div>
+      <div class="m">
+        <b>Nadzab Tomodachi Intl</b>
+        <span>Lae, Morobe, PNG &middot; Elev 239'</span>
+        <span>Sunrise 06:12 &middot; Sunset 18:24</span>
+      </div>
+    </div>
+    <div class="cchips">
+      <button>3D view</button>
+      <button>Runways</button>
+      <button>Notes</button>
+    </div>
+    <div class="metar">
+      <div class="hdr"><span class="dot"></span>VFR<span class="age">14m ago</span></div>
+      <div class="raw">AYNZ 190600Z 09008KT 9999 FEW020 SCT090 29/23 Q1010</div>
+      <div class="kv"><span class="k">Time</span><span class="v">0600Z &middot; 1600 LT</span></div>
+      <div class="kv"><span class="k">Wind</span><span class="v">090&deg; / 8 kt</span></div>
+      <div class="kv"><span class="k">Visibility</span><span class="v">10 km +</span></div>
+      <div class="kv"><span class="k">QNH</span><span class="v">1010 hPa</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- GPS window -->
+<div class="gpsov" id="gpsOv">
+  <div class="gpswin">
+    <div class="gpsh">
+      <span class="t"><b>GPS</b> &middot; coordinates for entry</span>
+      <span class="gpsfmt">
+        <button class="on" data-fmt="dms">D&deg;M'S"</button>
+        <button data-fmt="ddm">D&deg;M.M'</button>
+      </span>
+      <button class="gpsx" id="gpsClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="gpsb">
+      <div class="gpsname">Departure &middot; <b>AYNZ</b></div>
+      <div class="gpsline" id="gpsLat">S06&deg;34'11"</div>
+      <div class="gpsline" id="gpsLon">E146&deg;43'34"</div>
+      <div class="gpsprog">Point 1 of 3</div>
+    </div>
+    <div class="gpstabs">
+      <button class="on">DEP AYNZ</button>
+      <button>WPT 1</button>
+      <button>DEST AYMH</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stub view (Airports tab) -->
+<div class="stub" id="stubView">
+  <div class="stubh"><b id="stubTitle">Airports</b></div>
+  <div class="stubb">Not built in this demo</div>
+</div>
+
+<!-- Metrics overlay -->
+<div class="mx" id="mx"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var VERSION = 'v1';
+  var BUILD   = '2026-07-19';
+
+  var $  = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+  /* ---------- toast ---------- */
+  var toastEl = $('#toast'), toastT = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('on');
+    clearTimeout(toastT);
+    toastT = setTimeout(function(){ toastEl.classList.remove('on'); }, 1400);
+  }
+
+  /* ---------- overlay manager ---------- */
+  var scrim = $('#scrim');
+  function closeAll(){
+    $('#popLayers').classList.remove('on');
+    $('#dropFpl').classList.remove('on');
+    $('#sheetMore').classList.remove('on');
+    scrim.classList.remove('on');
+    $('#tbLayers').classList.remove('on');
+    $('#tbFpl').classList.remove('on');
+    syncMoreTab();
+  }
+  scrim.addEventListener('click', closeAll);
+
+  /* ---------- Layers popover (anchored to its button) ---------- */
+  var pop = $('#popLayers'), caret = $('#popCaret');
+  function openLayers(){
+    var open = pop.classList.contains('on');
+    closeAll();
+    if (open) return;
+    var btn = $('#tbLayers').getBoundingClientRect();
+    var chrome = $('#chrome').getBoundingClientRect();
+    // Panel: 19px from the left edge, 48px shy of the right (measured).
+    pop.style.left = '19px';
+    pop.style.width = (window.innerWidth - 19 - 48) + 'px';
+    pop.style.top = (chrome.bottom + 6.5) + 'px';
+    caret.style.left = (btn.left + btn.width/2 - 19 - 6) + 'px';
+    pop.classList.add('on');
+    scrim.classList.add('on');
+    $('#tbLayers').classList.add('on');
+  }
+  $('#tbLayers').addEventListener('click', openLayers);
+
+  $$('#popLayers .prow').forEach(function(r){
+    r.addEventListener('click', function(){
+      var ck = r.querySelector('.ck');
+      if (ck){
+        ck.innerHTML = ck.innerHTML.trim()
+          ? ''
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>';
+      } else {
+        var col = r.parentNode;
+        Array.prototype.forEach.call(col.querySelectorAll('.prow.sel'), function(x){ x.classList.remove('sel'); });
+        r.classList.add('sel');
+      }
+    });
+  });
+
+  /* ---------- FPL drop-down ---------- */
+  var drop = $('#dropFpl');
+  $('#tbFpl').addEventListener('click', function(){
+    var open = drop.classList.contains('on');
+    closeAll();
+    if (open) return;
+    drop.style.top = $('#chrome').getBoundingClientRect().bottom + 'px';
+    drop.classList.add('on');
+    scrim.classList.add('on');
+    $('#tbFpl').classList.add('on');
+  });
+  $$('#dropFpl .dtab').forEach(function(b){
+    b.addEventListener('click', function(){
+      $$('#dropFpl .dtab').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+  });
+
+  /* ---------- Activity bar ---------- */
+  var PAGES = [
+    [['GS','82'],['TRK','284'],['DIST NEXT','14.6'],['ETE DEST','1:04'],['FUEL','214']],
+    [['IAS','—'],['ALT','9,500'],['ETA DEST','0412'],['DIST DEST','128'],['WIND','—']]
+  ];
+  var pageIdx = 0;
+  function drawActy(){
+    var p = PAGES[pageIdx], h = '';
+    for (var i = 0; i < p.length; i++){
+      var dash = (p[i][1] === '—');
+      h += '<div class="acol"><span class="k">' + p[i][0] + '</span>'
+         + '<span class="v' + (dash ? ' dash' : '') + '">' + (dash ? '- - -' : p[i][1]) + '</span></div>';
+    }
+    $('#actyPage').innerHTML = h;
+  }
+  drawActy();
+  $('#actyNext').addEventListener('click', function(){
+    pageIdx = (pageIdx + 1) % PAGES.length;
+    drawActy();
+  });
+  $('#tbActy').addEventListener('click', function(){
+    var on = $('#tbActy').classList.toggle('on');
+    $('#acty').classList.toggle('off', !on);
+  });
+
+  /* ---------- Left rail ---------- */
+  var rail = $('#rail');
+  function toggleRail(){ rail.classList.toggle('open'); }
+  $('#rbVfr').addEventListener('click', toggleRail);
+  $('#rbVfrOpen').addEventListener('click', toggleRail);
+  $$('.rb.lyr').forEach(function(b){
+    b.addEventListener('click', function(){
+      b.classList.toggle('on');
+      toast(b.getAttribute('data-lyr') + (b.classList.contains('on') ? ' on' : ' off'));
+    });
+  });
+  $('#rbRec').addEventListener('click', function(){
+    this.classList.toggle('on');
+  });
+  ['#rbMark','#rbRoute','#rbIn','#rbOut'].forEach(function(sel){
+    $(sel).addEventListener('click', function(){ toast('Placeholder'); });
+  });
+
+  /* ---------- GPS window ---------- */
+  var gps = $('#gpsOv');
+  var COORD = {
+    dms: ['S06&deg;34\'11"', 'E146&deg;43\'34"'],
+    ddm: ['S06&deg;34.18\'',  'E146&deg;43.57\'']
+  };
+  $('#tbGps').addEventListener('click', function(){ closeAll(); gps.classList.add('on'); });
+  $('#gpsClose').addEventListener('click', function(){ gps.classList.remove('on'); });
+  gps.addEventListener('click', function(e){ if (e.target === gps) gps.classList.remove('on'); });
+  $$('#gpsOv .gpsfmt button').forEach(function(b){
+    b.addEventListener('click', function(){
+      $$('#gpsOv .gpsfmt button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      var f = COORD[b.getAttribute('data-fmt')];
+      $('#gpsLat').innerHTML = f[0];
+      $('#gpsLon').innerHTML = f[1];
+    });
+  });
+  $$('#gpsOv .gpstabs button').forEach(function(b){
+    b.addEventListener('click', function(){
+      $$('#gpsOv .gpstabs button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+  });
+
+  /* ---------- Airport card ---------- */
+  var card = $('#card');
+  $$('.fld').forEach(function(f){
+    f.addEventListener('click', function(){
+      $('#cardIcao').textContent = f.getAttribute('data-fld');
+      card.classList.add('on');
+    });
+  });
+  $('#cardBack').addEventListener('click', function(){ card.classList.remove('on'); });
+  $$('#card .ctabs button').forEach(function(b){
+    b.addEventListener('click', function(){
+      $$('#card .ctabs button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+  });
+  $$('#card .csub button').forEach(function(b){
+    b.addEventListener('click', function(){
+      $$('#card .csub button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+  });
+
+  /* ---------- More sheet ---------- */
+  var MORE = [
+    ['Flights',        'var(--accent-2)'],
+    ['Charts',         'var(--good)'],
+    ['Weight &amp; balance', 'var(--navaid)'],
+    ['Fuel calculator','var(--route)'],
+    ['Frequencies',    'var(--magenta)'],
+    ['Debrief',        'var(--accent-2)'],
+    ['Aircraft',       'var(--good)'],
+    ['Notes',          'var(--route)'],
+    ['Layout metrics', 'var(--accent)']
+  ];
+  var mh = '';
+  MORE.forEach(function(m){
+    mh += '<button class="srow" data-more="' + m[0] + '">'
+        + '<span class="sq" style="background:' + m[1] + '">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>'
+        + '</span>' + m[0] + '</button>';
+  });
+  $('#moreList').innerHTML = mh;
+  $('#sver').textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
+  $$('#moreList .srow').forEach(function(r){
+    r.addEventListener('click', function(){
+      var k = r.getAttribute('data-more');
+      if (k === 'Layout metrics'){ closeAll(); showMetrics(); return; }
+      toast(k + ' — placeholder');
+    });
+  });
+
+  /* ---------- Tab bar ---------- */
+  function syncMoreTab(){
+    var open = $('#sheetMore').classList.contains('on');
+    $$('.tab').forEach(function(t){
+      if (t.getAttribute('data-tab') === 'more') t.classList.toggle('on', open);
+    });
+    if (!open && !$('#stubView').classList.contains('on')){
+      $$('.tab').forEach(function(t){
+        t.classList.toggle('on', t.getAttribute('data-tab') === 'map');
+      });
+    }
+  }
+  $$('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      var k = t.getAttribute('data-tab');
+      if (k === 'more'){
+        var open = $('#sheetMore').classList.contains('on');
+        closeAll();
+        $('#stubView').classList.remove('on');
+        if (!open){ $('#sheetMore').classList.add('on'); scrim.classList.add('on'); }
+        syncMoreTab();
+        return;
+      }
+      closeAll();
+      $$('.tab').forEach(function(x){ x.classList.remove('on'); });
+      t.classList.add('on');
+      if (k === 'airports'){
+        $('#stubTitle').textContent = 'Airports';
+        $('#stubView').classList.add('on');
+      } else {
+        $('#stubView').classList.remove('on');
+      }
+    });
+  });
+
+  /* ---------- Search / misc stubs ---------- */
+  $('#search').addEventListener('click', function(){ toast('Search — placeholder'); });
+  ['#tbSet','#tbProf','#tbRec'].forEach(function(sel){
+    $(sel).addEventListener('click', function(){ closeAll(); toast('Placeholder'); });
+  });
+
+  /* ---------- Layout metrics overlay ---------- */
+  var mxOn = false;
+  function showMetrics(){
+    var mx = $('#mx');
+    if (mxOn){ mx.classList.remove('on'); mx.innerHTML = ''; mxOn = false; return; }
+    var bands = [
+      ['#chrome',  'top chrome'],
+      ['#map',     'map'],
+      ['#acty',    'activity bar'],
+      ['.tabs',    'tab bar']
+    ];
+    var h = '';
+    bands.forEach(function(b){
+      var el = $(b[0]); if (!el) return;
+      var r = el.getBoundingClientRect();
+      h += '<div class="mxb" style="top:' + Math.round(r.top) + 'px;height:' + Math.round(r.height) + 'px"></div>'
+         + '<div class="mxl" style="top:' + (Math.round(r.top) + 3) + 'px">'
+         + b[1] + ' ' + Math.round(r.height) + 'px</div>';
+    });
+    var sat = getComputedStyle(document.documentElement).getPropertyValue('--sat');
+    h += '<div class="mxl" style="top:3px;left:6px;right:auto">viewport '
+       + window.innerWidth + '\u00d7' + window.innerHeight
+       + ' \u00b7 safe-top ' + sat.trim() + ' \u00b7 ' + VERSION + '</div>';
+    mx.innerHTML = h;
+    mx.classList.add('on');
+    mxOn = true;
+    setTimeout(function(){ mx.classList.remove('on'); mx.innerHTML = ''; mxOn = false; }, 6000);
+  }
+
+  /* ---------- fake route legs between the airfield dots ---------- */
+  function drawLegs(){
+    var map = $('#map');
+    Array.prototype.forEach.call(map.querySelectorAll('.leg'), function(l){ l.remove(); });
+    var pts = $$('.fld').map(function(f){
+      return { x: f.offsetLeft, y: f.offsetTop };
+    });
+    var order = [0, 1, 2];
+    for (var i = 0; i < order.length - 1; i++){
+      var a = pts[order[i]], b = pts[order[i+1]];
+      var dx = b.x - a.x, dy = b.y - a.y;
+      var len = Math.sqrt(dx*dx + dy*dy);
+      var ang = Math.atan2(dy, dx) * 180 / Math.PI;
+      var el = document.createElement('div');
+      el.className = 'leg';
+      el.style.left = a.x + 'px';
+      el.style.top = a.y + 'px';
+      el.style.width = len + 'px';
+      el.style.transform = 'rotate(' + ang + 'deg)';
+      map.insertBefore(el, map.querySelector('.fld'));
+    }
+  }
+  window.addEventListener('resize', drawLegs);
+  setTimeout(drawLegs, 60);
+
+})();
+</script>
+</body>
+</html>
