@@ -12,6 +12,21 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v5  2026-07-20  GPS can now be assigned to a bottom-bar slot.
+                       Introduced "action" entries: choosing one opens
+                       an overlay instead of replacing the screen, so
+                       the underlying view is never lost.
+       v4  2026-07-20  GPS window rebuilt to match the live desktop
+                       component: larger panel (400px), fully centred
+                       body, dominant coordinate type with glow, and
+                       full-width two-line DEP/WPT/ARR tabs with an
+                       amber top rule on the active point.
+       v3  2026-07-19  Bottom bar is now 4 slots: 3 user-configurable
+                       + fixed "More". Editor at More > Edit bottom bar,
+                       persisted in localStorage. Generic full-screen
+                       view layer. Quick Fuel Check ported in as a real
+                       working view. Fixed: view layer was covering the
+                       tab bar (z-index).
        v2  2026-07-19  Fix standalone touch offset (status-bar style
                        black-translucent -> black; .app fixed -> 100dvh).
                        Reclaim 12px from the home-indicator band via
@@ -233,7 +248,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    TAB BAR — 3 items, selected = filled pill behind the icon
    ============================================================ */
 .tabs{
-  flex:0 0 auto;
+  flex:0 0 auto;position:relative;z-index:850;
   height:calc(var(--tabbar) + var(--sabp));
   padding-bottom:var(--sabp);
   display:flex;
@@ -462,51 +477,167 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .kv .k{color:var(--text-muted)}
 .kv .v{font-family:var(--mono);color:var(--accent-2)}
 
-/* ---- GPS window (NM Plotter's own component) --------------- */
+/* ---- GPS window (NM Plotter's own component) ---------------
+   Proportions taken from the live desktop component: panel width
+   as the reference, everything centred, coordinates dominant.     */
 .gpsov{position:fixed;inset:0;z-index:1200;display:none;
   align-items:center;justify-content:center;padding:16px;
-  background:rgba(3,5,8,.66);
-  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  background:rgba(3,5,8,.72);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .gpsov.on{display:flex}
-.gpswin{width:100%;max-width:340px;background:var(--panel);
-  border:1px solid var(--border-strong);border-radius:10px;overflow:hidden}
-.gpsh{display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;height:var(--mod-b);
-  background:var(--bg-2);border-bottom:1px solid var(--border)}
-.gpsh .t{flex:1 1 auto;font-size:var(--t-sm);color:var(--text-dim)}
-.gpsh .t b{color:var(--text);font-weight:700}
-.gpsfmt{display:flex;gap:4px}
-.gpsfmt button{height:26px;padding:0 8px;border-radius:var(--radius);
-  font-size:var(--t-xs);font-weight:700;color:var(--text-muted);
-  background:var(--bg);border:1px solid var(--border);font-family:var(--mono)}
-.gpsfmt button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
-.gpsx{width:30px;height:30px;display:flex;align-items:center;justify-content:center;
-  font-size:20px;color:var(--text-muted)}
-.gpsb{padding:16px 14px}
-.gpsname{font-size:var(--t-sm);color:var(--text-dim);margin-bottom:10px}
-.gpsname b{color:var(--text)}
-.gpsline{font-family:var(--mono);font-size:20px;font-weight:700;
-  color:var(--accent);letter-spacing:.02em;line-height:1.5}
-.gpsprog{margin-top:10px;font-size:var(--t-xs);color:var(--text-fainter);
-  letter-spacing:.06em;text-transform:uppercase}
-.gpstabs{display:flex;gap:var(--gut);padding:0 10px 10px;overflow-x:auto}
-.gpstabs button{flex:0 0 auto;height:var(--mod-a);padding:0 10px;border-radius:var(--radius);
-  background:var(--bg);border:1px solid var(--border);
-  font-size:var(--t-sm);color:var(--text-muted);white-space:nowrap}
-.gpstabs button.on{border-color:var(--accent);color:var(--accent)}
+.gpswin{
+  width:100%;max-width:400px;
+  background:var(--panel);border:1px solid var(--border-strong);
+  border-radius:12px;overflow:hidden;
+  box-shadow:0 18px 46px rgba(0,0,0,.7);
+}
+.gpsh{
+  display:flex;align-items:center;gap:8px;
+  height:var(--mod-b);padding:0 6px 0 14px;
+  background:var(--bg-2);border-bottom:1px solid var(--border);
+}
+.gpsh .t{
+  flex:1 1 auto;min-width:0;
+  font-family:var(--mono);font-size:var(--t-xs);letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.gpsh .t b{color:var(--accent);font-weight:700}
+.gpsfmt{display:flex;flex:0 0 auto;gap:0;
+  border:1px solid var(--border-strong);border-radius:var(--radius);overflow:hidden}
+.gpsfmt button{
+  height:28px;padding:0 9px;
+  font-family:var(--mono);font-size:var(--t-xs);font-weight:700;letter-spacing:.03em;
+  color:var(--text-muted);background:var(--bg);
+}
+.gpsfmt button + button{border-left:1px solid var(--border-strong)}
+.gpsfmt button.on{background:rgba(255,176,32,.14);color:var(--accent)}
+.gpsx{flex:0 0 auto;width:34px;height:34px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;line-height:1;color:var(--text-muted)}
 
-/* ---- Full-screen stub view -------------------------------- */
-.stub{
-  position:fixed;inset:0;z-index:800;background:var(--bg);display:none;
+.gpsb{padding:22px 14px 20px;text-align:center}
+.gpsname{
+  font-family:var(--mono);font-size:var(--t-sm);letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;
+}
+.gpsname b{color:var(--text);font-weight:700}
+.gpsline{
+  font-family:var(--mono);font-weight:700;color:var(--accent);
+  font-size:clamp(24px, 8vw, 34px);line-height:1.32;letter-spacing:.01em;
+  text-shadow:0 0 18px rgba(255,176,32,.26);
+  white-space:nowrap;
+}
+.gpsprog{margin-top:16px;font-family:var(--mono);font-size:var(--t-sm);
+  color:var(--text-faint);letter-spacing:.06em}
+
+.gpstabs{display:flex;border-top:1px solid var(--border)}
+.gpstabs button{
+  flex:1 1 0;min-width:0;height:50px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border-top:3px solid transparent;background:transparent;
+}
+.gpstabs button + button{border-left:1px solid var(--border)}
+.gpstabs .role{font-family:var(--mono);font-size:var(--t-xs);font-weight:700;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--text-fainter)}
+.gpstabs .nm{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.gpstabs button.on{border-top-color:var(--accent);background:rgba(255,176,32,.09)}
+.gpstabs button.on .role,.gpstabs button.on .nm{color:var(--accent)}
+
+/* ---- Full-screen view layer (non-map tabs) ----------------- */
+.view{
+  position:fixed;left:0;right:0;top:0;z-index:800;background:var(--bg);display:none;
+  bottom:calc(var(--tabbar) + var(--sabp));
   flex-direction:column;
   padding-top:calc(var(--sat) + var(--top-pad));
-  padding-bottom:calc(var(--tabbar) + var(--sabp));
 }
-.stub.on{display:flex}
-.stubh{display:flex;align-items:center;height:var(--mod-b);padding:0 var(--edge);
-  border-bottom:1px solid var(--border)}
-.stubh b{font-size:var(--t-lg);font-weight:700}
-.stubb{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
+.view.on{display:flex}
+.vhead{flex:0 0 var(--mod-b);display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:0 var(--edge);border-bottom:1px solid var(--border)}
+.vhead b{font-size:var(--t-lg);font-weight:700}
+.vhead .sub{font-size:var(--t-xs);color:var(--text-fainter);
+  letter-spacing:.09em;text-transform:uppercase}
+.vbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px var(--edge) 20px}
+.vwrap{display:none;flex:1 1 auto;flex-direction:column;min-height:0}
+.vwrap.on{display:flex}
+.vempty{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
   color:var(--text-fainter);font-size:var(--t-sm);letter-spacing:.1em;text-transform:uppercase}
+
+/* ---- Quick Fuel Check ------------------------------------- */
+.fcard{background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:12px;margin-bottom:12px}
+.flab{font-size:var(--t-xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-2);margin-bottom:10px}
+.fsub{display:block;font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--text-muted);margin-bottom:4px}
+.fin{
+  width:100%;height:var(--mod-a);
+  background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius);
+  padding:0 10px;text-align:right;
+  font-family:var(--mono);font-size:16px;font-weight:600;color:var(--accent);
+  outline:none;-webkit-appearance:none;appearance:none;
+  transition:border-color .12s,box-shadow .12s;
+}
+.fin::placeholder{color:var(--text-fainter);font-weight:400}
+.fin:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.fin::-webkit-outer-spin-button,.fin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:var(--gut)}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gut)}
+.fdens{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:#171208;border:1px solid #3a2e10;border-radius:8px;padding:8px 10px;margin-bottom:12px}
+.fdens .k{font-size:var(--t-xs);font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.fdens .fin{width:110px;border-color:#3a2e10}
+.fseg{display:flex;gap:4px}
+.fseg button{
+  flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  font-family:var(--mono);font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
+}
+.fseg button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.fout{margin-top:12px;background:var(--inset);border:1px solid var(--border-strong);
+  border-radius:8px;padding:12px;text-align:center}
+.fout .r{display:flex;justify-content:space-between;font-size:var(--t-sm);color:var(--text-muted);
+  font-family:var(--mono)}
+.fout .r + .r{margin-top:3px}
+.fout .big{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--accent);margin-top:10px;line-height:1}
+.fout .big u{font-size:var(--t-md);font-weight:600;text-decoration:none;margin-left:3px}
+.fout .alt{font-family:var(--mono);font-size:var(--t-sm);color:var(--text-muted);margin-top:6px}
+.fnone{margin-top:12px;text-align:center;font-size:var(--t-sm);color:var(--text-fainter);padding:10px 0}
+
+/* ---- Tab-bar editor --------------------------------------- */
+.ted{position:fixed;inset:0;z-index:1200;display:none;
+  align-items:flex-end;justify-content:center;background:rgba(3,5,8,.66)}
+.ted.on{display:flex}
+.tedw{width:100%;max-width:420px;max-height:82%;display:flex;flex-direction:column;
+  background:var(--panel);border-top:1px solid var(--border-strong);
+  border-radius:12px 12px 0 0;overflow:hidden;padding-bottom:var(--sabp)}
+.tedh{flex:0 0 var(--mod-b);display:flex;align-items:center;gap:8px;padding:0 6px 0 14px;
+  background:var(--bg-2);border-bottom:1px solid var(--border)}
+.tedh b{flex:1 1 auto;font-size:var(--t-md);font-weight:700}
+.tedh .x{width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:var(--text-muted)}
+.tedslots{display:flex;gap:var(--gut);padding:12px}
+.tslot{
+  flex:1 1 0;min-width:0;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.tslot.sel{border-color:var(--accent);background:var(--inset)}
+.tslot .n{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-fainter)}
+.tslot.sel .n{color:var(--accent)}
+.tslot .v{font-size:var(--t-sm);font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tedhint{padding:0 14px 8px;font-size:var(--t-xs);color:var(--text-fainter);letter-spacing:.04em}
+.tedlist{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--border)}
+.tedrow{width:100%;height:var(--mod-b);display:flex;align-items:center;gap:10px;padding:0 14px;
+  font-size:var(--t-md);color:var(--text);text-align:left}
+.tedrow + .tedrow{border-top:1px solid var(--border)}
+.tedrow:active{background:var(--inset)}
+.tedrow .ic{width:22px;flex:0 0 22px;color:var(--text-muted);display:flex}
+.tedrow .ic svg{width:19px;height:19px}
+.tedrow .badge{margin-left:auto;font-family:var(--mono);font-size:var(--t-xs);font-weight:700;
+  color:#0a0e13;background:var(--accent);border-radius:4px;padding:2px 6px}
 
 /* ---- Metrics overlay -------------------------------------- */
 .mx{position:fixed;inset:0;z-index:1500;display:none;pointer-events:none}
@@ -638,21 +769,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     </button>
   </div>
 
-  <!-- ===================== TAB BAR ===================== -->
-  <nav class="tabs">
-    <button class="tab" data-tab="airports">
-      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.2l1.4 6.6 6.6 1.4v1.6l-6.6 1.4L12 20.8l-1.4-6.6L4 12.8v-1.6l6.6-1.4z"/></svg></span>
-      <span class="lab">Airports</span>
-    </button>
-    <button class="tab on" data-tab="map">
-      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg></span>
-      <span class="lab">Map</span>
-    </button>
-    <button class="tab" data-tab="more">
-      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
-      <span class="lab">More</span>
-    </button>
-  </nav>
+  <!-- ===================== TAB BAR (config-driven) ===================== -->
+  <nav class="tabs" id="tabbar"></nav>
 
 </div>
 
@@ -732,7 +850,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <button class="stile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
     <button class="stile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2L5.4 5.4"/></svg><span class="lab">Settings</span></button>
   </div>
-  <div class="shead"><span class="k">Views</span><span class="a">Edit order</span></div>
+  <div class="shead"><span class="k">Views</span><button class="a" id="editTabs">Edit bottom bar</button></div>
   <div class="slist" id="moreList"></div>
   <div class="sver" id="sver"></div>
 </div>
@@ -795,7 +913,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <div class="gpsov" id="gpsOv">
   <div class="gpswin">
     <div class="gpsh">
-      <span class="t"><b>GPS</b> &middot; coordinates for entry</span>
+      <span class="t"><b>GPS</b> &middot; Coordinates</span>
       <span class="gpsfmt">
         <button class="on" data-fmt="dms">D&deg;M'S"</button>
         <button data-fmt="ddm">D&deg;M.M'</button>
@@ -803,23 +921,29 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <button class="gpsx" id="gpsClose" aria-label="Close">&times;</button>
     </div>
     <div class="gpsb">
-      <div class="gpsname">Departure &middot; <b>AYNZ</b></div>
-      <div class="gpsline" id="gpsLat">S06&deg;34'11"</div>
-      <div class="gpsline" id="gpsLon">E146&deg;43'34"</div>
-      <div class="gpsprog">Point 1 of 3</div>
+      <div class="gpsname" id="gpsName"></div>
+      <div class="gpsline" id="gpsLat"></div>
+      <div class="gpsline" id="gpsLon"></div>
+      <div class="gpsprog" id="gpsProg"></div>
     </div>
-    <div class="gpstabs">
-      <button class="on">DEP AYNZ</button>
-      <button>WPT 1</button>
-      <button>DEST AYMH</button>
-    </div>
+    <div class="gpstabs" id="gpsTabs"></div>
   </div>
 </div>
 
-<!-- Stub view (Airports tab) -->
-<div class="stub" id="stubView">
-  <div class="stubh"><b id="stubTitle">Airports</b></div>
-  <div class="stubb">Not built in this demo</div>
+<!-- Full-screen view layer -->
+<div class="view" id="viewLayer"></div>
+
+<!-- Tab-bar editor -->
+<div class="ted" id="tabEd">
+  <div class="tedw">
+    <div class="tedh">
+      <b>Bottom bar</b>
+      <button class="x" id="tabEdClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="tedslots" id="tedSlots"></div>
+    <div class="tedhint" id="tedHint"></div>
+    <div class="tedlist" id="tedList"></div>
+  </div>
 </div>
 
 <!-- Metrics overlay -->
@@ -831,7 +955,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v2';
+  var VERSION = 'v5';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -852,10 +976,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#popLayers').classList.remove('on');
     $('#dropFpl').classList.remove('on');
     $('#sheetMore').classList.remove('on');
+    if (gps) gps.classList.remove('on');
     scrim.classList.remove('on');
     $('#tbLayers').classList.remove('on');
     $('#tbFpl').classList.remove('on');
-    syncMoreTab();
+    renderTabs();
   }
   scrim.addEventListener('click', closeAll);
 
@@ -956,26 +1081,49 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- GPS window ---------- */
   var gps = $('#gpsOv');
-  var COORD = {
-    dms: ['S06&deg;34\'11"', 'E146&deg;43\'34"'],
-    ddm: ['S06&deg;34.18\'',  'E146&deg;43.57\'']
-  };
-  $('#tbGps').addEventListener('click', function(){ closeAll(); gps.classList.add('on'); });
-  $('#gpsClose').addEventListener('click', function(){ gps.classList.remove('on'); });
-  gps.addEventListener('click', function(e){ if (e.target === gps) gps.classList.remove('on'); });
+  var GPS_PTS = [
+    { role:'DEP',   nm:'AYNZ',
+      dms:['S 06\u00b034\'02"',  'E 146\u00b043\'34"'],
+      ddm:['S 06\u00b034.03\'',  'E 146\u00b043.57\''] },
+    { role:'WPT 1', nm:'AYGA',
+      dms:['S 06\u00b004\'55"',  'E 145\u00b023\'29"'],
+      ddm:['S 06\u00b004.92\'',  'E 145\u00b023.48\''] },
+    { role:'ARR',   nm:'AYMH',
+      dms:['S 05\u00b049\'35"',  'E 144\u00b017\'48"'],
+      ddm:['S 05\u00b049.58\'',  'E 144\u00b017.80\''] }
+  ];
+  var gpsIdx = 0, gpsFmt = 'dms';
+
+  function drawGps(){
+    var p = GPS_PTS[gpsIdx];
+    $('#gpsName').innerHTML = p.role + ' &middot; <b>' + p.nm + '</b>';
+    $('#gpsLat').textContent = p[gpsFmt][0];
+    $('#gpsLon').textContent = p[gpsFmt][1];
+    $('#gpsProg').textContent = 'Point ' + (gpsIdx + 1) + ' of ' + GPS_PTS.length;
+    $('#gpsTabs').innerHTML = GPS_PTS.map(function(x, i){
+      return '<button data-i="' + i + '"' + (i === gpsIdx ? ' class="on"' : '') + '>'
+           + '<span class="role">' + x.role + '</span>'
+           + '<span class="nm">' + x.nm + '</span></button>';
+    }).join('');
+    $$('#gpsTabs button').forEach(function(b){
+      b.addEventListener('click', function(){
+        gpsIdx = parseInt(b.getAttribute('data-i'), 10);
+        drawGps();
+      });
+    });
+    $$('#gpsOv .gpsfmt button').forEach(function(b){
+      b.classList.toggle('on', b.getAttribute('data-fmt') === gpsFmt);
+    });
+  }
+
+  $('#tbGps').addEventListener('click', function(){ openGps(); });
+  function hideGps(){ gps.classList.remove('on'); renderTabs(); }
+  $('#gpsClose').addEventListener('click', hideGps);
+  gps.addEventListener('click', function(e){ if (e.target === gps) hideGps(); });
   $$('#gpsOv .gpsfmt button').forEach(function(b){
     b.addEventListener('click', function(){
-      $$('#gpsOv .gpsfmt button').forEach(function(x){ x.classList.remove('on'); });
-      b.classList.add('on');
-      var f = COORD[b.getAttribute('data-fmt')];
-      $('#gpsLat').innerHTML = f[0];
-      $('#gpsLon').innerHTML = f[1];
-    });
-  });
-  $$('#gpsOv .gpstabs button').forEach(function(b){
-    b.addEventListener('click', function(){
-      $$('#gpsOv .gpstabs button').forEach(function(x){ x.classList.remove('on'); });
-      b.classList.add('on');
+      gpsFmt = b.getAttribute('data-fmt');
+      drawGps();
     });
   });
 
@@ -1001,69 +1149,366 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
   });
 
-  /* ---------- More sheet ---------- */
-  var MORE = [
-    ['Flights',        'var(--accent-2)'],
-    ['Charts',         'var(--good)'],
-    ['Weight &amp; balance', 'var(--navaid)'],
-    ['Fuel calculator','var(--route)'],
-    ['Frequencies',    'var(--magenta)'],
-    ['Debrief',        'var(--accent-2)'],
-    ['Aircraft',       'var(--good)'],
-    ['Notes',          'var(--route)'],
-    ['Layout metrics', 'var(--accent)']
+  /* ============================================================
+     VIEWS + CONFIGURABLE BOTTOM BAR
+     Bottom bar = 3 user-chosen slots + a fixed "More" slot.
+     Choice persists in localStorage; falls back silently if
+     storage is unavailable.
+     ============================================================ */
+
+  var IC = {
+    map:      '<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>',
+    airports: '<path d="M12 3.2l1.4 6.6 6.6 1.4v1.6l-6.6 1.4L12 20.8l-1.4-6.6L4 12.8v-1.6l6.6-1.4z"/>',
+    fuel:     '<path d="M12 3.4S19 12.2 19 16.2a7 7 0 0 1-14 0C5 12.2 12 3.4 12 3.4z"/><path d="M15 15.4a3.9 3.9 0 0 1-2.6 3.6"/>',
+    charts:   '<path d="M6 3.4h8.6L19 7.8V20.6H6z"/><path d="M14.2 3.6v4.4h4.4"/><path d="M9 12.6h6M9 16h4"/>',
+    wb:       '<path d="M12 4.6v15"/><path d="M6.6 19.6h10.8"/><path d="M4 9.4h16"/><path d="M4 9.4L1.8 15h4.4zM20 9.4L17.8 15h4.4z"/>',
+    freq:     '<circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"/><path d="M5.4 5.4a9.4 9.4 0 0 0 0 13.2M18.6 5.4a9.4 9.4 0 0 1 0 13.2"/>',
+    flights:  '<path d="M2.6 13.4l18.8-6.6-3 6.6 3 6.6z"/>',
+    notes:    '<path d="M5.4 4.4h13.2v15.2H5.4z"/><path d="M8.6 8.8h6.8M8.6 12h6.8M8.6 15.2h4.4"/>',
+    gps:      '<circle cx="12" cy="12" r="4.4"/><path d="M12 1.8v3.4M12 18.8v3.4M22.2 12h-3.4M5.2 12H1.8"/>',
+    more:     '<path d="M4 7h16M4 12h16M4 17h16"/>'
+  };
+  function svg(k){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+         + 'stroke-linejoin="round" stroke-linecap="round">' + (IC[k] || IC.notes) + '</svg>';
+  }
+
+  /* Entries flagged `act:true` are actions, not views: choosing one
+     opens an overlay instead of replacing the screen. */
+  var VIEWS = [
+    { k:'map',      t:'Map'      },
+    { k:'gps',      t:'GPS', act:true },
+    { k:'airports', t:'Airports' },
+    { k:'fuel',     t:'Fuel'     },
+    { k:'charts',   t:'Charts'   },
+    { k:'wb',       t:'W&amp;B'  },
+    { k:'freq',     t:'Freqs'    },
+    { k:'flights',  t:'Flights'  },
+    { k:'notes',    t:'Notes'    }
   ];
+  function isAct(k){
+    for (var i=0;i<VIEWS.length;i++) if (VIEWS[i].k===k) return !!VIEWS[i].act;
+    return false;
+  }
+  function firstView(){
+    for (var i=0;i<tabCfg.length;i++) if (!isAct(tabCfg[i])) return tabCfg[i];
+    return 'map';
+  }
+  function openGps(){ closeAll(); drawGps(); gps.classList.add('on'); renderTabs(); }
+  function vTitle(k){
+    for (var i=0;i<VIEWS.length;i++) if (VIEWS[i].k===k) return VIEWS[i].t;
+    return k;
+  }
+
+  var STORE_KEY = 'nmp.iphone.tabs';
+  function loadCfg(){
+    try{
+      var s = localStorage.getItem(STORE_KEY);
+      if (s){ var a = JSON.parse(s); if (a && a.length === 3) return a; }
+    }catch(e){}
+    return ['airports','map','fuel'];
+  }
+  function saveCfg(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(tabCfg)); }catch(e){} }
+
+  var tabCfg    = loadCfg();
+  var activeTab = tabCfg.indexOf('map') >= 0 ? 'map' : tabCfg[0];
+
+  /* ---------- view layer ---------- */
+  var viewLayer = $('#viewLayer'), viewCache = {};
+
+  function stubHTML(k){
+    return '<div class="vhead"><b>' + vTitle(k) + '</b></div>'
+         + '<div class="vempty">Not built in this demo</div>';
+  }
+
+  function getView(k){
+    if (viewCache[k]) return viewCache[k];
+    var el = document.createElement('div');
+    el.className = 'vwrap';
+    el.innerHTML = (k === 'fuel') ? fuelHTML() : stubHTML(k);
+    viewLayer.appendChild(el);
+    viewCache[k] = el;
+    if (k === 'fuel') initFuel(el);
+    return el;
+  }
+
+  function showView(k){
+    if (isAct(k)) return;
+    Object.keys(viewCache).forEach(function(x){ viewCache[x].classList.remove('on'); });
+    if (k === 'map'){ viewLayer.classList.remove('on'); return; }
+    getView(k).classList.add('on');
+    viewLayer.classList.add('on');
+  }
+
+  /* ---------- tab bar ---------- */
+  function renderTabs(){
+    var moreOpen = $('#sheetMore').classList.contains('on');
+    var gpsOpen  = gps && gps.classList.contains('on');
+    var busy     = moreOpen || gpsOpen;
+    var h = '';
+    tabCfg.forEach(function(k){
+      var lit = (k === 'gps') ? gpsOpen : (!busy && activeTab === k);
+      h += '<button class="tab' + (lit ? ' on' : '') + '" data-tab="' + k + '">'
+         + '<span class="ic">' + svg(k) + '</span>'
+         + '<span class="lab">' + vTitle(k) + '</span></button>';
+    });
+    h += '<button class="tab' + (moreOpen ? ' on' : '') + '" data-tab="more">'
+       + '<span class="ic">' + svg('more') + '</span>'
+       + '<span class="lab">More</span></button>';
+    $('#tabbar').innerHTML = h;
+    $$('#tabbar .tab').forEach(function(t){
+      t.addEventListener('click', function(){ onTab(t.getAttribute('data-tab')); });
+    });
+  }
+
+  function onTab(k){
+    if (k === 'more'){
+      var open = $('#sheetMore').classList.contains('on');
+      closeAll();
+      if (!open){ $('#sheetMore').classList.add('on'); scrim.classList.add('on'); }
+      renderTabs();
+      return;
+    }
+    if (isAct(k)){
+      if (k === 'gps'){
+        if (gps.classList.contains('on')) { hideGps(); return; }
+        openGps();
+      }
+      return;
+    }
+    closeAll();
+    activeTab = k;
+    showView(k);
+    renderTabs();
+  }
+
+  function goTo(k){ onTab(k); }
+
+  /* ---------- More sheet list ---------- */
+  var MORE_TINT = {
+    map:'var(--accent-2)', airports:'var(--good)', fuel:'var(--route)',
+    charts:'var(--accent-2)', wb:'var(--navaid)', freq:'var(--magenta)',
+    flights:'var(--good)', notes:'var(--route)', gps:'var(--accent)'
+  };
   var mh = '';
-  MORE.forEach(function(m){
-    mh += '<button class="srow" data-more="' + m[0] + '">'
-        + '<span class="sq" style="background:' + m[1] + '">'
-        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>'
-        + '</span>' + m[0] + '</button>';
+  VIEWS.forEach(function(v){
+    mh += '<button class="srow" data-go="' + v.k + '">'
+        + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
+        + svg(v.k) + '</span>' + v.t + '</button>';
   });
+  mh += '<button class="srow" data-go="__metrics"><span class="sq" style="background:var(--accent)">'
+      + svg('notes') + '</span>Layout metrics</button>';
   $('#moreList').innerHTML = mh;
   $('#sver').textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
   $$('#moreList .srow').forEach(function(r){
     r.addEventListener('click', function(){
-      var k = r.getAttribute('data-more');
-      if (k === 'Layout metrics'){ closeAll(); showMetrics(); return; }
-      toast(k + ' — placeholder');
+      var k = r.getAttribute('data-go');
+      if (k === '__metrics'){ closeAll(); showMetrics(); return; }
+      goTo(k);
     });
   });
 
-  /* ---------- Tab bar ---------- */
-  function syncMoreTab(){
-    var open = $('#sheetMore').classList.contains('on');
-    $$('.tab').forEach(function(t){
-      if (t.getAttribute('data-tab') === 'more') t.classList.toggle('on', open);
-    });
-    if (!open && !$('#stubView').classList.contains('on')){
-      $$('.tab').forEach(function(t){
-        t.classList.toggle('on', t.getAttribute('data-tab') === 'map');
-      });
+  /* ---------- Tab-bar editor ---------- */
+  var ted = $('#tabEd'), tedSlot = 0;
+  function openEd(){ closeAll(); tedSlot = 0; drawEd(); ted.classList.add('on'); }
+  function closeEd(){ ted.classList.remove('on'); }
+  $('#editTabs').addEventListener('click', openEd);
+  $('#tabEdClose').addEventListener('click', closeEd);
+  ted.addEventListener('click', function(e){ if (e.target === ted) closeEd(); });
+
+  function drawEd(){
+    var s = '';
+    for (var i = 0; i < 3; i++){
+      s += '<button class="tslot' + (i === tedSlot ? ' sel' : '') + '" data-slot="' + i + '">'
+         + '<span class="n">Slot ' + (i + 1) + '</span>'
+         + '<span class="v">' + vTitle(tabCfg[i]) + '</span></button>';
     }
+    $('#tedSlots').innerHTML = s;
+    $$('#tedSlots .tslot').forEach(function(b){
+      b.addEventListener('click', function(){
+        tedSlot = parseInt(b.getAttribute('data-slot'), 10);
+        drawEd();
+      });
+    });
+    $('#tedHint').textContent = 'Choose what goes in slot ' + (tedSlot + 1)
+                              + '. Slot 4 is always More.';
+    var l = '';
+    VIEWS.forEach(function(v){
+      var at = tabCfg.indexOf(v.k);
+      l += '<button class="tedrow" data-v="' + v.k + '">'
+         + '<span class="ic">' + svg(v.k) + '</span>' + v.t
+         + (at >= 0 ? '<span class="badge">' + (at + 1) + '</span>' : '') + '</button>';
+    });
+    $('#tedList').innerHTML = l;
+    $$('#tedList .tedrow').forEach(function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-v');
+        var at = tabCfg.indexOf(k);
+        if (at === tedSlot) return;
+        if (at >= 0) tabCfg[at] = tabCfg[tedSlot];   // swap, never duplicate
+        tabCfg[tedSlot] = k;
+        saveCfg();
+        if (tabCfg.indexOf(activeTab) < 0){ activeTab = firstView(); showView(activeTab); }
+        drawEd();
+        renderTabs();
+      });
+    });
   }
-  $$('.tab').forEach(function(t){
-    t.addEventListener('click', function(){
-      var k = t.getAttribute('data-tab');
-      if (k === 'more'){
-        var open = $('#sheetMore').classList.contains('on');
-        closeAll();
-        $('#stubView').classList.remove('on');
-        if (!open){ $('#sheetMore').classList.add('on'); scrim.classList.add('on'); }
-        syncMoreTab();
+
+  /* ============================================================
+     QUICK FUEL CHECK  (ported from QuickFuelCheck 2026-06-16)
+     ============================================================ */
+  function fuelHTML(){
+    function fld(lab, attrs){
+      return '<div><span class="fsub">' + lab + '</span>'
+           + '<input class="fin" type="number" inputmode="decimal" ' + attrs + '></div>';
+    }
+    return '<div class="vhead"><b>Quick Fuel Check</b><span class="sub">Jet A-1</span></div>'
+      + '<div class="vbody">'
+      + '<div class="fdens"><span class="k">Density &middot; kg/L</span>'
+      +   '<input class="fin" data-f="dens" type="number" step="0.001" value="0.800" inputmode="decimal"></div>'
+
+      + '<div class="fcard"><div class="flab">Unit converter</div><div class="fg2">'
+      +   fld('Litres',    'data-u="L"')
+      +   fld('US Gal',    'data-u="USG"')
+      +   fld('Kilograms', 'data-u="kg"')
+      +   fld('Pounds',    'data-u="lbs"')
+      + '</div></div>'
+
+      + '<div class="fcard"><div class="flab">Trip &rarr; required fuel</div><div class="fg3">'
+      +   fld('Trip &middot; NM',  'data-f="trip" placeholder="270"')
+      +   fld('TAS &middot; kt',   'data-f="tas"  placeholder="130"')
+      +   fld('Burn &middot; kg/h','data-f="burn" placeholder="176"')
+      + '</div>'
+      + '<span class="fsub" style="margin-top:10px">Reserve &middot; min</span>'
+      + '<div class="fseg" data-f="res"></div><div data-f="reqOut"></div></div>'
+
+      + '<div class="fcard"><div class="flab">Endurance</div>'
+      + '<span class="fsub">Fuel on board &middot; unit</span>'
+      + '<div class="fseg" data-f="endU"></div>'
+      + '<div class="fg2" style="margin-top:10px">'
+      +   fld('Quantity',          'data-f="endQ" placeholder="800"')
+      +   fld('Burn &middot; kg/h','data-f="endB" placeholder="176"')
+      + '</div><div data-f="endOut"></div></div>'
+      + '</div>';
+  }
+
+  function initFuel(root){
+    var L_PER_USG = 3.78541, KG_PER_LB = 0.453592;
+    var st = { density: 0.800, res: 15, endUnit: 'kg' };
+    var q  = function(sel){ return root.querySelector(sel); };
+    var qa = function(sel){ return Array.prototype.slice.call(root.querySelectorAll(sel)); };
+    var f  = function(n, d){ return Number(n).toFixed(d === undefined ? 1 : d); };
+    var num = function(sel){ return parseFloat(q(sel).value); };
+
+    /* -- unit converter -- */
+    var units = qa('input[data-u]');
+    function convert(field, raw){
+      var v = parseFloat(raw);
+      if (raw === '' || isNaN(v)){
+        units.forEach(function(i){ if (i.dataset.u !== field) i.value = ''; });
         return;
       }
-      closeAll();
-      $$('.tab').forEach(function(x){ x.classList.remove('on'); });
-      t.classList.add('on');
-      if (k === 'airports'){
-        $('#stubTitle').textContent = 'Airports';
-        $('#stubView').classList.add('on');
-      } else {
-        $('#stubView').classList.remove('on');
-      }
+      var L;
+      if (field === 'L')   L = v;
+      if (field === 'USG') L = v * L_PER_USG;
+      if (field === 'kg')  L = v / st.density;
+      if (field === 'lbs') L = (v * KG_PER_LB) / st.density;
+      var vals = {
+        L:   f(L, 1),
+        USG: f(L / L_PER_USG, 2),
+        kg:  f(L * st.density, 1),
+        lbs: f((L * st.density) / KG_PER_LB, 1)
+      };
+      units.forEach(function(i){ if (i.dataset.u !== field) i.value = vals[i.dataset.u]; });
+    }
+    units.forEach(function(i){
+      i.addEventListener('input', function(e){ convert(e.target.dataset.u, e.target.value); });
     });
-  });
+
+    /* -- density -- */
+    q('[data-f="dens"]').addEventListener('input', function(e){
+      st.density = parseFloat(e.target.value) || 0.800;
+      units.forEach(function(i){ i.value = ''; });
+      req(); end();
+    });
+
+    /* -- trip -> required fuel -- */
+    function req(){
+      var t = num('[data-f="trip"]'), v = num('[data-f="tas"]'), b = num('[data-f="burn"]');
+      var out = q('[data-f="reqOut"]');
+      if (!(t > 0 && v > 0 && b > 0)){
+        out.innerHTML = '<div class="fnone">Enter trip, TAS and burn</div>'; return;
+      }
+      var hr = t / v, trip = hr * b, resKg = b * (st.res / 60), tot = trip + resKg;
+      var h = Math.floor(hr), m = Math.round((hr - h) * 60);
+      if (m === 60){ h += 1; m = 0; }
+      out.innerHTML = '<div class="fout">'
+        + '<div class="r"><span>Flight time</span><span>' + h + 'h ' + String(m).padStart(2,'0') + 'm</span></div>'
+        + '<div class="r"><span>Reserve</span><span>' + (st.res === 0 ? 'NIL' : f(resKg,1) + ' kg') + '</span></div>'
+        + '<div class="big">' + f(tot,0) + '<u>kg</u></div>'
+        + '<div class="alt">' + f(tot/st.density,0) + ' L &middot; '
+        + f((tot/st.density)/L_PER_USG,1) + ' USG</div></div>';
+    }
+    ['trip','tas','burn'].forEach(function(k){
+      q('[data-f="' + k + '"]').addEventListener('input', req);
+    });
+
+    /* -- reserve segmented control -- */
+    var RES = [0,15,20,30,45,60], resHost = q('[data-f="res"]');
+    resHost.innerHTML = RES.map(function(r){
+      return '<button data-r="' + r + '"' + (r === st.res ? ' class="on"' : '') + '>'
+           + (r === 0 ? 'NIL' : r) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(resHost.children, function(b){
+      b.addEventListener('click', function(){
+        st.res = parseInt(b.getAttribute('data-r'), 10);
+        Array.prototype.forEach.call(resHost.children, function(x){ x.classList.toggle('on', x === b); });
+        req();
+      });
+    });
+
+    /* -- endurance -- */
+    var UNITS = ['kg','L','USG','lbs'], endHost = q('[data-f="endU"]');
+    function toKg(v, u){
+      if (u === 'lbs') return v * KG_PER_LB;
+      if (u === 'L')   return v * st.density;
+      if (u === 'USG') return v * L_PER_USG * st.density;
+      return v;
+    }
+    endHost.innerHTML = UNITS.map(function(u){
+      return '<button data-eu="' + u + '"' + (u === st.endUnit ? ' class="on"' : '') + '>' + u + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(endHost.children, function(b){
+      b.addEventListener('click', function(){
+        st.endUnit = b.getAttribute('data-eu');
+        Array.prototype.forEach.call(endHost.children, function(x){ x.classList.toggle('on', x === b); });
+        end();
+      });
+    });
+    function end(){
+      var v = num('[data-f="endQ"]'), b = num('[data-f="endB"]');
+      var out = q('[data-f="endOut"]');
+      if (!(v > 0 && b > 0)){
+        out.innerHTML = '<div class="fnone">Enter fuel on board and burn</div>'; return;
+      }
+      var kg = toKg(v, st.endUnit), hrs = kg / b;
+      var h = Math.floor(hrs), m = Math.round((hrs - h) * 60);
+      if (m === 60){ h += 1; m = 0; }
+      out.innerHTML = '<div class="fout">'
+        + '<div class="r"><span>Fuel on board</span><span>' + f(kg,1) + ' kg</span></div>'
+        + '<div class="big">' + h + '<u>h</u> ' + String(m).padStart(2,'0') + '<u>m</u></div>'
+        + '<div class="alt">at ' + f(b,0) + ' kg/hr</div></div>';
+    }
+    ['endQ','endB'].forEach(function(k){
+      q('[data-f="' + k + '"]').addEventListener('input', end);
+    });
+
+    req(); end();
+  }
+
+  renderTabs();
+  showView(activeTab);
 
   /* ---------- Search / misc stubs ---------- */
   $('#search').addEventListener('click', function(){ toast('Search — placeholder'); });
