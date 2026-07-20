@@ -12,6 +12,23 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v9  2026-07-20  FPL panel built out. Route tab with full on-phone
+                       construction (search by ICAO/name, DDM coordinate
+                       entry, insert before/after, reorder, remove,
+                       direct-to, reverse, clear). NavLog as per-leg
+                       cards. Profile with real great-circle sampling,
+                       modelled terrain, cruise line and drag scrubber.
+                       Strip reworked: fuel on arrival is the hero.
+       v8  2026-07-20  Type scale audit. Two sizes had drifted off the
+                       scale (tab label 11px, search 14px) and several
+                       9px micro-labels were hardcoded. All now tokens:
+                       --t-2xs/xs/sm/md/lg plus declared exceptions
+                       --t-in (16px, iOS input zoom) and --t-disp.
+                       New reference sheet at More > Type scale.
+       v7  2026-07-20  Optical radius fix: tab-bar selection was 6px on
+                       a 26px element (23% of height) vs 6px on the 32px
+                       toolbar buttons (19%), so it read rounder. Tab
+                       selection now 5px via --radius-sm.
        v6  2026-07-20  Toolbar slot 7: GPS window -> Track my position
                        (Off / Centred / Follow). Slot 6: Favourites ->
                        Direct-To (proposal, undecided). Activity bar is
@@ -94,13 +111,21 @@
   --top-pad:12px;           /* below the status-bar safe area */
   --gps-gap:26px;           /* isolating gap before the GPS button */
   --radius:6px;
+  --radius-sm:5px;          /* optical match to --radius on shorter elements */
   --tabbar:58px;            /* tab-bar content height, excl. home inset */
 
-  /* ---- Type scale: only 10 / 13 / 15 / 17 exist ---- */
+  /* ---- Type scale ----
+     Five UI sizes, nothing between them. Plus two declared
+     exceptions: --t-in is 16px because iOS force-zooms any input
+     below that, and --t-disp is for result numbers you read at
+     arm's length. Icon glyphs (x, +, -) are not type. */
+  --t-2xs:9px;
   --t-xs:10px;
   --t-sm:13px;
   --t-md:15px;
   --t-lg:17px;
+  --t-in:16px;
+  --t-disp:30px;
 
   --sat:env(safe-area-inset-top,0px);
   --sab:env(safe-area-inset-bottom,0px);
@@ -156,7 +181,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   padding:0 10px;
   background:var(--inset);border:1px solid var(--border);
   border-radius:var(--radius);
-  color:var(--text-faint);font-size:14px;
+  color:var(--text-faint);font-size:var(--t-sm);
 }
 .search svg{width:15px;height:15px;flex:0 0 auto}
 
@@ -265,11 +290,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   color:var(--text-muted);
 }
 .tab .ic{
-  width:38px;height:26px;border-radius:var(--radius);
+  width:38px;height:26px;border-radius:var(--radius-sm);
   display:flex;align-items:center;justify-content:center;
 }
 .tab svg{width:21px;height:21px;display:block}
-.tab .lab{font-size:11px;font-weight:600}
+.tab .lab{font-size:var(--t-xs);font-weight:600}
 .tab.on{color:var(--text)}
 .tab.on .ic{background:var(--accent);color:#0a0e13}
 
@@ -316,49 +341,103 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   border-top:1px solid var(--border);
 }
 
-/* ---- Drop-down panel (FPL) -------------------------------- */
+/* ---- Drop-down panel (FPL) --------------------------------
+   Fixed under the search row, sized to the space between the
+   chrome and the tab bar. Body scrolls; strip + tabs are pinned. */
 .drop{
   position:fixed;left:0;right:0;z-index:950;display:none;
+  flex-direction:column;
   background:var(--panel);
   border-bottom:1px solid var(--border-strong);
   box-shadow:0 12px 26px rgba(0,0,0,.55);
-  padding:var(--gut) var(--pedge) 0;
 }
-.drop.on{display:block}
+.drop.on{display:flex}
+.dbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:var(--gut) var(--pedge)}
 .drow{display:flex;gap:var(--gut);margin-bottom:var(--gut)}
 .dbtn{
-  flex:1 1 0;height:var(--mod-a);
+  flex:1 1 0;min-width:0;height:var(--mod-a);
   display:flex;align-items:center;justify-content:center;
   background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);
   font-size:var(--t-sm);font-weight:600;color:var(--text-2);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;
 }
 .dbtn:active{background:var(--inset)}
-.chips{
-  display:flex;flex-wrap:wrap;gap:var(--gut);
-  max-height:104px;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding-bottom:var(--gut);
-}
+
+/* ---- route chips ---- */
+.chips{display:flex;flex-wrap:wrap;gap:var(--gut)}
 .chip{
   flex:1 1 calc(50% - var(--gut));min-width:0;
   height:var(--mod-a);border-radius:16px;
-  display:flex;align-items:center;justify-content:center;
+  display:flex;align-items:center;gap:6px;
   background:var(--inset);border:1px solid var(--border-strong);
-  font-family:var(--mono);font-size:var(--t-sm);color:var(--text);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px;
+  padding:0 10px 0 6px;
 }
-.chip.act{border-color:var(--route);color:var(--route)}
+.chip .ix{
+  flex:0 0 18px;height:18px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);color:var(--text-fainter);
+  font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;
+}
+.chip .nm{flex:1 1 auto;min-width:0;text-align:center;
+  font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.act{border-color:var(--route)}
+.chip.act .nm{color:var(--route)}
+.chip.act .ix{background:var(--route);color:#0a0e13}
+.chip.add{border-style:dashed;border-color:var(--border-strong);justify-content:center;padding:0 10px}
+.chip.add .nm{color:var(--accent-2)}
+.chipempty{padding:18px 0;text-align:center;font-size:var(--t-sm);color:var(--text-fainter)}
+
+/* ---- NavLog leg cards ---- */
+.lgc{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;
+  padding:10px;margin-bottom:var(--gut)}
+.lgh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.lgh b{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lgh span{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.lgg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 6px}
+.lgg .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text-muted)}
+.lgg .v{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text);margin-top:1px}
+.lgg .v.warn{color:var(--bad)}
+
+/* ---- Profile ---- */
+.prof{position:relative;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;touch-action:none}
+.prof svg{display:block;width:100%;height:190px}
+.profstats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 6px;margin-top:10px}
+.profstats .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text-muted)}
+.profstats .v{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
+  color:var(--text);margin-top:1px}
+.profstats .v.warn{color:var(--bad)}
+
+/* ---- hero strip: one number dominant ---- */
 .strip{
-  display:flex;align-items:stretch;height:48px;
-  margin:0 calc(var(--pedge) * -1);
+  flex:0 0 auto;display:flex;align-items:stretch;
   border-top:1px solid var(--border);border-bottom:1px solid var(--border);
   background:var(--bg);
 }
-.stripchev{flex:0 0 22px;display:flex;align-items:center;justify-content:center;color:var(--text-faint)}
-.stripchev svg{width:12px;height:12px}
+.hero{flex:0 0 46%;display:flex;flex-direction:column;justify-content:center;
+  padding:8px 0 8px 14px;border-right:1px solid var(--border)}
+.hero .k{font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-muted)}
+.hero .v{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--accent);
+  line-height:1.1;margin-top:2px}
+.hero .v.warn{color:var(--bad)}
+.hero .v u{font-size:var(--t-sm);text-decoration:none;margin-left:3px}
+.minis{flex:1 1 auto;display:flex}
+.mini{flex:1 1 0;min-width:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1px;padding:0 2px}
+.mini .k{font-size:var(--t-2xs);font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-muted)}
+.mini .v{font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text)}
+
 .dtabs{
-  display:flex;align-items:center;gap:var(--gut);
-  height:50px;margin:0 calc(var(--pedge) * -1);padding:0 var(--pedge);
+  flex:0 0 auto;display:flex;align-items:center;gap:var(--gut);
+  height:50px;padding:0 var(--pedge);
 }
 .dtabs .spacer{flex:1 1 auto}
 .dtool{
@@ -368,12 +447,40 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 }
 .dtool svg{width:16px;height:16px}
 .dtab{
-  height:var(--mod-a);padding:0 12px;border-radius:var(--radius);
+  height:var(--mod-a);padding:0 11px;border-radius:var(--radius);
   display:flex;align-items:center;
   font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
   background:var(--bg-2);border:1px solid var(--border);
 }
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+
+/* ---- waypoint entry sheet ---- */
+.wsearch{padding:12px 12px 8px}
+.wsearch input{
+  width:100%;height:var(--mod-b);
+  background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius);
+  padding:0 12px;color:var(--text);font-family:var(--mono);font-size:var(--t-in);
+  outline:none;-webkit-appearance:none;
+}
+.wsearch input:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.wcoord{display:flex;gap:var(--gut);padding:0 12px 12px}
+.wcoord input{flex:1 1 0;min-width:0;height:var(--mod-b);
+  background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius);
+  padding:0 10px;color:var(--accent);font-family:var(--mono);font-size:var(--t-in);
+  text-align:center;outline:none;-webkit-appearance:none}
+.wcoord button{flex:0 0 62px;height:var(--mod-b);border-radius:var(--radius);
+  background:var(--accent);color:#0a0e13;font-size:var(--t-sm);font-weight:700}
+.wrow{width:100%;height:var(--mod-b);display:flex;align-items:center;gap:10px;padding:0 14px;
+  text-align:left;font-size:var(--t-md);color:var(--text)}
+.wrow + .wrow{border-top:1px solid var(--border)}
+.wrow:active{background:var(--inset)}
+.wrow .id{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  color:var(--accent-2);flex:0 0 52px}
+.wrow .nm2{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow.danger{color:var(--bad)}
+.wsec{padding:10px 14px 6px;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-fainter);border-top:1px solid var(--border)}
 
 /* ---- Right sheet (More) ----------------------------------- */
 .sheet{
@@ -575,13 +682,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   border-radius:8px;padding:12px;margin-bottom:12px}
 .flab{font-size:var(--t-xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;
   color:var(--text-2);margin-bottom:10px}
-.fsub{display:block;font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+.fsub{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;text-transform:uppercase;
   color:var(--text-muted);margin-bottom:4px}
 .fin{
   width:100%;height:var(--mod-a);
   background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius);
   padding:0 10px;text-align:right;
-  font-family:var(--mono);font-size:16px;font-weight:600;color:var(--accent);
+  font-family:var(--mono);font-size:var(--t-in);font-weight:600;color:var(--accent);
   outline:none;-webkit-appearance:none;appearance:none;
   transition:border-color .12s,box-shadow .12s;
 }
@@ -606,7 +713,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fout .r{display:flex;justify-content:space-between;font-size:var(--t-sm);color:var(--text-muted);
   font-family:var(--mono)}
 .fout .r + .r{margin-top:3px}
-.fout .big{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--accent);margin-top:10px;line-height:1}
+.fout .big{font-family:var(--mono);font-size:var(--t-disp);font-weight:700;color:var(--accent);margin-top:10px;line-height:1}
 .fout .big u{font-size:var(--t-md);font-weight:600;text-decoration:none;margin-left:3px}
 .fout .alt{font-family:var(--mono);font-size:var(--t-sm);color:var(--text-muted);margin-top:6px}
 .fnone{margin-top:12px;text-align:center;font-size:var(--t-sm);color:var(--text-fainter);padding:10px 0}
@@ -630,18 +737,29 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;
 }
 .tslot.sel{border-color:var(--accent);background:var(--inset)}
-.tslot .n{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-fainter)}
+.tslot .n{font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-fainter)}
 .tslot.sel .n{color:var(--accent)}
 .tslot .v{font-size:var(--t-sm);font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .tedpage{padding:12px 12px 0}
-.tedpage .pl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+.tedpage .pl{font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
   color:var(--text-fainter);margin-bottom:6px}
 .tedpage .row{display:flex;gap:4px;margin-bottom:12px}
 .tslot.sm{padding:7px 2px;gap:3px}
-.tslot.sm .n{font-size:8px;letter-spacing:.08em}
-.tslot.sm .v{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.01em}
+.tslot.sm .n{font-size:var(--t-2xs);letter-spacing:.08em}
+.tslot.sm .v{font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;letter-spacing:.01em}
 .tedhint{padding:0 14px 8px;font-size:var(--t-xs);color:var(--text-fainter);letter-spacing:.04em}
+.tsrow{padding:14px}
+.tsrow + .tsrow{border-top:1px solid var(--border)}
+.tsmeta{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.tsmeta b{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--accent)}
+.tsmeta span{font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-fainter)}
+.tsex{color:var(--text)}
+.tsex .m{font-family:var(--mono)}
+.tsex .u{text-transform:uppercase;letter-spacing:.11em;color:var(--text-muted);font-weight:700}
+.tsex div{margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tswhere{margin-top:8px;font-size:var(--t-2xs);letter-spacing:.05em;
+  color:var(--text-fainter);line-height:1.5}
 .tedlist{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--border)}
 .tedrow{width:100%;height:var(--mod-b);display:flex;align-items:center;gap:10px;padding:0 14px;
   font-size:var(--t-md);color:var(--text);text-align:left}
@@ -657,7 +775,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .mx.on{display:block}
 .mxb{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,176,32,.55);
   border-bottom:1px dashed rgba(255,176,32,.55);background:rgba(255,176,32,.07)}
-.mxl{position:absolute;right:6px;font-family:var(--mono);font-size:9px;
+.mxl{position:absolute;right:6px;font-family:var(--mono);font-size:var(--t-2xs);
   color:var(--accent);background:rgba(10,14,19,.85);padding:1px 4px;border-radius:3px}
 
 /* ---- Toast ------------------------------------------------- */
@@ -817,43 +935,31 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
 <!-- FPL drop-down -->
 <div class="drop" id="dropFpl">
-  <div class="drow">
-    <button class="dbtn">P2-LAW</button>
-    <button class="dbtn">BK117</button>
-    <button class="dbtn">9,500'</button>
-  </div>
-  <div class="drow">
-    <button class="dbtn">Procedure</button>
-    <button class="dbtn">Routes (3)</button>
-    <button class="dbtn">ETD</button>
-  </div>
-  <div class="chips">
-    <div class="chip act">AYNZ</div>
-    <div class="chip">06 34.2S</div>
-    <div class="chip">146 43.6E</div>
-    <div class="chip">AYGA</div>
-    <div class="chip">05 49.3S</div>
-    <div class="chip">AYMH</div>
-  </div>
-  <div class="strip" id="fplStrip">
-    <button class="stripchev" aria-label="Previous">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
-    </button>
-    <div class="acol"><span class="k">DIST</span><span class="v">128</span></div>
-    <div class="acol"><span class="k">ETE</span><span class="v">1:04</span></div>
-    <div class="acol"><span class="k">ETA</span><span class="v">0412</span></div>
-    <div class="acol"><span class="k">FUEL</span><span class="v">214</span></div>
-    <button class="stripchev" aria-label="Next">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
-    </button>
-  </div>
+  <div class="dbody" id="fplBody"></div>
+  <div class="strip" id="fplStrip"></div>
   <div class="dtabs">
-    <button class="dtool" aria-label="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 15V4"/><path d="M8 7.6L12 3.6l4 4"/><path d="M5 14v5.4h14V14"/></svg></button>
-    <button class="dtool" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg></button>
+    <button class="dtool" id="fplRev" aria-label="Reverse route">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 8h13l-3.4-3.4M20 16H7l3.4 3.4"/></svg>
+    </button>
+    <button class="dtool" id="fplClr" aria-label="Clear route">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
     <span class="spacer"></span>
-    <button class="dtab on">Edit</button>
-    <button class="dtab">NavLog</button>
-    <button class="dtab">Profile</button>
+    <button class="dtab on" data-ft="route">Route</button>
+    <button class="dtab" data-ft="navlog">NavLog</button>
+    <button class="dtab" data-ft="profile">Profile</button>
+  </div>
+</div>
+
+<!-- Waypoint entry / chip actions -->
+<div class="ted" id="wptSheet">
+  <div class="tedw">
+    <div class="tedh">
+      <b id="wptTitle">Add waypoint</b>
+      <button class="x" id="wptClose" aria-label="Close">&times;</button>
+    </div>
+    <div id="wptTop"></div>
+    <div class="tedlist" id="wptList"></div>
   </div>
 </div>
 
@@ -943,6 +1049,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   </div>
 </div>
 
+<!-- Type scale reference -->
+<div class="ted" id="typeSc">
+  <div class="tedw">
+    <div class="tedh">
+      <b>Type scale</b>
+      <button class="x" id="typeScClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="tedlist" id="typeScList"></div>
+  </div>
+</div>
+
 <!-- Activity-bar editor -->
 <div class="ted" id="actEd">
   <div class="tedw">
@@ -981,7 +1098,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v6';
+  var VERSION = 'v9';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1004,6 +1121,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#sheetMore').classList.remove('on');
     if (gps) gps.classList.remove('on');
     if (actEd) actEd.classList.remove('on');
+    if (typeSc) typeSc.classList.remove('on');
+    if (wpt) wpt.classList.remove('on');
     if (ted) ted.classList.remove('on');
     scrim.classList.remove('on');
     $('#tbLayers').classList.remove('on');
@@ -1046,23 +1165,410 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
   });
 
-  /* ---------- FPL drop-down ---------- */
+  /* ============================================================
+     FLIGHT PLAN
+     Route construction, NavLog and Profile. Great-circle maths is
+     real; terrain is a deterministic model, not survey data.
+     DEMO ONLY - not for navigation.
+     ============================================================ */
+
+  var AC = { tas: 110, burn: 176, fob: 500, resMin: 30, alt: 9500 };
+
+  var DB = [
+    { id:'AYNZ', nm:'Nadzab Tomodachi',  lat:-6.5698, lon:146.7261 },
+    { id:'AYGA', nm:'Goroka',            lat:-6.0817, lon:145.3917 },
+    { id:'AYMH', nm:'Mount Hagen Kagamuga', lat:-5.8267, lon:144.2961 },
+    { id:'AYMD', nm:'Madang',            lat:-5.2072, lon:145.7890 },
+    { id:'AYPY', nm:'Port Moresby Jacksons', lat:-9.4433, lon:147.2200 },
+    { id:'AYTK', nm:'Tokua',             lat:-4.3400, lon:152.3800 },
+    { id:'AYWK', nm:'Wewak Boram',       lat:-3.5838, lon:143.6692 },
+    { id:'AYMO', nm:'Momote',            lat:-2.0619, lon:147.4242 },
+    { id:'AYVN', nm:'Vanimo',            lat:-2.6927, lon:141.3021 },
+    { id:'AYKI', nm:'Kiunga',            lat:-6.1257, lon:141.2818 },
+    { id:'AYTB', nm:'Tabubil',           lat:-5.2786, lon:141.2260 },
+    { id:'AYMN', nm:'Mendi',             lat:-6.1478, lon:143.6572 },
+    { id:'AYWD', nm:'Wapenamanda',       lat:-5.6433, lon:143.8950 },
+    { id:'AYKV', nm:'Kavieng',           lat:-2.5794, lon:150.8078 },
+    { id:'AYBK', nm:'Buka',              lat:-5.4222, lon:154.6733 },
+    { id:'AYCH', nm:'Chimbu Kundiawa',   lat:-6.0242, lon:144.9706 }
+  ];
+
+  var ROUTE = [
+    { id:'AYNZ', nm:'Nadzab Tomodachi',      lat:-6.5698, lon:146.7261 },
+    { id:'AYGA', nm:'Goroka',                lat:-6.0817, lon:145.3917 },
+    { id:'AYMH', nm:'Mount Hagen Kagamuga',  lat:-5.8267, lon:144.2961 }
+  ];
+  var fplTab = 'route', activeLeg = 0;
+
+  /* ---- geodesy ---- */
+  var R2D = 180 / Math.PI, D2R = Math.PI / 180;
+  function nmBetween(a, b){
+    var p1 = a.lat * D2R, p2 = b.lat * D2R;
+    var dp = (b.lat - a.lat) * D2R, dl = (b.lon - a.lon) * D2R;
+    var h = Math.sin(dp/2) * Math.sin(dp/2)
+          + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+    return 2 * Math.asin(Math.min(1, Math.sqrt(h))) * 3440.065;
+  }
+  function trkBetween(a, b){
+    var p1 = a.lat * D2R, p2 = b.lat * D2R, dl = (b.lon - a.lon) * D2R;
+    var y = Math.sin(dl) * Math.cos(p2);
+    var x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+    return (Math.atan2(y, x) * R2D + 360) % 360;
+  }
+  function interp(a, b, f){
+    return { lat: a.lat + (b.lat - a.lat) * f, lon: a.lon + (b.lon - a.lon) * f };
+  }
+
+  /* ---- deterministic terrain model (illustrative only) ---- */
+  function terrainAt(lat, lon){
+    var v = Math.sin(lat * 7.3 + lon * 4.1) * 0.50
+          + Math.sin(lat * 13.7 - lon * 9.4) * 0.30
+          + Math.sin(lon * 21.3 + 2.1) * 0.20;
+    var r = Math.max(0, v);
+    return Math.round(180 + r * r * 11800);
+  }
+
+  /* ---- derived plan ---- */
+  function legs(){
+    var out = [], t = 0;
+    for (var i = 0; i < ROUTE.length - 1; i++){
+      var a = ROUTE[i], b = ROUTE[i+1];
+      var d = nmBetween(a, b), hr = d / AC.tas;
+      var hi = 0;
+      for (var s = 0; s <= 40; s++){
+        var p = interp(a, b, s/40), e = terrainAt(p.lat, p.lon);
+        if (e > hi) hi = e;
+      }
+      t += hr;
+      out.push({ a:a, b:b, nm:d, hr:hr, cum:t, fuel:hr * AC.burn, hi:hi });
+    }
+    return out;
+  }
+  function totals(){
+    var L = legs(), d = 0, hr = 0;
+    L.forEach(function(l){ d += l.nm; hr += l.hr; });
+    return { legs:L, nm:d, hr:hr, burn:hr * AC.burn, rem: AC.fob - hr * AC.burn };
+  }
+  function hhmm(hr){
+    var h = Math.floor(hr), m = Math.round((hr - h) * 60);
+    if (m === 60){ h += 1; m = 0; }
+    return h + ':' + String(m).padStart(2, '0');
+  }
+  var ETD_MIN = 3 * 60 + 8;                       /* 0308Z, demo */
+  function clock(hr){
+    var t = Math.round(ETD_MIN + hr * 60) % 1440;
+    return String(Math.floor(t / 60)).padStart(2,'0') + String(t % 60).padStart(2,'0');
+  }
+  function ddm(v, isLat){
+    var h = isLat ? (v < 0 ? 'S' : 'N') : (v < 0 ? 'W' : 'E');
+    var a = Math.abs(v), d = Math.floor(a), m = (a - d) * 60;
+    return h + String(d).padStart(isLat ? 2 : 3, '0') + ' ' + m.toFixed(1);
+  }
+  function label(p){ return p.id || (ddm(p.lat, true) + ' ' + ddm(p.lon, false)); }
+
+  /* ---- render: Route ---- */
+  function routeHTML(){
+    var h = '<div class="drow">'
+      + '<button class="dbtn">P2-LAW</button>'
+      + '<button class="dbtn">BK117</button>'
+      + '<button class="dbtn">' + AC.alt.toLocaleString() + '\'</button></div>'
+      + '<div class="drow">'
+      + '<button class="dbtn">Procedure</button>'
+      + '<button class="dbtn">Routes (3)</button>'
+      + '<button class="dbtn">ETD ' + clock(0) + '</button></div>';
+    if (!ROUTE.length){
+      h += '<div class="chipempty">No route. Tap Add to build one.</div>';
+    }
+    h += '<div class="chips">';
+    ROUTE.forEach(function(p, i){
+      h += '<button class="chip' + (i === activeLeg ? ' act' : '') + '" data-ci="' + i + '">'
+         + '<span class="ix">' + (i + 1) + '</span>'
+         + '<span class="nm">' + label(p) + '</span></button>';
+    });
+    h += '<button class="chip add" id="chipAdd"><span class="nm">+ Add</span></button>';
+    h += '</div>';
+    return h;
+  }
+
+  /* ---- render: NavLog ---- */
+  function navlogHTML(){
+    var T = totals();
+    if (!T.legs.length) return '<div class="chipempty">Add at least two points.</div>';
+    return T.legs.map(function(l, i){
+      var clr = AC.alt - l.hi;
+      return '<div class="lgc">'
+        + '<div class="lgh"><b>' + label(l.a) + ' \u2192 ' + label(l.b) + '</b>'
+        + '<span>Leg ' + (i + 1) + '</span></div>'
+        + '<div class="lgg">'
+        +   '<div><span class="k">Track</span><span class="v">' + Math.round(trkBetween(l.a, l.b)) + '\u00b0</span></div>'
+        +   '<div><span class="k">Dist</span><span class="v">' + l.nm.toFixed(1) + '</span></div>'
+        +   '<div><span class="k">ETE</span><span class="v">' + hhmm(l.hr) + '</span></div>'
+        +   '<div><span class="k">ETA</span><span class="v">' + clock(l.cum) + '</span></div>'
+        +   '<div><span class="k">Fuel</span><span class="v">' + Math.round(l.fuel) + '</span></div>'
+        +   '<div><span class="k">Max terr</span><span class="v' + (clr < 1000 ? ' warn' : '') + '">'
+        +     l.hi.toLocaleString() + '</span></div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  /* ---- render: Profile ---- */
+  var PROF_N = 180, profSamples = [], profScrub = 0;
+  function buildProfile(){
+    var T = totals();
+    profSamples = [];
+    if (!T.legs.length) return T;
+    var step = T.nm / PROF_N, acc = 0, li = 0, within = 0;
+    for (var s = 0; s <= PROF_N; s++){
+      var target = s * step;
+      while (li < T.legs.length - 1 && target > acc + T.legs[li].nm){ acc += T.legs[li].nm; li++; }
+      within = (target - acc) / T.legs[li].nm;
+      var p = interp(T.legs[li].a, T.legs[li].b, Math.max(0, Math.min(1, within)));
+      profSamples.push({ d: target, e: terrainAt(p.lat, p.lon) });
+    }
+    return T;
+  }
+  function profileHTML(){
+    buildProfile();
+    if (!profSamples.length) return '<div class="chipempty">Add at least two points.</div>';
+    return '<div class="prof" id="profBox"></div><div class="profstats" id="profStats"></div>';
+  }
+
+  /* Paint into stable containers so the drag listener survives a repaint. */
+  function profPaint(){
+    var box = $('#profBox'); if (!box) return;
+    var T = totals();
+    var W = 340, H = 190, PAD = 26;
+    var maxE = Math.max(AC.alt + 1500,
+                Math.max.apply(null, profSamples.map(function(s){ return s.e; })) + 900);
+    var x = function(d){ return PAD + (d / T.nm) * (W - PAD - 6); };
+    var y = function(e){ return H - 16 - (e / maxE) * (H - 30); };
+
+    var d = 'M' + x(0) + ',' + (H - 16);
+    profSamples.forEach(function(s){ d += ' L' + x(s.d).toFixed(1) + ',' + y(s.e).toFixed(1); });
+    d += ' L' + x(T.nm) + ',' + (H - 16) + ' Z';
+
+    var hi = 0, hiD = 0;
+    profSamples.forEach(function(s){ if (s.e > hi){ hi = s.e; hiD = s.d; } });
+    var clr = AC.alt - hi;
+
+    var ticks = '<line x1="' + x(0) + '" y1="14" x2="' + x(0) + '" y2="' + (H-16)
+              + '" stroke="#2a3744" stroke-width="1"/>';
+    var cum = 0;
+    T.legs.forEach(function(l){
+      cum += l.nm;
+      ticks += '<line x1="' + x(cum).toFixed(1) + '" y1="14" x2="' + x(cum).toFixed(1)
+             + '" y2="' + (H-16) + '" stroke="#2a3744" stroke-width="1"/>';
+    });
+
+    var sx = x(profScrub * T.nm);
+    var se = profSamples[Math.round(profScrub * PROF_N)] || profSamples[0];
+
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">'
+      + '<path d="' + d + '" fill="rgba(127,179,213,.16)" stroke="#7fb3d5" stroke-width="1.2"/>'
+      + ticks
+      + '<line x1="' + PAD + '" y1="' + y(AC.alt).toFixed(1) + '" x2="' + (W-6) + '" y2="' + y(AC.alt).toFixed(1)
+      +   '" stroke="#ffb020" stroke-width="1.4" stroke-dasharray="5 4"/>'
+      + '<line x1="' + sx.toFixed(1) + '" y1="6" x2="' + sx.toFixed(1) + '" y2="' + (H-16)
+      +   '" stroke="#dce6f0" stroke-width="1"/>'
+      + '<circle cx="' + sx.toFixed(1) + '" cy="' + y(se.e).toFixed(1) + '" r="3.5" fill="#dce6f0"/>'
+      + '<text x="4" y="' + (y(AC.alt) - 4).toFixed(1) + '" fill="#ffb020" font-size="9" '
+      +   'font-family="monospace">' + (AC.alt/1000) + 'k</text>'
+      + '</svg>';
+
+    $('#profStats').innerHTML =
+        '<div><span class="k">At cursor</span><span class="v">' + se.e.toLocaleString() + '</span></div>'
+      + '<div><span class="k">Cursor clr</span><span class="v' + ((AC.alt - se.e) < 1000 ? ' warn' : '') + '">'
+      +   Math.round(AC.alt - se.e).toLocaleString() + '</span></div>'
+      + '<div><span class="k">Dist along</span><span class="v">' + (profScrub * T.nm).toFixed(1) + '</span></div>'
+      + '<div><span class="k">Highest pt</span><span class="v">' + hi.toLocaleString() + '</span></div>'
+      + '<div><span class="k">Clearance</span><span class="v' + (clr < 1000 ? ' warn' : '') + '">'
+      +   clr.toLocaleString() + '</span></div>'
+      + '<div><span class="k">At</span><span class="v">' + hiD.toFixed(1) + ' nm</span></div>';
+  }
+
+  /* ---- strip: one number dominant ---- */
+  function stripHTML(){
+    var T = totals();
+    var resKg = AC.burn * (AC.resMin / 60);
+    var low = T.rem < resKg;
+    return '<div class="hero"><span class="k">Fuel on arrival</span>'
+      + '<span class="v' + (low ? ' warn' : '') + '">' + Math.round(T.rem) + '<u>kg</u></span></div>'
+      + '<div class="minis">'
+      +   '<div class="mini"><span class="k">Dist</span><span class="v">' + T.nm.toFixed(0) + '</span></div>'
+      +   '<div class="mini"><span class="k">ETE</span><span class="v">' + hhmm(T.hr) + '</span></div>'
+      +   '<div class="mini"><span class="k">ETA</span><span class="v">' + clock(T.hr) + '</span></div>'
+      + '</div>';
+  }
+
+  function drawFpl(){
+    $('#fplBody').innerHTML = fplTab === 'route'   ? routeHTML()
+                            : fplTab === 'navlog'  ? navlogHTML()
+                            : profileHTML();
+    $('#fplStrip').innerHTML = stripHTML();
+    if (fplTab === 'route'){
+      $$('#fplBody .chip[data-ci]').forEach(function(c){
+        c.addEventListener('click', function(){ openChip(parseInt(c.getAttribute('data-ci'), 10)); });
+      });
+      var add = $('#chipAdd');
+      if (add) add.addEventListener('click', function(){ openAdd(ROUTE.length); });
+    }
+    if (fplTab === 'profile'){ profPaint(); wireScrub(); }
+    drawLegs();
+  }
+
+  function wireScrub(){
+    var box = $('#profBox'); if (!box) return;
+    function set(e){
+      var r = box.getBoundingClientRect();
+      var t = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+      profScrub = Math.max(0, Math.min(1, (t - r.left) / r.width));
+      profPaint();                       /* repaints children only */
+    }
+    box.addEventListener('touchstart', function(e){ e.preventDefault(); set(e); }, { passive:false });
+    box.addEventListener('touchmove',  function(e){ e.preventDefault(); set(e); }, { passive:false });
+    box.addEventListener('mousedown', function(e){
+      set(e);
+      function mv(ev){ set(ev); }
+      function up(){ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
+      document.addEventListener('mousemove', mv);
+      document.addEventListener('mouseup', up);
+    });
+  }
+
+  /* ---- FPL open / tabs / tools ---- */
   var drop = $('#dropFpl');
+  function sizeDrop(){
+    var top = $('#chrome').getBoundingClientRect().bottom;
+    var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
+    drop.style.top = top + 'px';
+    drop.style.maxHeight = (window.innerHeight - top - tabH - 10) + 'px';
+  }
   $('#tbFpl').addEventListener('click', function(){
     var open = drop.classList.contains('on');
     closeAll();
     if (open) return;
-    drop.style.top = $('#chrome').getBoundingClientRect().bottom + 'px';
+    sizeDrop();
+    drawFpl();
     drop.classList.add('on');
     scrim.classList.add('on');
     $('#tbFpl').classList.add('on');
   });
+  window.addEventListener('resize', function(){ if (drop.classList.contains('on')) sizeDrop(); });
   $$('#dropFpl .dtab').forEach(function(b){
     b.addEventListener('click', function(){
       $$('#dropFpl .dtab').forEach(function(x){ x.classList.remove('on'); });
       b.classList.add('on');
+      fplTab = b.getAttribute('data-ft');
+      drawFpl();
     });
   });
+  $('#fplRev').addEventListener('click', function(){
+    ROUTE.reverse(); activeLeg = 0; drawFpl(); toast('Route reversed');
+  });
+  $('#fplClr').addEventListener('click', function(){
+    ROUTE = []; activeLeg = 0; drawFpl(); toast('Route cleared');
+  });
+
+  /* ============================================================
+     WAYPOINT SHEET - chip actions and point entry
+     ============================================================ */
+  var wpt = $('#wptSheet');
+  function closeWpt(){ wpt.classList.remove('on'); }
+  $('#wptClose').addEventListener('click', closeWpt);
+  wpt.addEventListener('click', function(e){ if (e.target === wpt) closeWpt(); });
+
+  function openChip(i){
+    var p = ROUTE[i];
+    $('#wptTitle').textContent = label(p);
+    $('#wptTop').innerHTML = '';
+    var rows = [
+      ['dct',  'Direct to here'],
+      ['ib',   'Insert point before'],
+      ['ia',   'Insert point after'],
+      ['up',   'Move up'],
+      ['dn',   'Move down'],
+      ['rm',   'Remove from route']
+    ];
+    $('#wptList').innerHTML = rows.map(function(r){
+      return '<button class="wrow' + (r[0] === 'rm' ? ' danger' : '') + '" data-a="' + r[0] + '">' + r[1] + '</button>';
+    }).join('');
+    $$('#wptList .wrow').forEach(function(b){
+      b.addEventListener('click', function(){
+        var a = b.getAttribute('data-a');
+        if (a === 'dct'){ activeLeg = i; closeWpt(); drawFpl(); toast('Direct to ' + label(p)); return; }
+        if (a === 'ib'){ closeWpt(); openAdd(i); return; }
+        if (a === 'ia'){ closeWpt(); openAdd(i + 1); return; }
+        if (a === 'up' && i > 0){ ROUTE.splice(i - 1, 0, ROUTE.splice(i, 1)[0]); }
+        if (a === 'dn' && i < ROUTE.length - 1){ ROUTE.splice(i + 1, 0, ROUTE.splice(i, 1)[0]); }
+        if (a === 'rm'){ ROUTE.splice(i, 1); if (activeLeg >= ROUTE.length) activeLeg = Math.max(0, ROUTE.length - 1); }
+        closeWpt(); drawFpl();
+      });
+    });
+    closeAllSheetsButFpl();
+    wpt.classList.add('on');
+  }
+
+  function openAdd(at){
+    $('#wptTitle').textContent = 'Add point' + (at < ROUTE.length ? ' at ' + (at + 1) : '');
+    $('#wptTop').innerHTML =
+        '<div class="wsearch"><input id="wq" type="text" placeholder="ICAO or name" '
+      + 'autocapitalize="characters" autocorrect="off" spellcheck="false"></div>'
+      + '<div class="wcoord">'
+      +   '<input id="wLat" type="text" inputmode="text" placeholder="S06 34.2">'
+      +   '<input id="wLon" type="text" inputmode="text" placeholder="E146 43.6">'
+      +   '<button id="wAdd">Add</button>'
+      + '</div>';
+    function list(q){
+      q = (q || '').trim().toUpperCase();
+      var hits = DB.filter(function(p){
+        return !q || p.id.indexOf(q) === 0 || p.nm.toUpperCase().indexOf(q) >= 0;
+      }).slice(0, 40);
+      var h = '<div class="wsec">Fields</div>';
+      if (!hits.length) h += '<div class="chipempty">No match</div>';
+      hits.forEach(function(p){
+        h += '<button class="wrow" data-id="' + p.id + '">'
+           + '<span class="id">' + p.id + '</span>'
+           + '<span class="nm2">' + p.nm + '</span></button>';
+      });
+      $('#wptList').innerHTML = h;
+      $$('#wptList .wrow').forEach(function(b){
+        b.addEventListener('click', function(){
+          var f = null, id = b.getAttribute('data-id');
+          DB.forEach(function(p){ if (p.id === id) f = p; });
+          if (!f) return;
+          ROUTE.splice(at, 0, { id:f.id, nm:f.nm, lat:f.lat, lon:f.lon });
+          closeWpt(); drawFpl();
+        });
+      });
+    }
+    list('');
+    $('#wq').addEventListener('input', function(e){ list(e.target.value); });
+    $('#wAdd').addEventListener('click', function(){
+      var la = parseDDM($('#wLat').value, true), lo = parseDDM($('#wLon').value, false);
+      if (la === null || lo === null){ toast('Use S06 34.2 / E146 43.6'); return; }
+      ROUTE.splice(at, 0, { id:null, lat:la, lon:lo });
+      closeWpt(); drawFpl();
+    });
+    closeAllSheetsButFpl();
+    wpt.classList.add('on');
+  }
+
+  function parseDDM(s, isLat){
+    if (!s) return null;
+    var m = String(s).trim().toUpperCase().match(/^([NSEW])\s*(\d{1,3})[\s\u00b0]*(\d{1,2}(?:\.\d+)?)?$/);
+    if (!m) return null;
+    var sign = (m[1] === 'S' || m[1] === 'W') ? -1 : 1;
+    var v = parseInt(m[2], 10) + (m[3] ? parseFloat(m[3]) / 60 : 0);
+    if (isLat && v > 90) return null;
+    if (!isLat && v > 180) return null;
+    return sign * v;
+  }
+
+  function closeAllSheetsButFpl(){
+    if (typeof ted !== 'undefined' && ted) ted.classList.remove('on');
+    if (typeof actEd !== 'undefined' && actEd) actEd.classList.remove('on');
+    if (typeof typeSc !== 'undefined' && typeSc) typeSc.classList.remove('on');
+  }
 
   /* ============================================================
      ACTIVITY BAR — 2 pages x 5 slots, every slot user-assignable.
@@ -1130,6 +1636,37 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     drawActy();
   });
   drawActy();
+
+  /* ---------- Type scale reference ---------- */
+  var TYPE_ROWS = [
+    { v:'--t-2xs', px:'9 px',  w:'micro-labels only: form field labels, editor slot captions',
+      ex:'<div class="u">Trip &middot; NM</div><div class="u">Reserve &middot; min</div>' },
+    { v:'--t-xs',  px:'10 px', w:'activity-bar labels, rail "VFR", section headers, tab-bar labels, GPS header',
+      ex:'<div class="u">Groundspeed</div><div class="u">Dist next</div><div>Airports</div>' },
+    { v:'--t-sm',  px:'13 px', w:'most buttons and list rows: toolbar "FPL", search, popover rows, card sub-tabs, waypoint chips',
+      ex:'<div>Procedure &middot; Routes (3) &middot; ETD</div><div class="m">AYNZ &middot; 06 34.2S</div><div>Search field, waypoint, navaid</div>' },
+    { v:'--t-md',  px:'15 px', w:'activity-bar values, More list rows, airport-card title',
+      ex:'<div class="m">82 &middot; 284 &middot; 14.6</div><div>Weight &amp; balance</div>' },
+    { v:'--t-lg',  px:'17 px', w:'full-screen view headers',
+      ex:'<div>Quick Fuel Check</div>' },
+    { v:'--t-in',  px:'16 px', w:'text inputs only \u2014 iOS force-zooms the page below 16 px',
+      ex:'<div class="m">0.800</div>' },
+    { v:'--t-disp',px:'30 px', w:'result numbers read at arm\'s length (fuel total, endurance)',
+      ex:'<div class="m" style="color:var(--accent)">214 kg</div>' }
+  ];
+  var typeSc = $('#typeSc');
+  function openType(){
+    closeAll();
+    $('#typeScList').innerHTML = TYPE_ROWS.map(function(r){
+      return '<div class="tsrow">'
+        + '<div class="tsmeta"><b>' + r.v + '</b><span>' + r.px + '</span></div>'
+        + '<div class="tsex" style="font-size:var(' + r.v + ')">' + r.ex + '</div>'
+        + '<div class="tswhere">' + r.w + '</div></div>';
+    }).join('');
+    typeSc.classList.add('on');
+  }
+  $('#typeScClose').addEventListener('click', function(){ typeSc.classList.remove('on'); });
+  typeSc.addEventListener('click', function(e){ if (e.target === typeSc) typeSc.classList.remove('on'); });
 
   /* ---------- Activity-bar editor ---------- */
   var actEd = $('#actEd'), actSel = 0;
@@ -1419,6 +1956,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
         + svg(v.k) + '</span>' + v.t + '</button>';
   });
+  mh += '<button class="srow" data-go="__type"><span class="sq" style="background:var(--accent)">'
+      + svg('notes') + '</span>Type scale</button>';
   mh += '<button class="srow" data-go="__acty"><span class="sq" style="background:var(--accent)">'
       + svg('more') + '</span>Edit activity bar</button>';
   mh += '<button class="srow" data-go="__metrics"><span class="sq" style="background:var(--accent)">'
@@ -1430,6 +1969,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       var k = r.getAttribute('data-go');
       if (k === '__metrics'){ closeAll(); showMetrics(); return; }
       if (k === '__acty'){ openActEd(); return; }
+      if (k === '__type'){ openType(); return; }
       goTo(k);
     });
   });
