@@ -12,6 +12,12 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v6  2026-07-20  Toolbar slot 7: GPS window -> Track my position
+                       (Off / Centred / Follow). Slot 6: Favourites ->
+                       Direct-To (proposal, undecided). Activity bar is
+                       now fully editable: 2 pages x 5 slots, any field
+                       in any slot, persisted. Editor at More > Edit
+                       activity bar.
        v5  2026-07-20  GPS can now be assigned to a bottom-bar slot.
                        Introduced "action" entries: choosing one opens
                        an overlay instead of replacing the screen, so
@@ -628,6 +634,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .tslot.sel .n{color:var(--accent)}
 .tslot .v{font-size:var(--t-sm);font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tedpage{padding:12px 12px 0}
+.tedpage .pl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-fainter);margin-bottom:6px}
+.tedpage .row{display:flex;gap:4px;margin-bottom:12px}
+.tslot.sm{padding:7px 2px;gap:3px}
+.tslot.sm .n{font-size:8px;letter-spacing:.08em}
+.tslot.sm .v{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.01em}
 .tedhint{padding:0 14px 8px;font-size:var(--t-xs);color:var(--text-fainter);letter-spacing:.04em}
 .tedlist{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--border)}
 .tedrow{width:100%;height:var(--mod-b);display:flex;align-items:center;gap:10px;padding:0 14px;
@@ -678,11 +691,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <button class="tb on" id="tbActy" aria-label="Activity bar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.4"/><path d="M12 12l4-3.4"/></svg>
       </button>
-      <button class="tb" id="tbRec" aria-label="Recent">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>
+      <button class="tb" id="tbDct" aria-label="Direct to">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4.6 19.4L19.4 4.6"/><path d="M13.4 4.6h6v6"/><circle cx="6.2" cy="17.8" r="2.6"/></svg>
       </button>
-      <button class="tb gps" id="tbGps" aria-label="GPS window">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.4"/><path d="M12 1.8v3.4M12 18.8v3.4M22.2 12h-3.4M5.2 12H1.8"/></svg>
+      <button class="tb gps" id="tbLoc" aria-label="Track my position">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><path d="M12 1.8v3.4M12 18.8v3.4M22.2 12h-3.4M5.2 12H1.8"/></svg>
       </button>
     </div>
     <div class="searchrow">
@@ -930,6 +943,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   </div>
 </div>
 
+<!-- Activity-bar editor -->
+<div class="ted" id="actEd">
+  <div class="tedw">
+    <div class="tedh">
+      <b>Activity bar</b>
+      <button class="x" id="actEdClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="tedpage" id="actSlots"></div>
+    <div class="tedhint" id="actHint"></div>
+    <div class="tedlist" id="actList"></div>
+  </div>
+</div>
+
 <!-- Full-screen view layer -->
 <div class="view" id="viewLayer"></div>
 
@@ -955,7 +981,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v5';
+  var VERSION = 'v6';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -977,6 +1003,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#dropFpl').classList.remove('on');
     $('#sheetMore').classList.remove('on');
     if (gps) gps.classList.remove('on');
+    if (actEd) actEd.classList.remove('on');
+    if (ted) ted.classList.remove('on');
     scrim.classList.remove('on');
     $('#tbLayers').classList.remove('on');
     $('#tbFpl').classList.remove('on');
@@ -1036,26 +1064,121 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
   });
 
-  /* ---------- Activity bar ---------- */
-  var PAGES = [
-    [['GS','82'],['TRK','284'],['DIST NEXT','14.6'],['ETE DEST','1:04'],['FUEL','214']],
-    [['IAS','—'],['ALT','9,500'],['ETA DEST','0412'],['DIST DEST','128'],['WIND','—']]
+  /* ============================================================
+     ACTIVITY BAR — 2 pages x 5 slots, every slot user-assignable.
+     Demo values are static placeholders.
+     ============================================================ */
+  var ACT_FIELDS = [
+    { k:'gs',    t:'GS',        v:'82'    },
+    { k:'trk',   t:'TRK',       v:'284'   },
+    { k:'hdg',   t:'HDG',       v:'279'   },
+    { k:'ias',   t:'IAS',       v:null    },
+    { k:'tas',   t:'TAS',       v:'110'   },
+    { k:'alt',   t:'ALT',       v:'9,500' },
+    { k:'gpsalt',t:'GPS ALT',   v:'9,540' },
+    { k:'agl',   t:'HGT AGL',   v:'3,180' },
+    { k:'dnext', t:'DIST NEXT', v:'14.6'  },
+    { k:'ddest', t:'DIST DEST', v:'128'   },
+    { k:'enext', t:'ETE NEXT',  v:'0:11'  },
+    { k:'edest', t:'ETE DEST',  v:'1:04'  },
+    { k:'anext', t:'ETA NEXT',  v:'0319'  },
+    { k:'adest', t:'ETA DEST',  v:'0412'  },
+    { k:'frem',  t:'FUEL REM',  v:'214'   },
+    { k:'freq',  t:'FUEL REQ',  v:'188'   },
+    { k:'endur', t:'ENDURANCE', v:'1:13'  },
+    { k:'wind',  t:'WIND',      v:null    },
+    { k:'oat',   t:'OAT',       v:'+11'   },
+    { k:'xte',   t:'XTE',       v:'0.2'   },
+    { k:'da',    t:'DA',        v:'11,240'},
+    { k:'utc',   t:'UTC',       v:'0308'  },
+    { k:'lt',    t:'LOCAL',     v:'1308'  }
   ];
+  function actField(k){
+    for (var i=0;i<ACT_FIELDS.length;i++) if (ACT_FIELDS[i].k===k) return ACT_FIELDS[i];
+    return null;
+  }
+
+  var ACT_KEY = 'nmp.iphone.acty';
+  var ACT_DEFAULT = ['gs','trk','dnext','edest','frem',
+                     'tas','alt','adest','ddest','wind'];
+  function loadAct(){
+    try{
+      var s = localStorage.getItem(ACT_KEY);
+      if (s){ var a = JSON.parse(s); if (a && a.length === 10) return a; }
+    }catch(e){}
+    return ACT_DEFAULT.slice();
+  }
+  function saveAct(){ try{ localStorage.setItem(ACT_KEY, JSON.stringify(actCfg)); }catch(e){} }
+
+  var actCfg  = loadAct();
   var pageIdx = 0;
+
   function drawActy(){
-    var p = PAGES[pageIdx], h = '';
-    for (var i = 0; i < p.length; i++){
-      var dash = (p[i][1] === '—');
-      h += '<div class="acol"><span class="k">' + p[i][0] + '</span>'
-         + '<span class="v' + (dash ? ' dash' : '') + '">' + (dash ? '- - -' : p[i][1]) + '</span></div>';
+    var h = '';
+    for (var i = 0; i < 5; i++){
+      var f = actField(actCfg[pageIdx * 5 + i]);
+      if (!f){ h += '<div class="acol"></div>'; continue; }
+      var dash = (f.v === null);
+      h += '<div class="acol"><span class="k">' + f.t + '</span>'
+         + '<span class="v' + (dash ? ' dash' : '') + '">'
+         + (dash ? '- - -' : f.v) + '</span></div>';
     }
     $('#actyPage').innerHTML = h;
   }
-  drawActy();
   $('#actyNext').addEventListener('click', function(){
-    pageIdx = (pageIdx + 1) % PAGES.length;
+    pageIdx = (pageIdx + 1) % 2;
     drawActy();
   });
+  drawActy();
+
+  /* ---------- Activity-bar editor ---------- */
+  var actEd = $('#actEd'), actSel = 0;
+  function openActEd(){ closeAll(); actSel = 0; drawActEd(); actEd.classList.add('on'); }
+  function closeActEd(){ actEd.classList.remove('on'); }
+  $('#actEdClose').addEventListener('click', closeActEd);
+  actEd.addEventListener('click', function(e){ if (e.target === actEd) closeActEd(); });
+
+  function drawActEd(){
+    var s = '';
+    for (var p = 0; p < 2; p++){
+      s += '<div class="pl">Page ' + (p + 1) + '</div><div class="row">';
+      for (var i = 0; i < 5; i++){
+        var idx = p * 5 + i, f = actField(actCfg[idx]);
+        s += '<button class="tslot sm' + (idx === actSel ? ' sel' : '') + '" data-s="' + idx + '">'
+           + '<span class="n">' + (i + 1) + '</span>'
+           + '<span class="v">' + (f ? f.t : '\u2014') + '</span></button>';
+      }
+      s += '</div>';
+    }
+    $('#actSlots').innerHTML = s;
+    $$('#actSlots .tslot').forEach(function(b){
+      b.addEventListener('click', function(){
+        actSel = parseInt(b.getAttribute('data-s'), 10);
+        pageIdx = Math.floor(actSel / 5);
+        drawActy(); drawActEd();
+      });
+    });
+    $('#actHint').textContent = 'Choose what goes in page ' + (Math.floor(actSel/5) + 1)
+                              + ', slot ' + (actSel % 5 + 1) + '.';
+    var l = '';
+    ACT_FIELDS.forEach(function(f){
+      var at = actCfg.indexOf(f.k);
+      l += '<button class="tedrow" data-f="' + f.k + '">' + f.t
+         + (at >= 0 ? '<span class="badge">' + (Math.floor(at/5)+1) + '.' + (at%5+1) + '</span>' : '')
+         + '</button>';
+    });
+    $('#actList').innerHTML = l;
+    $$('#actList .tedrow').forEach(function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-f'), at = actCfg.indexOf(k);
+        if (at === actSel) return;
+        if (at >= 0) actCfg[at] = actCfg[actSel];   // swap, never duplicate
+        actCfg[actSel] = k;
+        saveAct();
+        drawActy(); drawActEd();
+      });
+    });
+  }
   $('#tbActy').addEventListener('click', function(){
     var on = $('#tbActy').classList.toggle('on');
     $('#acty').classList.toggle('off', !on);
@@ -1116,7 +1239,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
   }
 
-  $('#tbGps').addEventListener('click', function(){ openGps(); });
+
   function hideGps(){ gps.classList.remove('on'); renderTabs(); }
   $('#gpsClose').addEventListener('click', hideGps);
   gps.addEventListener('click', function(e){ if (e.target === gps) hideGps(); });
@@ -1296,6 +1419,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
         + svg(v.k) + '</span>' + v.t + '</button>';
   });
+  mh += '<button class="srow" data-go="__acty"><span class="sq" style="background:var(--accent)">'
+      + svg('more') + '</span>Edit activity bar</button>';
   mh += '<button class="srow" data-go="__metrics"><span class="sq" style="background:var(--accent)">'
       + svg('notes') + '</span>Layout metrics</button>';
   $('#moreList').innerHTML = mh;
@@ -1304,6 +1429,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     r.addEventListener('click', function(){
       var k = r.getAttribute('data-go');
       if (k === '__metrics'){ closeAll(); showMetrics(); return; }
+      if (k === '__acty'){ openActEd(); return; }
       goTo(k);
     });
   });
@@ -1512,8 +1638,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- Search / misc stubs ---------- */
   $('#search').addEventListener('click', function(){ toast('Search — placeholder'); });
-  ['#tbSet','#tbProf','#tbRec'].forEach(function(sel){
+  ['#tbSet','#tbProf','#tbDct'].forEach(function(sel){
     $(sel).addEventListener('click', function(){ closeAll(); toast('Placeholder'); });
+  });
+
+  /* ---------- Track my position: Off -> Centre -> Follow ---------- */
+  var LOC_STATES = ['Off', 'Centred', 'Follow \u00b7 track up'];
+  var locState = 0;
+  $('#tbLoc').addEventListener('click', function(){
+    locState = (locState + 1) % LOC_STATES.length;
+    $('#tbLoc').classList.toggle('on', locState > 0);
+    toast('Own position: ' + LOC_STATES[locState]);
   });
 
   /* ---------- Layout metrics overlay ---------- */
