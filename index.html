@@ -12,6 +12,28 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v12 2026-07-21  GPS window now reads the live route instead of a
+                       hardcoded list. Roles derived (DEP / WPT n / ARR),
+                       DMS and DDM computed from the same lat/lon the
+                       FPL uses, tabs scroll past three points, empty
+                       state when there is no route.
+       v11 2026-07-21  FPL panel is a fixed height with a scrolling body,
+                       so switching Route/NavLog/Profile no longer
+                       resizes it. Drag grip below the tabs resizes the
+                       panel; height persisted. Fixed profile scrubber
+                       drag: repainting the SVG detached the node the
+                       touch began on, so iOS stopped delivering
+                       touchmove to the listener. Move handlers now live
+                       on document for the life of the gesture.
+       v10 2026-07-21  Search covers everything, not just ICAO: IATA
+                       codes, names, enroute fixes, villages/strips and
+                       personal waypoints, grouped by category; a typed
+                       coordinate is offered as a result. Add-point
+                       sheet is fixed height so it no longer jumps while
+                       filtering. Drag-to-reorder route chips (260ms
+                       long-press). NavLog highlights the leg being
+                       flown; tap a card to set it. Clear and reverse
+                       swapped; Clear now arms before it fires.
        v9  2026-07-20  FPL panel built out. Route tab with full on-phone
                        construction (search by ICAO/name, DDM coordinate
                        entry, insert before/after, reorder, remove,
@@ -385,13 +407,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .chip.act{border-color:var(--route)}
 .chip.act .nm{color:var(--route)}
 .chip.act .ix{background:var(--route);color:#0a0e13}
+.chip.drag{border-color:var(--accent);background:var(--bg-2);opacity:.55}
 .chip.add{border-style:dashed;border-color:var(--border-strong);justify-content:center;padding:0 10px}
 .chip.add .nm{color:var(--accent-2)}
 .chipempty{padding:18px 0;text-align:center;font-size:var(--t-sm);color:var(--text-fainter)}
 
 /* ---- NavLog leg cards ---- */
 .lgc{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;
-  padding:10px;margin-bottom:var(--gut)}
+  padding:10px;margin-bottom:var(--gut);width:100%;text-align:left}
+.lgc.act{border-color:var(--route);background:rgba(240,165,0,.06)}
+.lgc.act .lgh b{color:var(--route)}
+.lgh .now{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:#0a0e13;background:var(--route);border-radius:4px;padding:2px 6px}
 .lgh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
 .lgh b{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
   color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -446,6 +473,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   color:var(--text-muted);background:var(--bg-2);border:1px solid var(--border);
 }
 .dtool svg{width:16px;height:16px}
+.dtool.arm{border-color:var(--bad);color:var(--bad)}
 .dtab{
   height:var(--mod-a);padding:0 11px;border-radius:var(--radius);
   display:flex;align-items:center;
@@ -453,6 +481,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:var(--bg-2);border:1px solid var(--border);
 }
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.dgrip{
+  flex:0 0 auto;height:22px;display:flex;align-items:center;justify-content:center;
+  border-top:1px solid var(--border);background:var(--panel);
+  touch-action:none;cursor:ns-resize;
+}
+.dgrip span{width:46px;height:4px;border-radius:2px;background:var(--border-strong);
+  transition:background .12s}
+.dgrip.on span{background:var(--accent)}
 
 /* ---- waypoint entry sheet ---- */
 .wsearch{padding:12px 12px 8px}
@@ -478,6 +514,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   color:var(--accent-2);flex:0 0 52px}
 .wrow .nm2{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text-2);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow .cat{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.wnote{padding:8px 14px 10px;font-size:var(--t-2xs);color:var(--text-fainter);
+  line-height:1.5;border-top:1px solid var(--border)}
 .wrow.danger{color:var(--bad)}
 .wsec{padding:10px 14px 6px;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--text-fainter);border-top:1px solid var(--border)}
@@ -644,9 +684,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .gpsprog{margin-top:16px;font-family:var(--mono);font-size:var(--t-sm);
   color:var(--text-faint);letter-spacing:.06em}
 
-.gpstabs{display:flex;border-top:1px solid var(--border)}
+.gpstabs{display:flex;border-top:1px solid var(--border);
+  overflow-x:auto;-webkit-overflow-scrolling:touch}
 .gpstabs button{
-  flex:1 1 0;min-width:0;height:50px;
+  flex:1 0 33.333%;min-width:0;height:50px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   border-top:3px solid transparent;background:transparent;
 }
@@ -725,6 +766,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .tedw{width:100%;max-width:420px;max-height:82%;display:flex;flex-direction:column;
   background:var(--panel);border-top:1px solid var(--border-strong);
   border-radius:12px 12px 0 0;overflow:hidden;padding-bottom:var(--sabp)}
+.tedw.tall{height:82%}          /* fixed height: sheet must not jump while filtering */
 .tedh{flex:0 0 var(--mod-b);display:flex;align-items:center;gap:8px;padding:0 6px 0 14px;
   background:var(--bg-2);border-bottom:1px solid var(--border)}
 .tedh b{flex:1 1 auto;font-size:var(--t-md);font-weight:700}
@@ -938,17 +980,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   <div class="dbody" id="fplBody"></div>
   <div class="strip" id="fplStrip"></div>
   <div class="dtabs">
-    <button class="dtool" id="fplRev" aria-label="Reverse route">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 8h13l-3.4-3.4M20 16H7l3.4 3.4"/></svg>
-    </button>
     <button class="dtool" id="fplClr" aria-label="Clear route">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <button class="dtool" id="fplRev" aria-label="Reverse route">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 8h13l-3.4-3.4M20 16H7l3.4 3.4"/></svg>
     </button>
     <span class="spacer"></span>
     <button class="dtab on" data-ft="route">Route</button>
     <button class="dtab" data-ft="navlog">NavLog</button>
     <button class="dtab" data-ft="profile">Profile</button>
   </div>
+  <div class="dgrip" id="fplGrip" aria-label="Resize panel"><span></span></div>
 </div>
 
 <!-- Waypoint entry / chip actions -->
@@ -1098,7 +1141,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v9';
+  var VERSION = 'v12';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1174,31 +1217,61 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   var AC = { tas: 110, burn: 176, fob: 500, resMin: 30, alt: 9500 };
 
+  /* Searchable points. cat drives the section grouping in the picker.
+     Fields are ICAO/IATA real. Fixes, villages and personal waypoints
+     carry DEMO coordinates - placeholders until ENR 4.3 / 4.4 and
+     Danny's own list are transcribed and verified. */
   var DB = [
-    { id:'AYNZ', nm:'Nadzab Tomodachi',  lat:-6.5698, lon:146.7261 },
-    { id:'AYGA', nm:'Goroka',            lat:-6.0817, lon:145.3917 },
-    { id:'AYMH', nm:'Mount Hagen Kagamuga', lat:-5.8267, lon:144.2961 },
-    { id:'AYMD', nm:'Madang',            lat:-5.2072, lon:145.7890 },
-    { id:'AYPY', nm:'Port Moresby Jacksons', lat:-9.4433, lon:147.2200 },
-    { id:'AYTK', nm:'Tokua',             lat:-4.3400, lon:152.3800 },
-    { id:'AYWK', nm:'Wewak Boram',       lat:-3.5838, lon:143.6692 },
-    { id:'AYMO', nm:'Momote',            lat:-2.0619, lon:147.4242 },
-    { id:'AYVN', nm:'Vanimo',            lat:-2.6927, lon:141.3021 },
-    { id:'AYKI', nm:'Kiunga',            lat:-6.1257, lon:141.2818 },
-    { id:'AYTB', nm:'Tabubil',           lat:-5.2786, lon:141.2260 },
-    { id:'AYMN', nm:'Mendi',             lat:-6.1478, lon:143.6572 },
-    { id:'AYWD', nm:'Wapenamanda',       lat:-5.6433, lon:143.8950 },
-    { id:'AYKV', nm:'Kavieng',           lat:-2.5794, lon:150.8078 },
-    { id:'AYBK', nm:'Buka',              lat:-5.4222, lon:154.6733 },
-    { id:'AYCH', nm:'Chimbu Kundiawa',   lat:-6.0242, lon:144.9706 }
+    { id:'AYNZ', ia:'LAE', nm:'Nadzab Tomodachi',       cat:'field', lat:-6.5698, lon:146.7261 },
+    { id:'AYGA', ia:'GKA', nm:'Goroka',                 cat:'field', lat:-6.0817, lon:145.3917 },
+    { id:'AYMH', ia:'HGU', nm:'Mount Hagen Kagamuga',   cat:'field', lat:-5.8267, lon:144.2961 },
+    { id:'AYMD', ia:'MAG', nm:'Madang',                 cat:'field', lat:-5.2072, lon:145.7890 },
+    { id:'AYPY', ia:'POM', nm:'Port Moresby Jacksons',  cat:'field', lat:-9.4433, lon:147.2200 },
+    { id:'AYTK', ia:'RAB', nm:'Tokua',                  cat:'field', lat:-4.3400, lon:152.3800 },
+    { id:'AYWK', ia:'WWK', nm:'Wewak Boram',            cat:'field', lat:-3.5838, lon:143.6692 },
+    { id:'AYMO', ia:'MAS', nm:'Momote',                 cat:'field', lat:-2.0619, lon:147.4242 },
+    { id:'AYVN', ia:'VAI', nm:'Vanimo',                 cat:'field', lat:-2.6927, lon:141.3021 },
+    { id:'AYKI', ia:'UNG', nm:'Kiunga',                 cat:'field', lat:-6.1257, lon:141.2818 },
+    { id:'AYTB', ia:'TBG', nm:'Tabubil',                cat:'field', lat:-5.2786, lon:141.2260 },
+    { id:'AYMN', ia:'MDU', nm:'Mendi',                  cat:'field', lat:-6.1478, lon:143.6572 },
+    { id:'AYWD', ia:'WBM', nm:'Wapenamanda',            cat:'field', lat:-5.6433, lon:143.8950 },
+    { id:'AYKV', ia:'KVG', nm:'Kavieng',                cat:'field', lat:-2.5794, lon:150.8078 },
+    { id:'AYBK', ia:'BUA', nm:'Buka',                   cat:'field', lat:-5.4222, lon:154.6733 },
+    { id:'AYCH', ia:'CMU', nm:'Chimbu Kundiawa',        cat:'field', lat:-6.0242, lon:144.9706 },
+
+    { id:'TESEM', nm:'Enroute fix',   cat:'fix', lat:-6.3400, lon:146.1200 },
+    { id:'IKERU', nm:'Enroute fix',   cat:'fix', lat:-5.9500, lon:144.8000 },
+    { id:'BULOM', nm:'Enroute fix',   cat:'fix', lat:-6.7100, lon:146.9800 },
+    { id:'MAROS', nm:'Enroute fix',   cat:'fix', lat:-6.9500, lon:146.2000 },
+    { id:'KAGUL', nm:'Enroute fix',   cat:'fix', lat:-5.5200, lon:145.1000 },
+    { id:'WAPEN', nm:'Enroute fix',   cat:'fix', lat:-5.6800, lon:143.9500 },
+
+    { id:'BULO', nm:'Bulolo',          cat:'strip', lat:-7.2200, lon:146.6500 },
+    { id:'WAU',  nm:'Wau',             cat:'strip', lat:-7.3400, lon:146.7200 },
+    { id:'MENY', nm:'Menyamya',        cat:'strip', lat:-7.2100, lon:146.0200 },
+    { id:'ASEK', nm:'Aseki',           cat:'strip', lat:-7.3400, lon:146.1900 },
+    { id:'KAIN', nm:'Kaintiba',        cat:'strip', lat:-7.5000, lon:145.8700 },
+    { id:'GARA', nm:'Garaina',         cat:'strip', lat:-7.8800, lon:147.1400 },
+    { id:'KABW', nm:'Kabwum',          cat:'strip', lat:-6.1000, lon:147.1800 },
+    { id:'DERI', nm:'Derim',           cat:'strip', lat:-6.1800, lon:147.1000 },
+    { id:'SIAL', nm:'Sialum',          cat:'strip', lat:-6.0800, lon:147.5900 },
+    { id:'WASU', nm:'Wasu',            cat:'strip', lat:-5.9600, lon:147.1900 },
+    { id:'FINS', nm:'Finschhafen',     cat:'strip', lat:-6.6200, lon:147.8500 },
+    { id:'PIND', nm:'Pindiu',          cat:'strip', lat:-6.4600, lon:147.5000 },
+
+    { id:'LAE BASE',    nm:'Company base',      cat:'mine', lat:-6.7338, lon:146.9998 },
+    { id:'ANGAU PAD',   nm:'Angau hospital',    cat:'mine', lat:-6.7280, lon:146.9910 },
+    { id:'RIDGE GATE',  nm:'Markham valley',    cat:'mine', lat:-6.4500, lon:146.5000 }
   ];
+  var CAT_NM = { field:'Fields', fix:'Fixes', strip:'Strips &amp; villages', mine:'My waypoints' };
+  var CAT_ORDER = ['field','fix','strip','mine'];
 
   var ROUTE = [
     { id:'AYNZ', nm:'Nadzab Tomodachi',      lat:-6.5698, lon:146.7261 },
     { id:'AYGA', nm:'Goroka',                lat:-6.0817, lon:145.3917 },
     { id:'AYMH', nm:'Mount Hagen Kagamuga',  lat:-5.8267, lon:144.2961 }
   ];
-  var fplTab = 'route', activeLeg = 0;
+  var fplTab = 'route', toWpt = 1;      /* index of the point being flown TO */
 
   /* ---- geodesy ---- */
   var R2D = 180 / Math.PI, D2R = Math.PI / 180;
@@ -1281,7 +1354,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
     h += '<div class="chips">';
     ROUTE.forEach(function(p, i){
-      h += '<button class="chip' + (i === activeLeg ? ' act' : '') + '" data-ci="' + i + '">'
+      h += '<button class="chip' + (i === toWpt ? ' act' : '') + (i === dragI ? ' drag' : '')
+         + '" data-ci="' + i + '">'
          + '<span class="ix">' + (i + 1) + '</span>'
          + '<span class="nm">' + label(p) + '</span></button>';
     });
@@ -1295,10 +1369,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var T = totals();
     if (!T.legs.length) return '<div class="chipempty">Add at least two points.</div>';
     return T.legs.map(function(l, i){
-      var clr = AC.alt - l.hi;
-      return '<div class="lgc">'
+      var clr = AC.alt - l.hi, now = (i === toWpt - 1);
+      return '<button class="lgc' + (now ? ' act' : '') + '" data-li="' + i + '">'
         + '<div class="lgh"><b>' + label(l.a) + ' \u2192 ' + label(l.b) + '</b>'
-        + '<span>Leg ' + (i + 1) + '</span></div>'
+        + (now ? '<span class="now">Flying</span>' : '<span>Leg ' + (i + 1) + '</span>') + '</div>'
         + '<div class="lgg">'
         +   '<div><span class="k">Track</span><span class="v">' + Math.round(trkBetween(l.a, l.b)) + '\u00b0</span></div>'
         +   '<div><span class="k">Dist</span><span class="v">' + l.nm.toFixed(1) + '</span></div>'
@@ -1307,7 +1381,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +   '<div><span class="k">Fuel</span><span class="v">' + Math.round(l.fuel) + '</span></div>'
         +   '<div><span class="k">Max terr</span><span class="v' + (clr < 1000 ? ' warn' : '') + '">'
         +     l.hi.toLocaleString() + '</span></div>'
-        + '</div></div>';
+        + '</div></button>';
     }).join('');
   }
 
@@ -1407,42 +1481,153 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#fplStrip').innerHTML = stripHTML();
     if (fplTab === 'route'){
       $$('#fplBody .chip[data-ci]').forEach(function(c){
-        c.addEventListener('click', function(){ openChip(parseInt(c.getAttribute('data-ci'), 10)); });
+        var i = parseInt(c.getAttribute('data-ci'), 10);
+        c.addEventListener('click', function(){
+          if (dragJustEnded){ dragJustEnded = false; return; }
+          openChip(i);
+        });
+        c.addEventListener('touchstart', function(e){ dragStart(e, i); }, { passive:true });
       });
       var add = $('#chipAdd');
       if (add) add.addEventListener('click', function(){ openAdd(ROUTE.length); });
+    }
+    if (fplTab === 'navlog'){
+      $$('#fplBody .lgc[data-li]').forEach(function(c){
+        c.addEventListener('click', function(){
+          toWpt = parseInt(c.getAttribute('data-li'), 10) + 1;
+          drawFpl();
+        });
+      });
     }
     if (fplTab === 'profile'){ profPaint(); wireScrub(); }
     drawLegs();
   }
 
+  /* ---- drag to reorder route chips ----------------------------
+     Long-press 260ms to pick up, then drag. Move handlers live on
+     `document` so the live re-render can replace the chip nodes
+     under the finger without killing the gesture.               */
+  var dragI = -1, dragTimer = null, dragFrom = null, dragging = false, dragJustEnded = false;
+
+  function dragStart(e, i){
+    var t = e.touches[0];
+    dragFrom = [t.clientX, t.clientY];
+    dragTimer = setTimeout(function(){
+      dragging = true; dragI = i; drawFpl();
+      if (navigator.vibrate) navigator.vibrate(8);
+    }, 260);
+    document.addEventListener('touchmove', dragMove, { passive:false });
+    document.addEventListener('touchend', dragEnd);
+    document.addEventListener('touchcancel', dragEnd);
+  }
+  function dragMove(e){
+    var t = e.touches[0];
+    if (!dragging){
+      if (Math.abs(t.clientX - dragFrom[0]) > 8 || Math.abs(t.clientY - dragFrom[1]) > 8) dragEnd();
+      return;
+    }
+    e.preventDefault();
+    var chips = $$('#fplBody .chip[data-ci]');
+    for (var k = 0; k < chips.length; k++){
+      var r = chips[k].getBoundingClientRect();
+      if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom){
+        if (k !== dragI){
+          ROUTE.splice(k, 0, ROUTE.splice(dragI, 1)[0]);
+          dragI = k;
+          drawFpl();
+        }
+        break;
+      }
+    }
+  }
+  function dragEnd(){
+    clearTimeout(dragTimer);
+    document.removeEventListener('touchmove', dragMove);
+    document.removeEventListener('touchend', dragEnd);
+    document.removeEventListener('touchcancel', dragEnd);
+    if (dragging){ dragging = false; dragI = -1; dragJustEnded = true; drawFpl(); }
+  }
+
+  /* The scrubber repaints the SVG on every move, which detaches the
+     node the touch started on. iOS keeps dispatching touchmove to that
+     detached node, so a listener on the box stops hearing it. The move
+     handlers therefore live on `document` for the life of the gesture. */
   function wireScrub(){
     var box = $('#profBox'); if (!box) return;
-    function set(e){
+    function at(x){
       var r = box.getBoundingClientRect();
-      var t = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
-      profScrub = Math.max(0, Math.min(1, (t - r.left) / r.width));
-      profPaint();                       /* repaints children only */
+      profScrub = Math.max(0, Math.min(1, (x - r.left) / r.width));
+      profPaint();
     }
-    box.addEventListener('touchstart', function(e){ e.preventDefault(); set(e); }, { passive:false });
-    box.addEventListener('touchmove',  function(e){ e.preventDefault(); set(e); }, { passive:false });
-    box.addEventListener('mousedown', function(e){
-      set(e);
-      function mv(ev){ set(ev); }
-      function up(){ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
-      document.addEventListener('mousemove', mv);
-      document.addEventListener('mouseup', up);
-    });
+    function begin(x){
+      at(x);
+      function tm(ev){ ev.preventDefault(); at(ev.touches[0].clientX); }
+      function mm(ev){ at(ev.clientX); }
+      function end(){
+        document.removeEventListener('touchmove', tm);
+        document.removeEventListener('touchend', end);
+        document.removeEventListener('touchcancel', end);
+        document.removeEventListener('mousemove', mm);
+        document.removeEventListener('mouseup', end);
+      }
+      document.addEventListener('touchmove', tm, { passive:false });
+      document.addEventListener('touchend', end);
+      document.addEventListener('touchcancel', end);
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', end);
+    }
+    box.addEventListener('touchstart', function(e){ e.preventDefault(); begin(e.touches[0].clientX); }, { passive:false });
+    box.addEventListener('mousedown',  function(e){ e.preventDefault(); begin(e.clientX); });
   }
 
   /* ---- FPL open / tabs / tools ---- */
   var drop = $('#dropFpl');
+  var FPL_KEY = 'nmp.iphone.fplh', FPL_MIN = 250, fplMax = 400;
+  var fplFrac = (function(){
+    try{ var v = parseFloat(localStorage.getItem(FPL_KEY)); if (v > 0.2 && v <= 1) return v; }catch(e){}
+    return 0.72;
+  })();
+  function saveFplH(){ try{ localStorage.setItem(FPL_KEY, String(fplFrac)); }catch(e){} }
+
+  /* Fixed height, scrolling body. The panel must not resize when you
+     switch tabs - only when you drag the grip. */
   function sizeDrop(){
-    var top = $('#chrome').getBoundingClientRect().bottom;
+    var top  = $('#chrome').getBoundingClientRect().bottom;
     var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
+    fplMax = Math.max(FPL_MIN, window.innerHeight - top - tabH - 10);
+    var h = Math.max(FPL_MIN, Math.min(fplMax, Math.round(fplFrac * fplMax)));
     drop.style.top = top + 'px';
-    drop.style.maxHeight = (window.innerHeight - top - tabH - 10) + 'px';
+    drop.style.height = h + 'px';
   }
+
+  /* ---- resize grip ---- */
+  (function(){
+    var grip = $('#fplGrip');
+    function begin(clientY){
+      var startY = clientY, startH = drop.getBoundingClientRect().height;
+      grip.classList.add('on');
+      function move(y){
+        var h = Math.max(FPL_MIN, Math.min(fplMax, startH + (y - startY)));
+        drop.style.height = h + 'px';
+        fplFrac = h / fplMax;
+      }
+      function tm(ev){ ev.preventDefault(); move(ev.touches[0].clientY); }
+      function mm(ev){ move(ev.clientY); }
+      function end(){
+        grip.classList.remove('on'); saveFplH();
+        document.removeEventListener('touchmove', tm);
+        document.removeEventListener('touchend', end);
+        document.removeEventListener('mousemove', mm);
+        document.removeEventListener('mouseup', end);
+      }
+      document.addEventListener('touchmove', tm, { passive:false });
+      document.addEventListener('touchend', end);
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', end);
+    }
+    grip.addEventListener('touchstart', function(e){ e.preventDefault(); begin(e.touches[0].clientY); }, { passive:false });
+    grip.addEventListener('mousedown',  function(e){ e.preventDefault(); begin(e.clientY); });
+  })();
   $('#tbFpl').addEventListener('click', function(){
     var open = drop.classList.contains('on');
     closeAll();
@@ -1463,22 +1648,34 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
   });
   $('#fplRev').addEventListener('click', function(){
-    ROUTE.reverse(); activeLeg = 0; drawFpl(); toast('Route reversed');
+    ROUTE.reverse(); toWpt = Math.max(0, Math.min(1, ROUTE.length - 1)); drawFpl(); toast('Route reversed');
   });
+
+  /* Clear is destructive, so it arms first and clears on a second tap. */
+  var clrArmed = null;
   $('#fplClr').addEventListener('click', function(){
-    ROUTE = []; activeLeg = 0; drawFpl(); toast('Route cleared');
+    var b = $('#fplClr');
+    if (clrArmed){
+      clearTimeout(clrArmed); clrArmed = null; b.classList.remove('arm');
+      ROUTE = []; toWpt = 1; drawFpl(); toast('Route cleared');
+      return;
+    }
+    b.classList.add('arm');
+    toast('Tap again to clear the route');
+    clrArmed = setTimeout(function(){ clrArmed = null; b.classList.remove('arm'); }, 3000);
   });
 
   /* ============================================================
      WAYPOINT SHEET - chip actions and point entry
      ============================================================ */
-  var wpt = $('#wptSheet');
-  function closeWpt(){ wpt.classList.remove('on'); }
+  var wpt = $('#wptSheet'), wptW = wpt.querySelector('.tedw');
+  function closeWpt(){ wpt.classList.remove('on'); wptW.classList.remove('tall'); }
   $('#wptClose').addEventListener('click', closeWpt);
   wpt.addEventListener('click', function(e){ if (e.target === wpt) closeWpt(); });
 
   function openChip(i){
     var p = ROUTE[i];
+    wptW.classList.remove('tall');
     $('#wptTitle').textContent = label(p);
     $('#wptTop').innerHTML = '';
     var rows = [
@@ -1495,12 +1692,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $$('#wptList .wrow').forEach(function(b){
       b.addEventListener('click', function(){
         var a = b.getAttribute('data-a');
-        if (a === 'dct'){ activeLeg = i; closeWpt(); drawFpl(); toast('Direct to ' + label(p)); return; }
+        if (a === 'dct'){ toWpt = i; closeWpt(); drawFpl(); toast('Direct to ' + label(p)); return; }
         if (a === 'ib'){ closeWpt(); openAdd(i); return; }
         if (a === 'ia'){ closeWpt(); openAdd(i + 1); return; }
         if (a === 'up' && i > 0){ ROUTE.splice(i - 1, 0, ROUTE.splice(i, 1)[0]); }
         if (a === 'dn' && i < ROUTE.length - 1){ ROUTE.splice(i + 1, 0, ROUTE.splice(i, 1)[0]); }
-        if (a === 'rm'){ ROUTE.splice(i, 1); if (activeLeg >= ROUTE.length) activeLeg = Math.max(0, ROUTE.length - 1); }
+        if (a === 'rm'){ ROUTE.splice(i, 1); if (toWpt >= ROUTE.length) toWpt = Math.max(0, ROUTE.length - 1); }
         closeWpt(); drawFpl();
       });
     });
@@ -1510,55 +1707,112 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function openAdd(at){
     $('#wptTitle').textContent = 'Add point' + (at < ROUTE.length ? ' at ' + (at + 1) : '');
+    wptW.classList.add('tall');           /* fixed height: sheet must not move while filtering */
     $('#wptTop').innerHTML =
-        '<div class="wsearch"><input id="wq" type="text" placeholder="ICAO or name" '
+        '<div class="wsearch"><input id="wq" type="text" '
+      + 'placeholder="ICAO, IATA, name, fix or village" '
       + 'autocapitalize="characters" autocorrect="off" spellcheck="false"></div>'
       + '<div class="wcoord">'
-      +   '<input id="wLat" type="text" inputmode="text" placeholder="S06 34.2">'
-      +   '<input id="wLon" type="text" inputmode="text" placeholder="E146 43.6">'
+      +   '<input id="wLat" type="text" placeholder="S06 34.2">'
+      +   '<input id="wLon" type="text" placeholder="E146 43.6">'
       +   '<button id="wAdd">Add</button>'
       + '</div>';
+
+    function addPoint(p){
+      ROUTE.splice(at, 0, { id:p.id, nm:p.nm, cat:p.cat, lat:p.lat, lon:p.lon });
+      closeWpt(); drawFpl();
+    }
+
     function list(q){
       q = (q || '').trim().toUpperCase();
+      var h = '';
+
+      /* a query that parses as a coordinate is offered directly */
+      var cm = q.match(/^([NS]\s*\d[\d\s.\u00b0]*)[,/ ]+([EW]\s*\d[\d\s.\u00b0]*)$/);
+      if (cm){
+        var cla = parseDDM(cm[1], true), clo = parseDDM(cm[2], false);
+        if (cla !== null && clo !== null){
+          h += '<div class="wsec">Coordinate</div>'
+             + '<button class="wrow" data-coord="' + cla + ',' + clo + '">'
+             + '<span class="id">GPS</span>'
+             + '<span class="nm2">' + ddm(cla, true) + ' ' + ddm(clo, false) + '</span>'
+             + '<span class="cat">Add</span></button>';
+        }
+      }
+
       var hits = DB.filter(function(p){
-        return !q || p.id.indexOf(q) === 0 || p.nm.toUpperCase().indexOf(q) >= 0;
-      }).slice(0, 40);
-      var h = '<div class="wsec">Fields</div>';
-      if (!hits.length) h += '<div class="chipempty">No match</div>';
-      hits.forEach(function(p){
-        h += '<button class="wrow" data-id="' + p.id + '">'
-           + '<span class="id">' + p.id + '</span>'
-           + '<span class="nm2">' + p.nm + '</span></button>';
+        if (!q) return true;
+        return (p.id && p.id.toUpperCase().indexOf(q) >= 0)
+            || (p.ia && p.ia.toUpperCase().indexOf(q) === 0)
+            || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
       });
+
+      CAT_ORDER.forEach(function(c){
+        var inCat = hits.filter(function(p){ return p.cat === c; });
+        if (!inCat.length) return;
+        h += '<div class="wsec">' + CAT_NM[c] + '</div>';
+        inCat.forEach(function(p){
+          h += '<button class="wrow" data-id="' + p.id + '">'
+             + '<span class="id">' + p.id + '</span>'
+             + '<span class="nm2">' + p.nm + '</span>'
+             + (p.ia ? '<span class="cat">' + p.ia + '</span>' : '') + '</button>';
+        });
+      });
+
+      if (!h) h = '<div class="chipempty">No match</div>';
+      h += '<div class="wnote">Fields are AIP data. Fixes, villages and personal '
+         + 'waypoints in this demo carry placeholder coordinates and are not for navigation.</div>';
+
       $('#wptList').innerHTML = h;
       $$('#wptList .wrow').forEach(function(b){
         b.addEventListener('click', function(){
-          var f = null, id = b.getAttribute('data-id');
+          var cd = b.getAttribute('data-coord');
+          if (cd){
+            var parts = cd.split(',');
+            addPoint({ id:null, lat:parseFloat(parts[0]), lon:parseFloat(parts[1]) });
+            return;
+          }
+          var id = b.getAttribute('data-id'), f = null;
           DB.forEach(function(p){ if (p.id === id) f = p; });
-          if (!f) return;
-          ROUTE.splice(at, 0, { id:f.id, nm:f.nm, lat:f.lat, lon:f.lon });
-          closeWpt(); drawFpl();
+          if (f) addPoint(f);
         });
       });
     }
+
     list('');
     $('#wq').addEventListener('input', function(e){ list(e.target.value); });
     $('#wAdd').addEventListener('click', function(){
       var la = parseDDM($('#wLat').value, true), lo = parseDDM($('#wLon').value, false);
       if (la === null || lo === null){ toast('Use S06 34.2 / E146 43.6'); return; }
-      ROUTE.splice(at, 0, { id:null, lat:la, lon:lo });
-      closeWpt(); drawFpl();
+      addPoint({ id:null, lat:la, lon:lo });
     });
     closeAllSheetsButFpl();
     wpt.classList.add('on');
   }
 
+  /* Accepts "S06 34.2", "S06°34.2'", "S0634.2", "S06". Without a
+     separator the degrees are fixed width (2 for lat, 3 for lon), so
+     "S0634.2" cannot be misread as 63 degrees. */
   function parseDDM(s, isLat){
     if (!s) return null;
-    var m = String(s).trim().toUpperCase().match(/^([NSEW])\s*(\d{1,3})[\s\u00b0]*(\d{1,2}(?:\.\d+)?)?$/);
+    var t = String(s).trim().toUpperCase().replace(/[\u00b0'"]/g, ' ').replace(/\s+/g, ' ');
+    var m = t.match(/^([NSEW]) ?(.+)$/);
     if (!m) return null;
     var sign = (m[1] === 'S' || m[1] === 'W') ? -1 : 1;
-    var v = parseInt(m[2], 10) + (m[3] ? parseFloat(m[3]) / 60 : 0);
+    if ((isLat && m[1] !== 'N' && m[1] !== 'S') || (!isLat && m[1] !== 'E' && m[1] !== 'W')) return null;
+    var rest = m[2].trim(), dStr, mStr;
+    if (rest.indexOf(' ') >= 0){
+      var parts = rest.split(' ');
+      dStr = parts[0]; mStr = parts[1] || '0';
+    } else {
+      var w = isLat ? 2 : 3;
+      if (rest.length <= w){ dStr = rest; mStr = '0'; }
+      else { dStr = rest.slice(0, w); mStr = rest.slice(w); }
+    }
+    if (!/^\d{1,3}$/.test(dStr) || !/^\d{1,2}(\.\d+)?$/.test(mStr)) return null;
+    var mm = parseFloat(mStr);
+    if (mm >= 60) return null;
+    var v = parseInt(dStr, 10) + mm / 60;
     if (isLat && v > 90) return null;
     if (!isLat && v > 180) return null;
     return sign * v;
@@ -1741,29 +1995,52 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- GPS window ---------- */
   var gps = $('#gpsOv');
-  var GPS_PTS = [
-    { role:'DEP',   nm:'AYNZ',
-      dms:['S 06\u00b034\'02"',  'E 146\u00b043\'34"'],
-      ddm:['S 06\u00b034.03\'',  'E 146\u00b043.57\''] },
-    { role:'WPT 1', nm:'AYGA',
-      dms:['S 06\u00b004\'55"',  'E 145\u00b023\'29"'],
-      ddm:['S 06\u00b004.92\'',  'E 145\u00b023.48\''] },
-    { role:'ARR',   nm:'AYMH',
-      dms:['S 05\u00b049\'35"',  'E 144\u00b017\'48"'],
-      ddm:['S 05\u00b049.58\'',  'E 144\u00b017.80\''] }
-  ];
-  var gpsIdx = 0, gpsFmt = 'dms';
+  var gpsIdx = 0, gpsFmt = 'ddm';
+
+  /* The window reads the live route. It must never show a point the
+     route does not contain - these are the numbers that get typed
+     into the Garmin. */
+  function dmsStr(v, isLat){
+    var h = isLat ? (v < 0 ? 'S' : 'N') : (v < 0 ? 'W' : 'E');
+    var a = Math.abs(v), d = Math.floor(a);
+    var mf = (a - d) * 60, m = Math.floor(mf), s = Math.round((mf - m) * 60);
+    if (s === 60){ s = 0; m += 1; }
+    if (m === 60){ m = 0; d += 1; }
+    return h + ' ' + String(d).padStart(isLat ? 2 : 3, '0')
+         + '\u00b0' + String(m).padStart(2, '0') + '\'' + String(s).padStart(2, '0') + '"';
+  }
+  function ddmStr(v, isLat){
+    var h = isLat ? (v < 0 ? 'S' : 'N') : (v < 0 ? 'W' : 'E');
+    var a = Math.abs(v), d = Math.floor(a), m = (a - d) * 60;
+    if (m >= 59.995){ m = 0; d += 1; }
+    return h + ' ' + String(d).padStart(isLat ? 2 : 3, '0')
+         + '\u00b0' + (m < 10 ? '0' : '') + m.toFixed(2) + '\'';
+  }
+  function gpsRole(i){
+    if (i === 0) return 'DEP';
+    if (i === ROUTE.length - 1) return 'ARR';
+    return 'WPT ' + i;
+  }
 
   function drawGps(){
-    var p = GPS_PTS[gpsIdx];
-    $('#gpsName').innerHTML = p.role + ' &middot; <b>' + p.nm + '</b>';
-    $('#gpsLat').textContent = p[gpsFmt][0];
-    $('#gpsLon').textContent = p[gpsFmt][1];
-    $('#gpsProg').textContent = 'Point ' + (gpsIdx + 1) + ' of ' + GPS_PTS.length;
-    $('#gpsTabs').innerHTML = GPS_PTS.map(function(x, i){
+    if (gpsIdx > ROUTE.length - 1) gpsIdx = Math.max(0, ROUTE.length - 1);
+    if (!ROUTE.length){
+      $('#gpsName').textContent = 'No route';
+      $('#gpsLat').textContent = '\u2014';
+      $('#gpsLon').textContent = '';
+      $('#gpsProg').textContent = 'Build a route in FPL';
+      $('#gpsTabs').innerHTML = '';
+      return;
+    }
+    var p = ROUTE[gpsIdx], fn = (gpsFmt === 'dms') ? dmsStr : ddmStr;
+    $('#gpsName').innerHTML = gpsRole(gpsIdx) + ' &middot; <b>' + label(p) + '</b>';
+    $('#gpsLat').textContent = fn(p.lat, true);
+    $('#gpsLon').textContent = fn(p.lon, false);
+    $('#gpsProg').textContent = 'Point ' + (gpsIdx + 1) + ' of ' + ROUTE.length;
+    $('#gpsTabs').innerHTML = ROUTE.map(function(x, i){
       return '<button data-i="' + i + '"' + (i === gpsIdx ? ' class="on"' : '') + '>'
-           + '<span class="role">' + x.role + '</span>'
-           + '<span class="nm">' + x.nm + '</span></button>';
+           + '<span class="role">' + gpsRole(i) + '</span>'
+           + '<span class="nm">' + (x.id || 'GPS') + '</span></button>';
     }).join('');
     $$('#gpsTabs button').forEach(function(b){
       b.addEventListener('click', function(){
@@ -1771,11 +2048,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         drawGps();
       });
     });
+    var sel = $('#gpsTabs button.on');
+    if (sel && sel.scrollIntoView) sel.scrollIntoView({ block:'nearest', inline:'nearest' });
     $$('#gpsOv .gpsfmt button').forEach(function(b){
       b.classList.toggle('on', b.getAttribute('data-fmt') === gpsFmt);
     });
   }
-
 
   function hideGps(){ gps.classList.remove('on'); renderTabs(); }
   $('#gpsClose').addEventListener('click', hideGps);
