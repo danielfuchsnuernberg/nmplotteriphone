@@ -12,6 +12,8 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v13 2026-07-21  Tapping the map closes the open layer column.
+                       The VFR button still toggles it both ways.
        v12 2026-07-21  GPS window now reads the live route instead of a
                        hardcoded list. Roles derived (DEP / WPT n / ARR),
                        DMS and DDM computed from the same lat/lon the
@@ -1141,7 +1143,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v12';
+  var VERSION = 'v13';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1980,6 +1982,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function toggleRail(){ rail.classList.toggle('open'); }
   $('#rbVfr').addEventListener('click', toggleRail);
   $('#rbVfrOpen').addEventListener('click', toggleRail);
+
+  /* Tapping the map dismisses the open layer column. The VFR button
+     still toggles it; this just adds the reflex of tapping away. */
+  $('#map').addEventListener('click', function(e){
+    if (rail.contains(e.target)) return;
+    rail.classList.remove('open');
+  });
   $$('.rb.lyr').forEach(function(b){
     b.addEventListener('click', function(){
       b.classList.toggle('on');
