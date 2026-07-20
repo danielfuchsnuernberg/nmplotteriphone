@@ -12,6 +12,12 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v14 2026-07-21  Airport card built out. Five live tabs (Info,
+                       Weather with METAR/TAF/Winds, Runway with wind
+                       components, Procedure, NOTAM). Position, distance
+                       and bearing from the active route point, and
+                       sunrise/sunset are computed. Actions wired to the
+                       route. Fixed height with a drag grip, persisted.
        v13 2026-07-21  Tapping the map closes the open layer column.
                        The VFR button still toggles it both ways.
        v12 2026-07-21  GPS window now reads the live route instead of a
@@ -563,74 +569,114 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   position:fixed;left:0;right:0;bottom:0;z-index:1000;
   transform:translateY(100%);transition:transform .22s ease;
   display:flex;flex-direction:column;
-  max-height:70%;
   background:var(--bg-2);
   border-top:1px solid var(--border-strong);
   padding-bottom:var(--sabp);
 }
 .card.on{transform:translateY(0)}
+.cgrip{flex:0 0 auto;height:20px;display:flex;align-items:center;justify-content:center;
+  background:var(--panel);touch-action:none;cursor:ns-resize}
+.cgrip span{width:46px;height:4px;border-radius:2px;background:var(--border-strong);
+  transition:background .12s}
+.cgrip.on span{background:var(--accent)}
 .chead{
   flex:0 0 var(--mod-b);display:flex;align-items:center;gap:8px;padding:0 10px;
   background:var(--panel);border-bottom:1px solid var(--border);
 }
 .chead .back{
-  height:26px;padding:0 10px;border-radius:13px;
+  height:26px;padding:0 10px;border-radius:var(--radius);
   display:flex;align-items:center;gap:4px;
   background:var(--bg-2);border:1px solid var(--border-strong);
   font-size:var(--t-sm);font-weight:600;color:var(--text-2);
 }
 .chead .ttl{flex:1 1 auto;min-width:0;text-align:center}
-.chead .ttl b{display:block;font-size:var(--t-md);font-weight:700;line-height:1.1}
-.chead .ttl span{display:block;font-size:var(--t-xs);color:var(--text-muted);
+.chead .ttl b{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;line-height:1.1}
+.chead .ttl span{display:block;font-size:var(--t-2xs);color:var(--text-muted);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chead .star{width:30px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
+.chead .star.on{color:var(--accent)}
 .chead .star svg{width:16px;height:16px}
 .cact{
   flex:0 0 52px;display:flex;background:var(--bg);
   border-bottom:1px solid var(--border);
 }
 .cact button{
-  flex:1 1 0;font-size:var(--t-sm);font-weight:700;
+  flex:1 1 0;min-width:0;font-size:var(--t-sm);font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px;
 }
 .cact button + button{border-left:1px solid var(--border)}
-.cbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px}
-.cinfo{display:flex;gap:12px}
-.cthumb{width:64px;height:64px;flex:0 0 64px;border-radius:6px;
-  background:var(--inset);border:1px solid var(--border-strong)}
-.cinfo .m b{display:block;font-size:var(--t-md);font-weight:700}
-.cinfo .m span{display:block;font-size:var(--t-sm);color:var(--text-dim);margin-top:2px}
-.cchips{display:flex;gap:var(--gut);margin-top:12px}
-.cchips button{
-  flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
-  background:var(--bg);border:1px solid var(--border);
-  font-size:var(--t-sm);font-weight:600;color:var(--text-2);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;
-}
 .ctabs{flex:0 0 42px;display:flex;background:var(--panel);
   border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.ctabs button{flex:1 1 0;font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
+.ctabs button{flex:1 1 0;min-width:0;font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}
 .ctabs button + button{border-left:1px solid var(--border)}
 .ctabs button.on{background:var(--bg-2);color:var(--text)}
 .csub{flex:0 0 42px;display:flex;align-items:center;gap:var(--gut);
-  padding:0 10px;background:var(--bg);border-bottom:1px solid var(--border)}
-.csub button{
-  height:26px;padding:0 12px;border-radius:13px;
+  padding:0 10px;background:var(--bg);border-bottom:1px solid var(--border);
+  overflow-x:auto;-webkit-overflow-scrolling:touch}
+.csub.off{display:none}
+.csub button{flex:0 0 auto;height:26px;padding:0 12px;border-radius:var(--radius);
   font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
-  background:transparent;border:1px solid transparent;
-}
+  background:transparent;border:1px solid transparent}
 .csub button.on{background:var(--accent-2);color:#0a0e13}
-.metar{margin-top:2px}
-.metar .hdr{display:flex;align-items:center;gap:6px;font-size:var(--t-sm);font-weight:700}
-.metar .dot{width:9px;height:9px;border-radius:50%;background:var(--good)}
-.metar .age{margin-left:auto;font-size:var(--t-sm);color:var(--accent-2);font-weight:600}
-.metar .raw{margin-top:8px;font-family:var(--mono);font-size:var(--t-sm);
-  line-height:1.45;color:var(--good);word-break:break-word}
+.cbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px}
+
+/* card content blocks */
+.cinfo{display:flex;gap:12px}
+.cthumb{width:64px;height:64px;flex:0 0 64px;border-radius:6px;
+  background:var(--inset);border:1px solid var(--border-strong);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-fainter)}
+.cinfo .m{min-width:0}
+.cinfo .m b{display:block;font-size:var(--t-md);font-weight:700}
+.cinfo .m span{display:block;font-size:var(--t-sm);color:var(--text-dim);margin-top:2px}
+.csec{margin-top:16px;font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text-fainter);
+  padding-bottom:6px;border-bottom:1px solid var(--border)}
 .kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;
-  border-top:1px solid var(--border);font-size:var(--t-sm)}
-.kv .k{color:var(--text-muted)}
-.kv .v{font-family:var(--mono);color:var(--accent-2)}
+  border-bottom:1px solid var(--border);font-size:var(--t-sm)}
+.kv .k{color:var(--text-muted);flex:0 0 auto}
+.kv .v{font-family:var(--mono);color:var(--text);text-align:right;min-width:0}
+.kv .v.acc{color:var(--accent-2)}
+.kv .v.amb{color:var(--accent)}
+.cnote{margin-top:14px;font-size:var(--t-2xs);color:var(--text-fainter);line-height:1.5}
+.cempty{padding:26px 0;text-align:center;font-size:var(--t-sm);color:var(--text-fainter)}
+
+.metar .hdr{display:flex;align-items:center;gap:6px;font-size:var(--t-sm);font-weight:700}
+.metar .dot{width:9px;height:9px;border-radius:50%}
+.metar .age{margin-left:auto;font-size:var(--t-sm);color:var(--accent-2);font-weight:600}
+.metar .raw{margin-top:8px;padding:10px;background:var(--bg);border:1px solid var(--border);
+  border-radius:6px;font-family:var(--mono);font-size:var(--t-sm);
+  line-height:1.5;word-break:break-word}
+
+.rwyc{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:10px;margin-bottom:var(--gut)}
+.rwyc .rh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.rwyc .rh b{flex:1 1 auto;font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text)}
+.rwyc .rh span{font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.rwyg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 6px}
+.rwyg .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text-muted)}
+.rwyg .v{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
+  color:var(--text);margin-top:1px}
+.rwyg .v.warn{color:var(--bad)}
+.rwyg .v.ok{color:var(--good)}
+
+.prow2{display:flex;align-items:center;gap:10px;width:100%;
+  padding:11px 0;border-bottom:1px solid var(--border);text-align:left}
+.prow2 .bdg{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--good)}
+.prow2 .t2{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow2 .go{flex:0 0 auto;font-size:var(--t-sm);font-weight:600;color:var(--accent-2)}
+
+.ntm{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:10px;margin-bottom:var(--gut)}
+.ntm .nh{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.ntm .nh b{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--accent)}
+.ntm .nh span{margin-left:auto;font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-fainter)}
+.ntm p{margin:0;font-size:var(--t-sm);line-height:1.5;color:var(--text-2)}
 
 /* ---- GPS window (NM Plotter's own component) ---------------
    Proportions taken from the live desktop component: panel width
@@ -1021,56 +1067,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
 <!-- Airport card -->
 <div class="card" id="card">
+  <div class="cgrip" id="cardGrip" aria-label="Resize card"><span></span></div>
   <div class="chead">
     <button class="back" id="cardBack">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" style="width:11px;height:11px"><path d="M15 5l-7 7 7 7"/></svg>
       Map
     </button>
-    <div class="ttl"><b id="cardIcao">AYNZ</b><span id="cardName">Nadzab Tomodachi International</span></div>
-    <button class="star" aria-label="Favourite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg></button>
+    <div class="ttl"><b id="cardIcao"></b><span id="cardName"></span></div>
+    <button class="star" id="cardStar" aria-label="Favourite">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>
+    </button>
   </div>
-  <div class="cact">
-    <button style="color:var(--route)">Direct to</button>
-    <button style="color:var(--magenta)">Add to route</button>
-    <button style="color:var(--accent-2)">Charts</button>
-    <button style="color:var(--navaid)">Freqs</button>
-  </div>
-  <div class="ctabs">
-    <button>Info</button>
-    <button class="on">Weather</button>
-    <button>Runway</button>
-    <button>Procedure</button>
-    <button>NOTAM</button>
-  </div>
-  <div class="csub">
-    <button class="on">METAR</button>
-    <button>TAF</button>
-    <button>Forecast</button>
-    <button>Winds</button>
-  </div>
-  <div class="cbody">
-    <div class="cinfo">
-      <div class="cthumb"></div>
-      <div class="m">
-        <b>Nadzab Tomodachi Intl</b>
-        <span>Lae, Morobe, PNG &middot; Elev 239'</span>
-        <span>Sunrise 06:12 &middot; Sunset 18:24</span>
-      </div>
-    </div>
-    <div class="cchips">
-      <button>3D view</button>
-      <button>Runways</button>
-      <button>Notes</button>
-    </div>
-    <div class="metar">
-      <div class="hdr"><span class="dot"></span>VFR<span class="age">14m ago</span></div>
-      <div class="raw">AYNZ 190600Z 09008KT 9999 FEW020 SCT090 29/23 Q1010</div>
-      <div class="kv"><span class="k">Time</span><span class="v">0600Z &middot; 1600 LT</span></div>
-      <div class="kv"><span class="k">Wind</span><span class="v">090&deg; / 8 kt</span></div>
-      <div class="kv"><span class="k">Visibility</span><span class="v">10 km +</span></div>
-      <div class="kv"><span class="k">QNH</span><span class="v">1010 hPa</span></div>
-    </div>
-  </div>
+  <div class="cact" id="cardAct"></div>
+  <div class="ctabs" id="cardTabs"></div>
+  <div class="csub" id="cardSub"></div>
+  <div class="cbody" id="cardBody"></div>
 </div>
 
 <!-- GPS window -->
@@ -1143,7 +1154,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v13';
+  var VERSION = 'v14';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -2074,27 +2085,350 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
   });
 
-  /* ---------- Airport card ---------- */
-  var card = $('#card');
-  $$('.fld').forEach(function(f){
-    f.addEventListener('click', function(){
-      $('#cardIcao').textContent = f.getAttribute('data-fld');
-      card.classList.add('on');
+  /* ============================================================
+     AIRPORT CARD
+     Coordinates, distance/bearing and sun times are computed.
+     Runways, frequencies, METAR, procedures and NOTAMs are DEMO
+     placeholders pending transcription from the AIP.
+     ============================================================ */
+
+  var FIELD_INFO = {
+    AYNZ:{ elev:239, town:'Lae, Morobe',
+      rwy:[{id:'09/27', len:2438, wid:45, surf:'Asphalt'}],
+      freq:[['TWR','118.1'],['ATIS','126.4'],['GND','121.9'],['APP','124.7']],
+      metar:'AYNZ 210600Z 09008KT 9999 FEW020 SCT090 29/23 Q1010',
+      taf:'AYNZ 210500Z 2106/2118 09010KT 9999 SCT020 TEMPO 2108/2112 4000 SHRA BKN012' },
+    AYGA:{ elev:5282, town:'Goroka, Eastern Highlands',
+      rwy:[{id:'17/35', len:1585, wid:30, surf:'Asphalt'}],
+      freq:[['TWR','118.5'],['CTAF','118.5']],
+      metar:'AYGA 210600Z 14006KT 9999 SCT025 BKN080 24/14 Q1017',
+      taf:'AYGA 210500Z 2106/2118 14008KT 9999 SCT025 TEMPO 2107/2110 3000 SHRA BKN015' },
+    AYMH:{ elev:5388, town:'Mount Hagen, Western Highlands',
+      rwy:[{id:'12/30', len:2225, wid:30, surf:'Asphalt'}],
+      freq:[['TWR','119.1'],['CTAF','119.1']],
+      metar:'AYMH 210600Z 12007KT 8000 SCT020 BKN070 23/15 Q1018',
+      taf:'AYMH 210500Z 2106/2118 12010KT 9999 SCT020 TEMPO 2108/2113 2000 TSRA BKN010CB' },
+    AYMD:{ elev:20, town:'Madang, Madang Province',
+      rwy:[{id:'07/25', len:1585, wid:30, surf:'Asphalt'}],
+      freq:[['TWR','118.3'],['CTAF','118.3']],
+      metar:'AYMD 210600Z 04010KT 9999 FEW018 SCT100 31/25 Q1009',
+      taf:'AYMD 210500Z 2106/2118 05010KT 9999 FEW018 SCT100' },
+    AYPY:{ elev:146, town:'Port Moresby, NCD',
+      rwy:[{id:'14L/32R', len:2750, wid:45, surf:'Asphalt'},
+           {id:'14R/32L', len:2200, wid:30, surf:'Asphalt'}],
+      freq:[['TWR','118.1'],['ATIS','127.6'],['GND','121.7'],['APP','125.5'],['DEP','125.5']],
+      metar:'AYPY 210600Z 13012KT 9999 FEW025 SCT090 32/22 Q1008',
+      taf:'AYPY 210500Z 2106/2206 13012KT 9999 FEW025 SCT090' },
+    AYTK:{ elev:32, town:'Tokua, East New Britain',
+      rwy:[{id:'12/30', len:2200, wid:45, surf:'Asphalt'}],
+      freq:[['TWR','118.7'],['CTAF','118.7']],
+      metar:'AYTK 210600Z 11009KT 9999 SCT020 BKN090 30/24 Q1010',
+      taf:'AYTK 210500Z 2106/2118 11010KT 9999 SCT020' }
+  };
+
+  var cardId = null, cardTab = 'info', cardSub = 'metar', cardFav = {};
+  var CARD_TABS = [['info','Info'],['wx','Weather'],['rwy','Runway'],['proc','Procedure'],['ntm','NOTAM']];
+  var WX_SUBS   = [['metar','METAR'],['taf','TAF'],['wind','Winds']];
+
+  function dbById(id){ for (var i=0;i<DB.length;i++) if (DB[i].id === id) return DB[i]; return null; }
+
+  /* ---- sun times: real NOAA calculation, PNG is UTC+10 ---- */
+  function sunTimes(lat, lon, date){
+    var rad = Math.PI / 180;
+    var start = Date.UTC(date.getUTCFullYear(), 0, 0);
+    var doy = Math.floor((date.getTime() - start) / 86400000);
+    var g = 2 * Math.PI / 365 * (doy - 1 + 0.5);
+    var eq = 229.18 * (0.000075 + 0.001868*Math.cos(g) - 0.032077*Math.sin(g)
+           - 0.014615*Math.cos(2*g) - 0.040849*Math.sin(2*g));
+    var dec = 0.006918 - 0.399912*Math.cos(g) + 0.070257*Math.sin(g)
+            - 0.006758*Math.cos(2*g) + 0.000907*Math.sin(2*g)
+            - 0.002697*Math.cos(3*g) + 0.00148*Math.sin(3*g);
+    var c = Math.cos(90.833 * rad) / (Math.cos(lat*rad) * Math.cos(dec)) - Math.tan(lat*rad) * Math.tan(dec);
+    if (c < -1 || c > 1) return null;
+    var haDeg = Math.acos(c) / rad;
+    return [720 - 4*(lon + haDeg) - eq, 720 - 4*(lon - haDeg) - eq];   /* minutes UTC */
+  }
+  function hhmmLocal(minUTC, offsetMin){
+    var t = ((Math.round(minUTC + offsetMin) % 1440) + 1440) % 1440;
+    return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
+  }
+
+  /* ---- METAR helpers ---- */
+  function wxCat(m){
+    if (!m) return ['—','var(--text-fainter)'];
+    var vis = 9999, bkn = 9999;
+    var v = m.match(/\s(\d{4})\s/); if (v) vis = parseInt(v[1], 10);
+    var c = m.match(/(BKN|OVC)(\d{3})/); if (c) bkn = parseInt(c[2], 10) * 100;
+    if (vis < 1600 || bkn < 500)  return ['LIFR','#d65db1'];
+    if (vis < 5000 || bkn < 1000) return ['IFR','var(--bad)'];
+    if (vis < 8000 || bkn < 3000) return ['MVFR','#2b8cff'];
+    return ['VFR','var(--good)'];
+  }
+  function metarWind(m){
+    var w = m && m.match(/\s(\d{3}|VRB)(\d{2})(G\d{2})?KT/);
+    if (!w) return null;
+    return { dir: w[1] === 'VRB' ? null : parseInt(w[1], 10), kt: parseInt(w[2], 10) };
+  }
+
+  /* ---- tabs ---- */
+  function cardInfo(f, fi){
+    var now = new Date(), st = sunTimes(f.lat, f.lon, now);
+    var h = '<div class="cinfo"><div class="cthumb">' + (fi ? 'RWY' : 'N/A') + '</div>'
+      + '<div class="m"><b>' + f.nm + '</b>'
+      + '<span>' + (fi ? fi.town : 'Papua New Guinea') + '</span>'
+      + '<span>Elevation ' + (fi ? fi.elev.toLocaleString() + '\'' : '\u2014') + '</span></div></div>';
+
+    h += '<div class="csec">Position</div>'
+      +  '<div class="kv"><span class="k">Latitude</span><span class="v amb">' + ddm(f.lat, true) + '</span></div>'
+      +  '<div class="kv"><span class="k">Longitude</span><span class="v amb">' + ddm(f.lon, false) + '</span></div>';
+
+    if (ROUTE.length){
+      var from = ROUTE[Math.max(0, Math.min(toWpt, ROUTE.length - 1))];
+      if (from !== f){
+        h += '<div class="kv"><span class="k">From ' + label(from) + '</span><span class="v">'
+           + nmBetween(from, f).toFixed(1) + ' nm / ' + Math.round(trkBetween(from, f)) + '\u00b0</span></div>';
+      }
+    }
+
+    h += '<div class="csec">Day</div>';
+    if (st){
+      h += '<div class="kv"><span class="k">Sunrise</span><span class="v">' + hhmmLocal(st[0], 600) + ' LT</span></div>'
+        +  '<div class="kv"><span class="k">Sunset</span><span class="v">'  + hhmmLocal(st[1], 600) + ' LT</span></div>'
+        +  '<div class="kv"><span class="k">Daylight</span><span class="v">' + hhmm((st[1]-st[0])/60) + '</span></div>';
+    } else {
+      h += '<div class="cempty">Not computable</div>';
+    }
+
+    h += '<div class="csec">Frequencies</div>';
+    if (fi){
+      fi.freq.forEach(function(r){
+        h += '<div class="kv"><span class="k">' + r[0] + '</span><span class="v acc">' + r[1] + '</span></div>';
+      });
+    } else {
+      h += '<div class="cempty">Not in demo data</div>';
+    }
+
+    h += '<div class="cnote">Coordinates, distance, bearing and sun times are computed. '
+      +  'Elevation, runways, frequencies, weather, procedures and NOTAMs are demo placeholders '
+      +  'pending transcription from the AIP. Not for navigation.</div>';
+    return h;
+  }
+
+  function cardWx(f, fi){
+    if (!fi) return '<div class="cempty">Not in demo data</div>';
+    if (cardSub === 'metar'){
+      var cat = wxCat(fi.metar);
+      return '<div class="metar"><div class="hdr">'
+        + '<span class="dot" style="background:' + cat[1] + '"></span>'
+        + '<span style="color:' + cat[1] + '">' + cat[0] + '</span>'
+        + '<span class="age">14m ago</span></div>'
+        + '<div class="raw" style="color:' + cat[1] + '">' + fi.metar + '</div>'
+        + '<div class="csec">Decoded</div>'
+        + kvWind(fi.metar)
+        + '<div class="kv"><span class="k">Temp / dew</span><span class="v">'
+        +   (fi.metar.match(/\s(M?\d{2})\/(M?\d{2})\s/) || [0,'—','—']).slice(1,3).join(' / ') + '</span></div>'
+        + '<div class="kv"><span class="k">QNH</span><span class="v">'
+        +   (fi.metar.match(/Q(\d{4})/) ? fi.metar.match(/Q(\d{4})/)[1] + ' hPa' : '—') + '</span></div>'
+        + '</div>';
+    }
+    if (cardSub === 'taf'){
+      return '<div class="metar"><div class="hdr"><span>TAF</span><span class="age">1h ago</span></div>'
+        + '<div class="raw" style="color:var(--text-2)">' + fi.taf + '</div></div>';
+    }
+    var lv = [[2000,'090',12,18],[5000,'110',18,12],[10000,'130',24,6],[14000,'150',28,1]];
+    var h = '<div class="csec">Forecast winds</div>';
+    lv.forEach(function(r){
+      h += '<div class="kv"><span class="k">' + r[0].toLocaleString() + '\'</span>'
+         + '<span class="v">' + r[1] + '\u00b0 / ' + r[2] + ' kt &nbsp; ' + (r[3] > 0 ? '+' : '') + r[3] + '\u00b0C</span></div>';
     });
+    return h + '<div class="cnote">Demo data.</div>';
+  }
+  function kvWind(m){
+    var w = metarWind(m);
+    return '<div class="kv"><span class="k">Wind</span><span class="v">'
+      + (w ? (w.dir === null ? 'Variable' : String(w.dir).padStart(3,'0') + '\u00b0') + ' / ' + w.kt + ' kt' : '\u2014')
+      + '</span></div>';
+  }
+
+  function cardRwy(f, fi){
+    if (!fi) return '<div class="cempty">Not in demo data</div>';
+    var w = metarWind(fi.metar);
+    var h = '';
+    fi.rwy.forEach(function(r){
+      var ends = r.id.split('/');
+      h += '<div class="rwyc"><div class="rh"><b>' + r.id + '</b><span>' + r.surf + '</span></div>'
+        + '<div class="rwyg">'
+        + '<div><span class="k">Length</span><span class="v">' + r.len.toLocaleString() + ' m</span></div>'
+        + '<div><span class="k">Width</span><span class="v">' + r.wid + ' m</span></div>'
+        + '<div><span class="k">Feet</span><span class="v">' + Math.round(r.len * 3.28084).toLocaleString() + '</span></div>'
+        + '</div>';
+      if (w && w.dir !== null){
+        h += '<div class="csec" style="margin-top:12px">Wind component</div><div class="rwyg">';
+        ends.forEach(function(e){
+          var hdg = parseInt(e, 10) * 10;
+          var d = ((w.dir - hdg + 540) % 360) - 180;
+          var head = w.kt * Math.cos(d * Math.PI / 180);
+          var cross = Math.abs(w.kt * Math.sin(d * Math.PI / 180));
+          h += '<div><span class="k">Rwy ' + e + '</span><span class="v ' + (head >= 0 ? 'ok' : 'warn') + '">'
+             + (head >= 0 ? 'H' : 'T') + Math.abs(head).toFixed(0) + ' X' + cross.toFixed(0) + '</span></div>';
+        });
+        h += '</div>';
+      }
+      h += '</div>';
+    });
+    return h + '<div class="cnote">H = headwind, T = tailwind, X = crosswind, from the METAR above. Demo data.</div>';
+  }
+
+  function cardProc(f){
+    var list = [
+      ['Gov', f.id + ' Aerodrome chart'],
+      ['Gov', f.id + ' RNAV (GNSS) approach'],
+      ['Gov', f.id + ' Departure (RNAV)'],
+      ['Own', 'Circuit notes']
+    ];
+    return list.map(function(r){
+      return '<button class="prow2"><span class="bdg">' + r[0] + '</span>'
+        + '<span class="t2">' + r[1] + '</span><span class="go">Open</span></button>';
+    }).join('') + '<div class="cnote">Demo list. Plate overlay is not wired in this shell.</div>';
+  }
+
+  function cardNtm(f){
+    var n = [
+      ['A0142/26', '21 JUL - 30 SEP', 'Runway lighting unserviceable. Night operations not authorised.'],
+      ['A0138/26', '18 JUL - 25 JUL', 'Grass cutting adjacent runway edge, personnel and equipment on movement area during daylight hours.'],
+      ['C0071/26', 'Perm',            'AIP chart amended, refer latest AIP supplement.']
+    ];
+    return n.map(function(r){
+      return '<div class="ntm"><div class="nh"><b>' + r[0] + '</b><span>' + r[1] + '</span></div>'
+        + '<p>' + r[2] + '</p></div>';
+    }).join('') + '<div class="cnote">Demo NOTAMs. Not a briefing source.</div>';
+  }
+
+  /* ---- render ---- */
+  function drawCard(){
+    var f = dbById(cardId); if (!f) return;
+    var fi = FIELD_INFO[f.id];
+    $('#cardIcao').textContent = f.id;
+    $('#cardName').textContent = f.nm;
+    $('#cardStar').classList.toggle('on', !!cardFav[f.id]);
+
+    var inRoute = ROUTE.some(function(p){ return p.id === f.id; });
+    $('#cardAct').innerHTML =
+        '<button data-ca="dct" style="color:var(--route)">Direct to</button>'
+      + '<button data-ca="add" style="color:var(--magenta)">' + (inRoute ? 'In route' : 'Add to route') + '</button>'
+      + '<button data-ca="chart" style="color:var(--accent-2)">Charts</button>'
+      + '<button data-ca="freq" style="color:var(--navaid)">Freqs</button>';
+
+    $('#cardTabs').innerHTML = CARD_TABS.map(function(t){
+      return '<button data-ct="' + t[0] + '"' + (cardTab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
+    }).join('');
+
+    var sub = $('#cardSub');
+    sub.classList.toggle('off', cardTab !== 'wx');
+    if (cardTab === 'wx'){
+      sub.innerHTML = WX_SUBS.map(function(s){
+        return '<button data-cs="' + s[0] + '"' + (cardSub === s[0] ? ' class="on"' : '') + '>' + s[1] + '</button>';
+      }).join('');
+    }
+
+    $('#cardBody').innerHTML =
+        cardTab === 'info' ? cardInfo(f, fi)
+      : cardTab === 'wx'   ? cardWx(f, fi)
+      : cardTab === 'rwy'  ? cardRwy(f, fi)
+      : cardTab === 'proc' ? cardProc(f)
+      :                      cardNtm(f);
+
+    $$('#cardTabs button').forEach(function(b){
+      b.addEventListener('click', function(){ cardTab = b.getAttribute('data-ct'); drawCard(); });
+    });
+    $$('#cardSub button').forEach(function(b){
+      b.addEventListener('click', function(){ cardSub = b.getAttribute('data-cs'); drawCard(); });
+    });
+    $$('#cardAct button').forEach(function(b){
+      b.addEventListener('click', function(){ cardAction(b.getAttribute('data-ca'), f); });
+    });
+  }
+
+  function cardAction(a, f){
+    if (a === 'dct'){
+      var at = ROUTE.findIndex(function(p){ return p.id === f.id; });
+      if (at < 0){
+        at = Math.max(1, Math.min(toWpt, ROUTE.length));
+        ROUTE.splice(at, 0, { id:f.id, nm:f.nm, cat:f.cat, lat:f.lat, lon:f.lon });
+      }
+      toWpt = at; drawFpl(); toast('Direct to ' + f.id);
+      return;
+    }
+    if (a === 'add'){
+      if (ROUTE.some(function(p){ return p.id === f.id; })){ toast(f.id + ' is already in the route'); return; }
+      ROUTE.push({ id:f.id, nm:f.nm, cat:f.cat, lat:f.lat, lon:f.lon });
+      drawFpl(); drawCard(); toast(f.id + ' added to route');
+      return;
+    }
+    if (a === 'freq'){ cardTab = 'info'; drawCard();
+      var s = $('#cardBody').querySelectorAll('.csec');
+      if (s[2]) s[2].scrollIntoView({ block:'start', behavior:'smooth' });
+      return;
+    }
+    toast('Placeholder');
+  }
+
+  function openCard(id){
+    cardId = id; cardTab = 'info';
+    sizeCard(); drawCard();
+    card.classList.add('on');
+  }
+
+  /* ---- card shell: fixed height, resizable, persisted ---- */
+  var card = $('#card');
+  var CARD_KEY = 'nmp.iphone.cardh', CARD_MIN = 280, cardMax = 500;
+  var cardFrac = (function(){
+    try{ var v = parseFloat(localStorage.getItem(CARD_KEY)); if (v > 0.2 && v <= 1) return v; }catch(e){}
+    return 0.66;
+  })();
+  function sizeCard(){
+    cardMax = Math.max(CARD_MIN, window.innerHeight - 120);
+    card.style.height = Math.max(CARD_MIN, Math.min(cardMax, Math.round(cardFrac * cardMax))) + 'px';
+  }
+  (function(){
+    var grip = $('#cardGrip');
+    function begin(y0){
+      var startH = card.getBoundingClientRect().height;
+      grip.classList.add('on');
+      function move(y){
+        var h = Math.max(CARD_MIN, Math.min(cardMax, startH - (y - y0)));
+        card.style.height = h + 'px';
+        cardFrac = h / cardMax;
+      }
+      function tm(e){ e.preventDefault(); move(e.touches[0].clientY); }
+      function mm(e){ move(e.clientY); }
+      function end(){
+        grip.classList.remove('on');
+        try{ localStorage.setItem(CARD_KEY, String(cardFrac)); }catch(e){}
+        document.removeEventListener('touchmove', tm);
+        document.removeEventListener('touchend', end);
+        document.removeEventListener('mousemove', mm);
+        document.removeEventListener('mouseup', end);
+      }
+      document.addEventListener('touchmove', tm, { passive:false });
+      document.addEventListener('touchend', end);
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', end);
+    }
+    grip.addEventListener('touchstart', function(e){ e.preventDefault(); begin(e.touches[0].clientY); }, { passive:false });
+    grip.addEventListener('mousedown',  function(e){ e.preventDefault(); begin(e.clientY); });
+  })();
+
+  $$('.fld').forEach(function(f){
+    f.addEventListener('click', function(){ openCard(f.getAttribute('data-fld')); });
   });
   $('#cardBack').addEventListener('click', function(){ card.classList.remove('on'); });
-  $$('#card .ctabs button').forEach(function(b){
-    b.addEventListener('click', function(){
-      $$('#card .ctabs button').forEach(function(x){ x.classList.remove('on'); });
-      b.classList.add('on');
-    });
+  $('#cardStar').addEventListener('click', function(){
+    if (!cardId) return;
+    cardFav[cardId] = !cardFav[cardId];
+    $('#cardStar').classList.toggle('on', !!cardFav[cardId]);
   });
-  $$('#card .csub button').forEach(function(b){
-    b.addEventListener('click', function(){
-      $$('#card .csub button').forEach(function(x){ x.classList.remove('on'); });
-      b.classList.add('on');
-    });
-  });
+  window.addEventListener('resize', function(){ if (card.classList.contains('on')) sizeCard(); });
 
   /* ============================================================
      VIEWS + CONFIGURABLE BOTTOM BAR
