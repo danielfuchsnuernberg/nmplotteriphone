@@ -16,6 +16,38 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v31 2026-07-21  The four airport-card action slots are now
+                       user-assignable, same editor pattern as the
+                       bottom bar, activity bar and layer rail. Pool of
+                       eight: Direct to, Add to route, Centre, Copy
+                       coords, Charts, Freqs, Weather, NOTAM.
+                       Aerodrome-only actions drop out automatically on
+                       fixes, villages and personal waypoints.
+       v30 2026-07-21  Airports tab built as Nearest, with All,
+                       Favourites and Recent alongside. Includes bush
+                       strips, not just aerodromes. Distance and bearing
+                       from the map centre, runway length, flight
+                       category dot, tap to open the card. Rebuilt on
+                       every visit since distances move with the map.
+       v29 2026-07-21  Left rail finished. Mark drops a named waypoint
+                       at the map centre, persisted and immediately
+                       searchable. REC is a real timer: tap to start or
+                       stop, hold to reset. Route fits the map to the
+                       active plan. Zoom works, which meant making the
+                       map viewport mutable rather than a fixed box.
+                       Card's Charts action jumps to the Procedure tab.
+                       No dead buttons left in the chrome.
+       v28 2026-07-21  Reverted the icon picker (v26-v27). Fuel and
+                       Airports back to their original glyphs. Kept the
+                       one decision made: Settings is Gear 6, hardcoded.
+                       Parked, not abandoned.
+       v27 2026-07-21  Redrew the Fuel and Airports icon options. Five
+                       each, fewer strokes, more internal space, no
+                       detail smaller than the stroke weight.
+       v26 2026-07-21  Icon options for Settings, Fuel and Airports -
+                       four each, previewed at the size they are drawn
+                       in the chrome, choice persisted and applied
+                       live. Settings > Layout > Icons.
        v25 2026-07-21  Fix: tapping a rail layer button closed the
                        column. v23 made the rail regenerate its markup
                        on every toggle, so the tapped node was detached
@@ -991,6 +1023,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .vempty{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
   color:var(--text-fainter);font-size:var(--t-sm);letter-spacing:.1em;text-transform:uppercase}
 
+/* ---- Nearest / airports list ------------------------------ */
+.npseg{display:flex;gap:var(--gut);padding:0 0 12px}
+.npseg button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted)}
+.npseg button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.nprow{width:100%;display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid var(--border);text-align:left}
+.npdot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:var(--text-fainter)}
+.npid{flex:0 0 auto;min-width:52px;font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  color:var(--accent-2)}
+.npmid{flex:1 1 auto;min-width:0}
+.npmid b{display:block;font-size:var(--t-sm);font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.npmid span{display:block;font-size:var(--t-2xs);color:var(--text-fainter);margin-top:1px}
+.npr{flex:0 0 auto;text-align:right}
+.npr b{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text)}
+.npr span{display:block;font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-muted);margin-top:1px}
+
 /* ---- Quick Fuel Check ------------------------------------- */
 .fcard{background:var(--panel);border:1px solid var(--border);
   border-radius:8px;padding:12px;margin-bottom:12px}
@@ -1116,7 +1167,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       </button>
       <button class="tb" id="tbFpl" aria-label="Flight plan"><span class="txt">FPL</span></button>
       <button class="tb" id="tbSet" aria-label="Settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2L5.4 5.4"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg>
       </button>
       <button class="tb" id="tbTerr" aria-label="Terrain profile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 18l5-7 4 4 4-6 7 9z"/></svg>
@@ -1333,6 +1384,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   <div class="slistw" id="searchList"></div>
 </div>
 
+<!-- Card-action editor -->
+<div class="ted" id="actsEd">
+  <div class="tedw">
+    <div class="tedh">
+      <b>Card actions</b>
+      <button class="x" id="actsEdClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="tedpage" id="actsSlots"></div>
+    <div class="tedhint" id="actsHint"></div>
+    <div class="tedlist" id="actsList"></div>
+  </div>
+</div>
+
 <!-- Layer-rail editor -->
 <div class="ted" id="railEd">
   <div class="tedw">
@@ -1384,7 +1448,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v25';
+  var VERSION = 'v31';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1409,6 +1473,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (actEd) actEd.classList.remove('on');
     if (typeSc) typeSc.classList.remove('on');
     if (railEd) railEd.classList.remove('on');
+    if (actsEd) actsEd.classList.remove('on');
     if (wpt) wpt.classList.remove('on');
     if (sPanel){ sPanel.classList.remove('on'); sBox.classList.remove('on'); }
     if (ted) ted.classList.remove('on');
@@ -1513,6 +1578,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'RIDGE GATE',  nm:'Markham valley',    cat:'mine', lat:-6.4500, lon:146.5000 }
   ];
   var CAT_NM = { field:'Fields', fix:'Fixes', strip:'Strips &amp; villages', mine:'My waypoints' };
+  var MARK_KEY = 'nmp.iphone.marks';
+  (function(){
+    try{
+      var a = JSON.parse(localStorage.getItem(MARK_KEY));
+      if (a && a.length) a.forEach(function(m){ DB.push(m); });
+    }catch(e){}
+  })();
+  function saveMarks(){
+    try{
+      localStorage.setItem(MARK_KEY, JSON.stringify(
+        DB.filter(function(p){ return p.mk; })));
+    }catch(e){}
+  }
   var CAT_ORDER = ['field','fix','strip','mine'];
 
   var ROUTE = [
@@ -2458,6 +2536,48 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   });
   drawActy();
 
+  /* ---------- Card-action editor ---------- */
+  var actsEd = $('#actsEd'), actsSel = 0;
+  function openActsEd(){ closeAll(); actsSel = 0; drawActsEd(); actsEd.classList.add('on'); }
+  $('#actsEdClose').addEventListener('click', function(){ actsEd.classList.remove('on'); });
+  actsEd.addEventListener('click', function(e){ if (e.target === actsEd) actsEd.classList.remove('on'); });
+
+  function drawActsEd(){
+    var s = '<div class="pl">Action slots, left to right</div><div class="row">';
+    for (var i = 0; i < 4; i++){
+      s += '<button class="tslot sm' + (i === actsSel ? ' sel' : '') + '" data-as="' + i + '">'
+         + '<span class="n">' + (i + 1) + '</span>'
+         + '<span class="v" style="color:' + CARD_ACTS[CARD_CFG[i]].c + '">'
+         + CARD_ACTS[CARD_CFG[i]].t + '</span></button>';
+    }
+    s += '</div>';
+    $('#actsSlots').innerHTML = s;
+    $$('#actsSlots .tslot').forEach(function(b){
+      b.addEventListener('click', function(){ actsSel = parseInt(b.getAttribute('data-as'), 10); drawActsEd(); });
+    });
+    $('#actsHint').textContent = 'Choose what goes in slot ' + (actsSel + 1)
+                               + '. Aerodrome-only actions are hidden on fixes and waypoints.';
+    $('#actsList').innerHTML = ACTS_POOL.map(function(k){
+      var at = CARD_CFG.indexOf(k), a = CARD_ACTS[k];
+      return '<button class="tedrow" data-ak="' + k + '">'
+           + '<span class="ic" style="color:' + a.c
+           + '"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/></svg></span>'
+           + a.t + (a.fld ? ' <span style="color:var(--text-fainter);font-size:var(--t-2xs)">'
+                          + '&nbsp;aerodromes only</span>' : '')
+           + (at >= 0 ? '<span class="badge">' + (at + 1) + '</span>' : '') + '</button>';
+    }).join('');
+    $$('#actsList .tedrow').forEach(function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-ak'), at = CARD_CFG.indexOf(k);
+        if (at === actsSel) return;
+        if (at >= 0) CARD_CFG[at] = CARD_CFG[actsSel];   /* swap, never duplicate */
+        CARD_CFG[actsSel] = k;
+        saveActs(); drawActsEd();
+        if (cardId || cardAdHoc) drawCard();
+      });
+    });
+  }
+
   /* ---------- Layer-rail editor ---------- */
   var railEd = $('#railEd'), railSel = 0;
   function openRailEd(){ closeAll(); railSel = 0; drawRailEd(); railEd.classList.add('on'); }
@@ -2623,12 +2743,67 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       b.classList.toggle('on', layOn(b.getAttribute('data-lyr')));
     });
   }
-  $('#rbRec').addEventListener('click', function(){
-    this.classList.toggle('on');
+  /* ---- Mark: drop a waypoint at the map centre ---- */
+  $('#rbMark').addEventListener('click', function(e){
+    e.stopPropagation();
+    var n = 0;
+    DB.forEach(function(p){ if (p.mk) n++; });
+    var id = 'MARK ' + (n + 1);
+    var p = {
+      id: id, nm: 'Marked ' + new Date().toISOString().slice(11, 16) + 'Z',
+      cat: 'mine', mk: true,
+      lat: (VIEW.n + VIEW.s) / 2, lon: (VIEW.w + VIEW.e) / 2
+    };
+    DB.push(p); saveMarks();
+    if (!LAYERS.mine){ LAYERS.mine = true; saveLayers(); syncRail(); drawLayersPop(); }
+    renderMap();
+    toast(id + ' \u00b7 ' + ddm(p.lat, true) + ' ' + ddm(p.lon, false));
   });
-  ['#rbMark','#rbRoute','#rbIn','#rbOut'].forEach(function(sel){
-    $(sel).addEventListener('click', function(){ toast('Placeholder'); });
+
+  /* ---- REC: tap to start or stop, hold to reset ---- */
+  var recRun = false, recSec = 0, recT = null, recHold = null, recDidHold = false;
+  function recPaint(){
+    var t = $('#rbRec .tick');
+    if (t) t.textContent = String(Math.floor(recSec / 60)).padStart(2, '0') + ':'
+                         + String(recSec % 60).padStart(2, '0');
+    $('#rbRec').classList.toggle('on', recRun);
+  }
+  function recTick(){ recSec++; if (recSec > 5999) recSec = 0; recPaint(); }
+  $('#rbRec').addEventListener('touchstart', function(){
+    recDidHold = false;
+    recHold = setTimeout(function(){
+      recDidHold = true;
+      recRun = false; clearInterval(recT); recT = null; recSec = 0; recPaint();
+      if (navigator.vibrate) navigator.vibrate(10);
+      toast('Timer reset');
+    }, 650);
+  }, { passive:true });
+  ['touchend','touchcancel','touchmove'].forEach(function(ev){
+    $('#rbRec').addEventListener(ev, function(){ clearTimeout(recHold); });
   });
+  $('#rbRec').addEventListener('click', function(e){
+    e.stopPropagation();
+    if (recDidHold){ recDidHold = false; return; }
+    recRun = !recRun;
+    if (recRun){ recT = setInterval(recTick, 1000); }
+    else { clearInterval(recT); recT = null; }
+    recPaint();
+  });
+  recPaint();
+
+  /* ---- Route: fit the map to the active plan ---- */
+  $('#rbRoute').addEventListener('click', function(e){
+    e.stopPropagation();
+    if (!ROUTE.length){ toast('No route to fit'); return; }
+    if (ROUTE.length === 1) viewFit(ROUTE, 3);
+    else viewFit(ROUTE);
+    if (!LAYERS.route){ LAYERS.route = true; saveLayers(); syncRail(); drawLayersPop(); renderMap(); }
+    toast('Fitted to route');
+  });
+
+  /* ---- Zoom ---- */
+  $('#rbIn').addEventListener('click',  function(e){ e.stopPropagation(); viewZoom(0.7); });
+  $('#rbOut').addEventListener('click', function(e){ e.stopPropagation(); viewZoom(1.4); });
 
   /* ---------- GPS window ---------- */
   var gps = $('#gpsOv');
@@ -2751,6 +2926,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function rwyLenM(r){
     return Math.round(nmBetween({lat:r.e[0],lon:r.e[1]}, {lat:r.e[2],lon:r.e[3]}) * 1852);
   }
+
+  /* The four action slots on the card are user-assignable. Four is a
+     hard ceiling: at 375px each slot gets ~94px and "Add to route"
+     needs ~78 of that, so a fifth would start truncating labels. */
+  var CARD_ACTS = {
+    dct:  { t:'Direct to',    c:'var(--route)',    fld:false },
+    add:  { t:'Add to route', c:'var(--magenta)',  fld:false },
+    ctr:  { t:'Centre',       c:'var(--accent-2)', fld:false },
+    copy: { t:'Copy coords',  c:'var(--accent)',   fld:false },
+    chart:{ t:'Charts',       c:'var(--navaid)',   fld:true  },
+    freq: { t:'Freqs',        c:'var(--good)',     fld:true  },
+    wx:   { t:'Weather',      c:'#2b8cff',         fld:true  },
+    ntm:  { t:'NOTAM',        c:'var(--bad)',      fld:true  }
+  };
+  var ACTS_POOL = ['dct','add','ctr','copy','chart','freq','wx','ntm'];
+  var ACTS_KEY = 'nmp.iphone.cardacts';
+  var CARD_CFG = (function(){
+    try{
+      var a = JSON.parse(localStorage.getItem(ACTS_KEY));
+      if (a && a.length === 4 && a.every(function(k){ return ACTS_POOL.indexOf(k) >= 0; })) return a;
+    }catch(e){}
+    return ['dct','add','ctr','chart'];
+  })();
+  function saveActs(){ try{ localStorage.setItem(ACTS_KEY, JSON.stringify(CARD_CFG)); }catch(e){} }
 
   var cardId = null, cardTab = 'info', cardSub = 'metar', cardFav = {};
   var CARD_TABS = [['info','Info'],['wx','Weather'],['rwy','Runway'],['proc','Procedure'],['ntm','NOTAM']];
@@ -2944,11 +3143,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#cardStar').classList.toggle('on', !!(f.id && cardFav[f.id]));
 
     var inRoute = ROUTE.some(function(p){ return p.id === f.id; });
-    $('#cardAct').innerHTML =
-        '<button data-ca="dct" style="color:var(--route)">Direct to</button>'
-      + '<button data-ca="add" style="color:var(--magenta)">' + (inRoute ? 'In route' : 'Add to route') + '</button>'
-      + '<button data-ca="ctr" style="color:var(--accent-2)">Centre</button>'
-      + (fi ? '<button data-ca="freq" style="color:var(--navaid)">Freqs</button>' : '');
+    $('#cardAct').innerHTML = CARD_CFG.filter(function(k){
+      return fi || !CARD_ACTS[k].fld;      /* aerodrome-only actions drop out elsewhere */
+    }).map(function(k){
+      var a = CARD_ACTS[k];
+      var label = (k === 'add' && inRoute) ? 'In route' : a.t;
+      return '<button data-ca="' + k + '" style="color:' + a.c + '">' + label + '</button>';
+    }).join('');
 
     /* Only aerodromes have weather, runways, procedures and NOTAMs. */
     if (!fi) cardTab = 'info';
@@ -3004,20 +3205,56 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       if (s[2]) s[2].scrollIntoView({ block:'start', behavior:'smooth' });
       return;
     }
-    if (a === 'ctr'){ card.classList.remove('on'); flashPoint(f); return; }
+    if (a === 'ctr'){ card.classList.remove('on'); viewFit([f], 6); flashPoint(f); return; }
+    if (a === 'chart'){ cardTab = 'proc'; drawCard(); return; }
+    if (a === 'wx'){  cardTab = 'wx';  drawCard(); return; }
+    if (a === 'ntm'){ cardTab = 'ntm'; drawCard(); return; }
+    if (a === 'copy'){
+      var s = ddm(f.lat, true) + ' ' + ddm(f.lon, false);
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(s).then(function(){ toast(s + ' copied'); },
+                                              function(){ toast(s); });
+      } else toast(s);
+      return;
+    }
     toast('Placeholder');
   }
 
   /* The demo map is a placeholder, so "Centre" drops a pulsing marker
      at the point's position within a PNG bounding box rather than
      pretending to pan a real map. */
-  var PNG_BOX = { n:-1.5, s:-11.0, w:140.0, e:156.0 };
+  var PNG_BOX = { n:-1.5, s:-11.0, w:140.0, e:156.0 };   /* home extent */
+  var VIEW = { n:PNG_BOX.n, s:PNG_BOX.s, w:PNG_BOX.w, e:PNG_BOX.e };
+  var VIEW_MIN = 0.25, VIEW_MAX = 30;                   /* degrees of span */
+
+  function viewZoom(f){
+    var cy = (VIEW.n + VIEW.s) / 2, cx = (VIEW.w + VIEW.e) / 2;
+    var hy = (VIEW.n - VIEW.s) / 2 * f, hx = (VIEW.e - VIEW.w) / 2 * f;
+    if (hx * 2 < VIEW_MIN || hx * 2 > VIEW_MAX) return;
+    VIEW.n = cy + hy; VIEW.s = cy - hy;
+    VIEW.w = cx - hx; VIEW.e = cx + hx;
+    renderMap();
+  }
+  function viewFit(pts, pad){
+    if (!pts || !pts.length) return false;
+    var n = -90, s = 90, w = 180, e = -180;
+    pts.forEach(function(p){
+      n = Math.max(n, p.lat); s = Math.min(s, p.lat);
+      w = Math.min(w, p.lon); e = Math.max(e, p.lon);
+    });
+    var dy = Math.max(n - s, 0.4), dx = Math.max(e - w, 0.4);
+    var span = Math.max(dy, dx * 0.62) * (1 + (pad === undefined ? 0.35 : pad));
+    var cy = (n + s) / 2, cx = (w + e) / 2;
+    VIEW.n = cy + span / 2; VIEW.s = cy - span / 2;
+    VIEW.w = cx - span / 2 / 0.62; VIEW.e = cx + span / 2 / 0.62;
+    renderMap();
+    return true;
+  }
   var flashT = null;
   function flashPoint(p){
     var old = document.querySelector('.mkflash'); if (old) old.remove();
     clearTimeout(flashT);
-    var x = (p.lon - PNG_BOX.w) / (PNG_BOX.e - PNG_BOX.w);
-    var y = (PNG_BOX.n - p.lat) / (PNG_BOX.n - PNG_BOX.s);
+    var x = projX(p.lon) / 100, y = projY(p.lat) / 100;
     var el = document.createElement('div');
     el.className = 'mkflash';
     el.style.left = Math.max(6, Math.min(94, x * 100)) + '%';
@@ -3171,6 +3408,72 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* ---------- view layer ---------- */
   var viewLayer = $('#viewLayer'), viewCache = {};
 
+  /* ---- Airports: nearest first, with the full list one tap away ---- */
+  var npMode = 'near';
+  function airportsHTML(){
+    /* This view can be the opening tab, which runs before the map
+       section has assigned VIEW and before search has loaded recents. */
+    var V = (typeof VIEW !== 'undefined' && VIEW) ? VIEW
+          : { n:-1.5, s:-11.0, w:140.0, e:156.0 };
+    var rec = (typeof recents !== 'undefined' && recents) ? recents : [];
+    var here = { lat:(V.n + V.s) / 2, lon:(V.w + V.e) / 2 };
+    var modes = [['near','Nearest'],['all','All'],['fav','Favourites'],['rec','Recent']];
+
+    var items = DB.filter(function(p){ return p.cat === 'field' || p.cat === 'strip'; });
+    if (npMode === 'fav') items = items.filter(function(p){ return cardFav[p.id]; });
+    if (npMode === 'rec') items = rec.map(dbById).filter(function(p){
+      return p && (p.cat === 'field' || p.cat === 'strip');
+    });
+
+    items = items.map(function(p){
+      return { p:p, d:nmBetween(here, p), b:trkBetween(here, p) };
+    });
+    if (npMode === 'near') items.sort(function(a, b){ return a.d - b.d; });
+    if (npMode === 'all')  items.sort(function(a, b){ return a.p.id < b.p.id ? -1 : 1; });
+    if (npMode === 'near') items = items.slice(0, 20);
+
+    var h = '<div class="npseg">' + modes.map(function(m){
+      return '<button data-np="' + m[0] + '"' + (npMode === m[0] ? ' class="on"' : '') + '>'
+           + m[1] + '</button>';
+    }).join('') + '</div>';
+
+    if (!items.length){
+      h += '<div class="cempty">' + (npMode === 'fav' ? 'No favourites yet \u2014 star a field on its card'
+                                                       : 'Nothing here yet') + '</div>';
+      return h;
+    }
+
+    items.forEach(function(it){
+      var p = it.p, fi = FIELD_INFO[p.id];
+      var dot = 'var(--text-fainter)';
+      if (fi) dot = wxCat(fi.metar)[1];
+      var rwy = fi ? (rwyLenM(fi.rwy[0]).toLocaleString() + ' m') : (p.cat === 'strip' ? 'Strip' : '\u2014');
+      h += '<button class="nprow" data-ap="' + p.id + '">'
+        +  '<span class="npdot" style="background:' + dot + '"></span>'
+        +  '<span class="npid">' + p.id + '</span>'
+        +  '<span class="npmid"><b>' + p.nm + '</b><span>' + rwy
+        +    (fi && fi.iata ? ' \u00b7 ' + fi.iata : '') + '</span></span>'
+        +  '<span class="npr"><b>' + it.d.toFixed(0) + '</b><span>'
+        +    String(Math.round(it.b)).padStart(3, '0') + '\u00b0</span></span></button>';
+    });
+    return h + '<div class="cnote">Distance and bearing are from the centre of the map view. '
+      + 'In the real build this is own-ship position. Green, blue or red dot is the parsed '
+      + 'flight category where a METAR exists.</div>';
+  }
+
+  function wireAirports(el){
+    Array.prototype.forEach.call(el.querySelectorAll('.npseg button'), function(b){
+      b.addEventListener('click', function(){
+        npMode = b.getAttribute('data-np');
+        el.querySelector('.vbody').innerHTML = airportsHTML();
+        wireAirports(el);
+      });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('.nprow'), function(b){
+      b.addEventListener('click', function(){ openCard(b.getAttribute('data-ap')); });
+    });
+  }
+
   function stubHTML(k){
     return '<div class="vhead"><b>' + vTitle(k) + '</b></div>'
          + '<div class="vempty">Not built in this demo</div>';
@@ -3180,10 +3483,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (viewCache[k]) return viewCache[k];
     var el = document.createElement('div');
     el.className = 'vwrap';
-    el.innerHTML = (k === 'fuel') ? fuelHTML() : stubHTML(k);
+    el.innerHTML = (k === 'fuel')     ? fuelHTML()
+                 : (k === 'airports') ? '<div class="vhead"><b>Airports</b>'
+                     + '<span class="sub">nearest first</span></div>'
+                     + '<div class="vbody">' + airportsHTML() + '</div>'
+                 : stubHTML(k);
     viewLayer.appendChild(el);
     viewCache[k] = el;
     if (k === 'fuel') initFuel(el);
+    if (k === 'airports') wireAirports(el);
     return el;
   }
 
@@ -3191,7 +3499,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (isAct(k)) return;
     Object.keys(viewCache).forEach(function(x){ viewCache[x].classList.remove('on'); });
     if (k === 'map'){ viewLayer.classList.remove('on'); return; }
-    getView(k).classList.add('on');
+    var el = getView(k);
+    /* distances depend on where the map is, so rebuild on every visit */
+    if (k === 'airports'){
+      el.querySelector('.vbody').innerHTML = airportsHTML();
+      wireAirports(el);
+    }
+    el.classList.add('on');
     viewLayer.classList.add('on');
   }
 
@@ -3245,16 +3559,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     charts:'var(--accent-2)', wb:'var(--navaid)', freq:'var(--magenta)',
     flights:'var(--good)', notes:'var(--route)', gps:'var(--accent)'
   };
-  var mh = '';
-  VIEWS.forEach(function(v){
-    mh += '<button class="srow" data-go="' + v.k + '">'
-        + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
-        + svg(v.k) + '</span>' + v.t + '</button>';
-  });
-  mh += '<button class="srow" data-go="__set"><span class="sq" style="background:var(--accent)">'
-      + svg('more') + '</span>Settings</button>';
-  $('#moreList').innerHTML = mh;
-  $('#sver').textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
+  function buildMore(){
+    var mh = '';
+    VIEWS.forEach(function(v){
+      mh += '<button class="srow" data-go="' + v.k + '">'
+          + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
+          + svg(v.k) + '</span>' + v.t + '</button>';
+    });
+    mh += '<button class="srow" data-go="__set"><span class="sq" style="background:var(--accent)">'
+        + svg('more') + '</span>Settings</button>';
+    $('#moreList').innerHTML = mh;
+    $('#sver').textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
+    wireMore();
+  }
+  function wireMore(){
   $$('#moreList .srow').forEach(function(r){
     r.addEventListener('click', function(){
       var k = r.getAttribute('data-go');
@@ -3262,6 +3580,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       goTo(k);
     });
   });
+  }
+  buildMore();
 
   /* ---------- Tab-bar editor ---------- */
   var ted = $('#tabEd'), tedSlot = 0;
@@ -3640,6 +3960,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + '<button class="setgo" data-go2="tabs">Edit bottom bar<span class="ch">\u203a</span></button>'
       + '<button class="setgo" data-go2="acty">Edit activity bar<span class="ch">\u203a</span></button>'
       + '<button class="setgo" data-go2="rail">Edit layer rail<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="acts">Edit card actions<span class="ch">\u203a</span></button>'
       + '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
       + '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>'
 
@@ -3687,6 +4008,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         if (k === 'tabs')    openEd();
         if (k === 'acty')    openActEd();
         if (k === 'rail')    openRailEd();
+        if (k === 'acts')    openActsEd();
         if (k === 'type')    openType();
         if (k === 'metrics') showMetrics();
       });
@@ -3840,8 +4162,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'R-AYR921', n:-9.20, s:-9.75, w:146.90, e:147.60 }
   ];
 
-  function projX(lon){ return (lon - PNG_BOX.w) / (PNG_BOX.e - PNG_BOX.w) * 100; }
-  function projY(lat){ return (PNG_BOX.n - lat) / (PNG_BOX.n - PNG_BOX.s) * 100; }
+  function projX(lon){ return (lon - VIEW.w) / (VIEW.e - VIEW.w) * 100; }
+  function projY(lat){ return (VIEW.n - lat) / (VIEW.n - VIEW.s) * 100; }
 
   function renderMap(){
     var map = $('#map'), host = $('#mapLayers');
