@@ -16,6 +16,16 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v20 2026-07-21  Layers popover is live. Map markers are now
+                       projected from the same DB search and FPL use,
+                       so every toggle changes what is drawn: three
+                       basemaps, airfields, strips, enroute fixes,
+                       personal waypoints, the active route, danger
+                       areas, terrain shading, and flight-category
+                       colouring of aerodrome dots. Layers with no data
+                       in this shell are shown disabled and say so
+                       rather than ticking and doing nothing. Route
+                       line moved from Settings into Layers.
        v19 2026-07-21  Terrain button wired. Full-panel route profile
                        with an altitude grid, waypoint ticks, drag
                        scrubber, terrain above (cruise - clearance)
@@ -324,24 +334,45 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     radial-gradient(120% 90% at 30% 20%, #101821 0%, #0a0e13 70%);
   overflow:hidden;
 }
-.grat{position:absolute;inset:0;opacity:.5;
+.grat{position:absolute;inset:0;opacity:.5;pointer-events:none;
   background-image:
     linear-gradient(to right, #17202b 1px, transparent 1px),
     linear-gradient(to bottom, #17202b 1px, transparent 1px);
   background-size:52px 52px;
 }
+.map.base-carto{background:#0c1014}
+.map.base-carto .grat{opacity:.22}
+.map.base-sat{background:linear-gradient(160deg,#1b2418 0%,#242a1c 45%,#141a20 100%)}
+.map.base-sat .grat{opacity:.12}
+.terr-ov{position:absolute;inset:0;pointer-events:none;display:none;
+  background:
+    radial-gradient(52% 26% at 44% 40%, rgba(196,150,86,.34) 0%, rgba(196,150,86,0) 70%),
+    radial-gradient(38% 18% at 68% 52%, rgba(196,150,86,.28) 0%, rgba(196,150,86,0) 70%),
+    radial-gradient(46% 20% at 26% 46%, rgba(120,150,110,.22) 0%, rgba(120,150,110,0) 70%);
+}
+.terr-ov.on{display:block}
+.dgr{position:absolute;pointer-events:none;border:1px solid rgba(240,80,110,.75);
+  background:repeating-linear-gradient(45deg,rgba(240,80,110,.13) 0 6px,transparent 6px 12px)}
+.dgr b{position:absolute;top:2px;left:4px;font-family:var(--mono);font-size:var(--t-2xs);
+  font-weight:700;color:#f0506e;white-space:nowrap}
 .mapnote{
   position:absolute;left:0;right:0;top:44%;
   text-align:center;font-size:var(--t-sm);
   color:var(--text-fainter);letter-spacing:.12em;text-transform:uppercase;
   pointer-events:none;
 }
-.fld{position:absolute;transform:translate(-50%,-50%);pointer-events:auto}
+.fld{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;z-index:12}
 .fld i{display:block;width:9px;height:9px;border-radius:50%;
   background:var(--accent-2);margin:0 auto;box-shadow:0 0 0 2px rgba(10,14,19,.9)}
 .fld b{display:block;margin-top:3px;font-size:var(--t-xs);font-weight:600;
   color:var(--text-dim);letter-spacing:.04em;white-space:nowrap}
-.leg{position:absolute;height:2px;background:var(--route);transform-origin:0 50%;opacity:.9}
+.fld.k-strip i{width:6px;height:6px;background:var(--text-muted)}
+.fld.k-strip b{font-size:var(--t-2xs);color:var(--text-fainter)}
+.fld.k-fix i{width:8px;height:8px;border-radius:1px;background:#8de84a;transform:rotate(45deg)}
+.fld.k-fix b{color:#8de84a;opacity:.85}
+.fld.k-mine i{width:8px;height:8px;border-radius:2px;background:var(--accent)}
+.fld.k-mine b{color:var(--accent);opacity:.9}
+.leg{position:absolute;height:2px;background:var(--route);transform-origin:0 50%;opacity:.9;z-index:10}
 
 /* ---- Left rail --------------------------------------------
    44px lane, 6px off the left edge, bottom-anchored,
@@ -1074,12 +1105,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   <!-- ===================== MAP ===================== -->
   <main class="map" id="map">
     <div class="grat"></div>
+    <div class="terr-ov" id="terrOv"></div>
     <div class="mapnote">Placeholder map</div>
-
-    <div class="fld" style="left:26%;top:32%" data-fld="AYNZ"><i></i><b>AYNZ</b></div>
-    <div class="fld" style="left:57%;top:22%" data-fld="AYGA"><i></i><b>AYGA</b></div>
-    <div class="fld" style="left:79%;top:47%" data-fld="AYMH"><i></i><b>AYMH</b></div>
-    <div class="fld" style="left:44%;top:66%" data-fld="AYMD"><i></i><b>AYMD</b></div>
+    <div id="mapLayers"></div>
 
     <!-- Left rail -->
     <div class="rail" id="rail">
@@ -1159,24 +1187,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <div class="pop" id="popLayers">
   <div class="caret" id="popCaret"></div>
   <div class="pop2">
-    <div class="pcol l">
-      <div class="prow sel">PNG vector (offline)</div>
-      <div class="prow">CARTO dark</div>
-      <div class="prow">Satellite</div>
-      <div class="psec">Overlays</div>
-      <div class="prow"><span class="ck"></span>Terrain</div>
-      <div class="prow"><span class="ck"></span>Labels</div>
-    </div>
-    <div class="pcol">
-      <div class="prow"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg></span>Airfields</div>
-      <div class="prow"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg></span>My waypoints</div>
-      <div class="prow"><span class="ck"></span>Navaids</div>
-      <div class="prow"><span class="ck"></span>Enroute fixes</div>
-      <div class="prow"><span class="ck"></span>Danger / Restricted</div>
-      <div class="prow"><span class="ck"></span>MBZ</div>
-      <div class="prow"><span class="ck"></span>Flight category</div>
-      <div class="prow"><span class="ck"></span>Procedure fixes</div>
-    </div>
+    <div class="pcol l" id="popL"></div>
+    <div class="pcol" id="popR"></div>
   </div>
 </div>
 
@@ -1337,7 +1349,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v19';
+  var VERSION = 'v20';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1386,26 +1398,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     pop.style.width = (window.innerWidth - 19 - 48) + 'px';
     pop.style.top = (chrome.bottom + 6.5) + 'px';
     caret.style.left = (btn.left + btn.width/2 - 19 - 6) + 'px';
+    drawLayersPop();
     pop.classList.add('on');
     scrim.classList.add('on');
     $('#tbLayers').classList.add('on');
   }
   $('#tbLayers').addEventListener('click', openLayers);
 
-  $$('#popLayers .prow').forEach(function(r){
-    r.addEventListener('click', function(){
-      var ck = r.querySelector('.ck');
-      if (ck){
-        ck.innerHTML = ck.innerHTML.trim()
-          ? ''
-          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>';
-      } else {
-        var col = r.parentNode;
-        Array.prototype.forEach.call(col.querySelectorAll('.prow.sel'), function(x){ x.classList.remove('sel'); });
-        r.classList.add('sel');
-      }
-    });
-  });
 
   /* ============================================================
      FLIGHT PLAN
@@ -1415,7 +1414,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      ============================================================ */
 
   var AC  = { reg:'P2-LAW', type:'BK117', tas:110, burn:176, fob:500, resMin:30, alt:9500 };
-  var SET = { clr:1000, labels:'auto', routeLine:true, coordFmt:'ddm' };
+  var SET = { clr:1000, labels:'auto', coordFmt:'ddm' };   /* route line lives in LAYERS */
   var SET_KEY = 'nmp.iphone.set', savedEtd = null;
   (function(){
     try{
@@ -1714,7 +1713,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       });
     }
     if (fplTab === 'profile'){ profPaint(); wireScrub(); }
-    drawLegs();
+    renderMap();
   }
 
   /* ---- drag to reorder route chips ----------------------------
@@ -3533,7 +3532,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
       + '<div class="csec">Map</div>'
       + setRow('Airfield labels', 'declutter', segCtrl('labels', [['off','Off'],['auto','Auto'],['always','Always']], SET.labels))
-      + setRow('Route line', null, swiCtrl('routeLine', SET.routeLine))
 
       + '<div class="csec">Units</div>'
       + setRow('Coordinate format', 'default for the GPS window',
@@ -3572,14 +3570,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           if (name === 'resMin')      AC.resMin = parseInt(v, 10);
           else if (name === 'clr')    SET.clr = parseInt(v, 10);
           else { SET[name] = v; if (name === 'coordFmt') gpsFmt = v; }
-          saveSet(); drawSet(); drawFpl(); applyMapOpts();
+          saveSet(); drawSet(); drawFpl(); renderMap();
         });
       });
     });
     $$('#setBody .swi').forEach(function(s){
       s.addEventListener('click', function(){
         SET[s.getAttribute('data-swi')] = !SET[s.getAttribute('data-swi')];
-        saveSet(); drawSet(); applyMapOpts();
+        saveSet(); drawSet(); renderMap();
       });
     });
     $$('#setBody .setgo').forEach(function(b){
@@ -3640,50 +3638,151 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     setTimeout(function(){ mx.classList.remove('on'); mx.innerHTML = ''; mxOn = false; }, 6000);
   }
 
-  /* ---------- map placeholder options ---------- */
-  function applyMapOpts(){
-    $$('.fld b').forEach(function(el){
-      el.style.display = (SET.labels === 'off') ? 'none' : '';
-      el.style.opacity = (SET.labels === 'auto') ? '.75' : '1';
-    });
-    $$('.leg').forEach(function(el){ el.style.display = SET.routeLine ? '' : 'none'; });
-  }
+  /* ============================================================
+     MAP LAYERS
+     The map is a placeholder, but the layer wiring is real: markers
+     are projected from the same DB the search and FPL use, so every
+     toggle changes what is actually drawn.
+     ============================================================ */
+  var LAYERS = {
+    base:'png', terrain:false,
+    fields:true, strips:false, fixes:false, mine:true,
+    route:true, danger:false, wxcat:false
+  };
+  var LAY_KEY = 'nmp.iphone.layers';
+  (function(){
+    try{ var s = JSON.parse(localStorage.getItem(LAY_KEY));
+         if (s) for (var k in s) if (k in LAYERS) LAYERS[k] = s[k]; }catch(e){}
+  })();
+  function saveLayers(){ try{ localStorage.setItem(LAY_KEY, JSON.stringify(LAYERS)); }catch(e){} }
 
-  /* ---------- offline: register the paired service worker ----------
-     Guarded so the file still runs from file:// or a preview, where
-     there is no SW scope. The cache name is namespaced to this repo
-     so it can never evict the live NM Plotter shell. */
-  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
-    window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js').catch(function(){ /* offline-only, non-fatal */ });
-    });
-  }
+  var BASES = [
+    ['png',   'PNG vector (offline)'],
+    ['carto', 'CARTO dark'],
+    ['sat',   'Satellite']
+  ];
+  var OVERLAYS = [
+    ['fields', 'Airfields',        true],
+    ['strips', 'Strips &amp; villages', true],
+    ['fixes',  'Enroute fixes',    true],
+    ['mine',   'My waypoints',     true],
+    ['route',  'Active route',     true],
+    ['danger', 'Danger areas',     true],
+    ['wxcat',  'Flight category',  true],
+    ['terrain','Terrain shading',  true],
+    ['navaid', 'Navaids',          false],
+    ['proc',   'Procedure fixes',  false]
+  ];
 
-  /* ---------- fake route legs between the airfield dots ---------- */
-  function drawLegs(){
-    var map = $('#map');
-    Array.prototype.forEach.call(map.querySelectorAll('.leg'), function(l){ l.remove(); });
-    var pts = $$('.fld').map(function(f){
-      return { x: f.offsetLeft, y: f.offsetTop };
-    });
-    var order = [0, 1, 2];
-    for (var i = 0; i < order.length - 1; i++){
-      var a = pts[order[i]], b = pts[order[i+1]];
-      var dx = b.x - a.x, dy = b.y - a.y;
-      var len = Math.sqrt(dx*dx + dy*dy);
-      var ang = Math.atan2(dy, dx) * 180 / Math.PI;
-      var el = document.createElement('div');
-      el.className = 'leg';
-      el.style.left = a.x + 'px';
-      el.style.top = a.y + 'px';
-      el.style.width = len + 'px';
-      el.style.transform = 'rotate(' + ang + 'deg)';
-      map.insertBefore(el, map.querySelector('.fld'));
+  /* demo danger areas, boxes in degrees - shape only, not AIP data */
+  var DANGER = [
+    { id:'D-AYD903', n:-6.20, s:-6.95, w:146.30, e:147.20 },
+    { id:'R-AYR921', n:-9.20, s:-9.75, w:146.90, e:147.60 }
+  ];
+
+  function projX(lon){ return (lon - PNG_BOX.w) / (PNG_BOX.e - PNG_BOX.w) * 100; }
+  function projY(lat){ return (PNG_BOX.n - lat) / (PNG_BOX.n - PNG_BOX.s) * 100; }
+
+  function renderMap(){
+    var map = $('#map'), host = $('#mapLayers');
+    if (!map || !host) return;
+
+    map.classList.remove('base-png','base-carto','base-sat');
+    map.classList.add('base-' + LAYERS.base);
+    $('#terrOv').classList.toggle('on', !!LAYERS.terrain);
+
+    var h = '';
+
+    if (LAYERS.danger){
+      DANGER.forEach(function(d){
+        var l = projX(d.w), t = projY(d.n);
+        h += '<div class="dgr" style="left:' + l.toFixed(2) + '%;top:' + t.toFixed(2)
+          +  '%;width:' + (projX(d.e) - l).toFixed(2) + '%;height:' + (projY(d.s) - t).toFixed(2)
+          +  '%"><b>' + d.id + '</b></div>';
+      });
     }
-    applyMapOpts();
+
+    if (LAYERS.route && ROUTE.length > 1){
+      var rect = map.getBoundingClientRect();
+      for (var i = 0; i < ROUTE.length - 1; i++){
+        var a = ROUTE[i], b = ROUTE[i+1];
+        var ax = projX(a.lon) / 100 * rect.width, ay = projY(a.lat) / 100 * rect.height;
+        var bx = projX(b.lon) / 100 * rect.width, by = projY(b.lat) / 100 * rect.height;
+        var dx = bx - ax, dy = by - ay;
+        h += '<div class="leg" style="left:' + ax.toFixed(1) + 'px;top:' + ay.toFixed(1)
+          +  'px;width:' + Math.sqrt(dx*dx + dy*dy).toFixed(1) + 'px;transform:rotate('
+          +  (Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2) + 'deg)"></div>';
+      }
+    }
+
+    var show = { field:LAYERS.fields, strip:LAYERS.strips, fix:LAYERS.fixes, mine:LAYERS.mine };
+    DB.forEach(function(p){
+      if (!show[p.cat]) return;
+      var x = projX(p.lon), y = projY(p.lat);
+      if (x < -2 || x > 102 || y < -2 || y > 102) return;
+      var tint = '';
+      if (LAYERS.wxcat && p.cat === 'field'){
+        var fi = FIELD_INFO[p.id];
+        if (fi) tint = 'background:' + wxCat(fi.metar)[1] + ';';
+      }
+      var lab = (SET.labels === 'off') ? ''
+              : '<b' + (SET.labels === 'auto' ? ' style="opacity:.75"' : '') + '>' + p.id + '</b>';
+      h += '<div class="fld k-' + p.cat + '" data-fld="' + p.id + '" style="left:' + x.toFixed(2)
+        +  '%;top:' + y.toFixed(2) + '%"><i' + (tint ? ' style="' + tint + '"' : '') + '></i>'
+        +  lab + '</div>';
+    });
+
+    host.innerHTML = h;
+    $$('#mapLayers .fld').forEach(function(el){
+      el.addEventListener('click', function(e){
+        e.stopPropagation();
+        openCard(el.getAttribute('data-fld'));
+      });
+    });
   }
-  window.addEventListener('resize', drawLegs);
-  setTimeout(drawLegs, 60);
+
+  /* ---------- Layers popover, generated from the model ---------- */
+  function drawLayersPop(){
+    var l = '';
+    BASES.forEach(function(b){
+      l += '<div class="prow' + (LAYERS.base === b[0] ? ' sel' : '') + '" data-base="' + b[0] + '">'
+        +  b[1] + '</div>';
+    });
+    $('#popL').innerHTML = l;
+
+    var tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
+             + 'stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>';
+    var r = '';
+    OVERLAYS.forEach(function(o){
+      var on = !!LAYERS[o[0]];
+      r += '<div class="prow" data-ov="' + o[0] + '"' + (o[2] ? '' : ' style="opacity:.4"') + '>'
+        +  '<span class="ck">' + (o[2] && on ? tick : '') + '</span>' + o[1]
+        +  (o[2] ? '' : '<span style="margin-left:auto;font-size:var(--t-2xs);color:var(--text-fainter)">no data</span>')
+        +  '</div>';
+    });
+    $('#popR').innerHTML = r;
+
+    $$('#popL .prow').forEach(function(el){
+      el.addEventListener('click', function(){
+        LAYERS.base = el.getAttribute('data-base');
+        saveLayers(); drawLayersPop(); renderMap();
+      });
+    });
+    $$('#popR .prow').forEach(function(el){
+      el.addEventListener('click', function(){
+        var k = el.getAttribute('data-ov');
+        var meta = null;
+        OVERLAYS.forEach(function(o){ if (o[0] === k) meta = o; });
+        if (!meta || !meta[2]){ toast('No data for this layer in the demo shell'); return; }
+        LAYERS[k] = !LAYERS[k];
+        saveLayers(); drawLayersPop(); renderMap();
+      });
+    });
+  }
+
+  window.addEventListener('resize', renderMap);
+  drawLayersPop();
+  renderMap();
 
 })();
 </script>
