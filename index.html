@@ -6,13 +6,21 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0d1219">
+<meta name="apple-mobile-web-app-title" content="NM Plotter">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20180%20180'%3E%3Crect%20width='180'%20height='180'%20rx='40'%20fill='%230a0e13'/%3E%3Cpath%20d='M44%20128V52l92%2076V52'%20fill='none'%20stroke='%23ffb020'%20stroke-width='12'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20180%20180'%3E%3Crect%20width='180'%20height='180'%20rx='40'%20fill='%230a0e13'/%3E%3Cpath%20d='M44%20128V52l92%2076V52'%20fill='none'%20stroke='%23ffb020'%20stroke-width='12'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
 <title>NM Plotter — iPhone Layout Demo</title>
 <!-- ============================================================
      NM PLOTTER — iPhone layout demo shell
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
-       v18 2026-07-21  Toolbar slot 6 decided: Radio - the frequencies
+       v18 2026-07-21  Paired sw.js added so the shell works with no
+                       signal once installed; cache namespaced to
+                       nmplotter-iphone- so it can never evict the live
+                       build's cache. Home-screen icon added.
+                       Toolbar slot 6 decided: Radio - the frequencies
                        for the route in the order they are flown.
                        Derived from the route, aerodrome frequencies
                        from the live dataset, sorted ATIS/APP/TWR/GND/
@@ -3412,6 +3420,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       el.style.opacity = (SET.labels === 'auto') ? '.75' : '1';
     });
     $$('.leg').forEach(function(el){ el.style.display = SET.routeLine ? '' : 'none'; });
+  }
+
+  /* ---------- offline: register the paired service worker ----------
+     Guarded so the file still runs from file:// or a preview, where
+     there is no SW scope. The cache name is namespaced to this repo
+     so it can never evict the live NM Plotter shell. */
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(){ /* offline-only, non-fatal */ });
+    });
   }
 
   /* ---------- fake route legs between the airfield dots ---------- */
