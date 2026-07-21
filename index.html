@@ -16,6 +16,22 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v33 2026-07-21  Copy actually works. navigator.clipboard fails
+                       silently on iOS from a home-screen PWA, so there
+                       is now a contentEditable + Range fallback and the
+                       toast reports failure instead of implying
+                       success. Coordinates are tappable to copy
+                       wherever they appear: both rows on any card
+                       (airfield, strip, fix, personal waypoint) and in
+                       the GPS window, in whichever format is showing.
+                       Radio frequencies use the same helper.
+       v32 2026-07-21  Personal waypoints are editable from their card:
+                       rename, retype either coordinate in DDM, move to
+                       map centre, or delete with an arm-then-confirm.
+                       A rename follows through to the route, recents
+                       and favourites rather than orphaning them.
+                       Storage now owns the whole personal set so an
+                       edit cannot leave a seeded copy behind.
        v31 2026-07-21  The four airport-card action slots are now
                        user-assignable, same editor pattern as the
                        bottom bar, activity bar and layer rail. Pool of
@@ -371,6 +387,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .setrow .lb{flex:1 1 auto;min-width:0;color:var(--text)}
 .setrow .lb small{display:block;font-size:var(--t-2xs);color:var(--text-fainter);margin-top:2px}
 .setrow .fin{width:96px;flex:0 0 96px}
+.setrow .fin.wide{width:158px;flex:0 0 158px;text-align:left}
+.wpbtns{display:flex;gap:var(--gut);margin-top:12px}
+.wpbtns button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-2)}
+.wpbtns button.del{color:var(--bad)}
+.wpbtns button.del.arm{border-color:var(--bad);background:rgba(240,80,110,.12)}
 .setrow .fseg{flex:0 0 auto}
 .setrow .fseg button{flex:0 0 auto;padding:0 10px;height:28px}
 .swi{flex:0 0 44px;width:44px;height:26px;border-radius:13px;background:var(--bg-2);
@@ -895,6 +918,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .kv .k{color:var(--text-muted);flex:0 0 auto}
 .kv .v{font-family:var(--mono);color:var(--text);text-align:right;min-width:0}
 .kv .v.acc{color:var(--accent-2)}
+.kv.cp{width:100%;text-align:left;align-items:center}
+.kv.cp:active{background:var(--inset)}
+.cpi{width:13px;height:13px;flex:0 0 13px;color:var(--text-fainter);margin-left:8px}
+#gpsLat[data-cp],#gpsLon[data-cp]{cursor:pointer}
+#gpsLat:active,#gpsLon:active{color:var(--accent)}
 .kv .v.amb{color:var(--accent)}
 .cnote{margin-top:14px;font-size:var(--t-2xs);color:var(--text-fainter);line-height:1.5}
 .cempty{padding:26px 0;text-align:center;font-size:var(--t-sm);color:var(--text-fainter)}
@@ -1448,7 +1476,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v31';
+  var VERSION = 'v33';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1456,6 +1484,39 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- toast ---------- */
   var toastEl = $('#toast'), toastT = null;
+  /* iOS Safari will not always honour navigator.clipboard, especially
+     from a home-screen PWA, and it fails silently. Fall back to a
+     selected off-screen field, which needs contentEditable + a Range
+     on iOS - readOnly textareas cannot be selected there. */
+  function copyText(s, label){
+    function done(ok){ toast(ok ? ((label || s) + ' copied') : ('Copy failed \u00b7 ' + s)); }
+    function legacy(){
+      var el = document.createElement('textarea');
+      el.value = s;
+      el.contentEditable = true;
+      el.readOnly = false;
+      el.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;'
+                       + 'font-size:16px;border:0;padding:0;';
+      document.body.appendChild(el);
+      var ok = false;
+      try{
+        var r = document.createRange();
+        r.selectNodeContents(el);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+        el.setSelectionRange(0, s.length);
+        ok = document.execCommand('copy');
+        sel.removeAllRanges();
+      }catch(e){ ok = false; }
+      document.body.removeChild(el);
+      done(ok);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(s).then(function(){ done(true); }, legacy);
+    } else legacy();
+  }
+
   function toast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add('on');
@@ -1578,18 +1639,43 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'RIDGE GATE',  nm:'Markham valley',    cat:'mine', lat:-6.4500, lon:146.5000 }
   ];
   var CAT_NM = { field:'Fields', fix:'Fixes', strip:'Strips &amp; villages', mine:'My waypoints' };
+  /* Storage owns the whole personal-waypoint set once it exists, so a
+     rename or a delete cannot leave a seeded copy behind. */
   var MARK_KEY = 'nmp.iphone.marks';
   (function(){
     try{
       var a = JSON.parse(localStorage.getItem(MARK_KEY));
-      if (a && a.length) a.forEach(function(m){ DB.push(m); });
+      if (a){
+        for (var i = DB.length - 1; i >= 0; i--) if (DB[i].cat === 'mine') DB.splice(i, 1);
+        a.forEach(function(m){ DB.push(m); });
+      }
     }catch(e){}
   })();
   function saveMarks(){
     try{
       localStorage.setItem(MARK_KEY, JSON.stringify(
-        DB.filter(function(p){ return p.mk; })));
+        DB.filter(function(p){ return p.cat === 'mine'; })));
     }catch(e){}
+  }
+  /* A rename changes the key the route, recents and favourites use. */
+  function renameMine(oldId, newId){
+    ROUTE.forEach(function(p){ if (p.id === oldId){ p.id = newId; } });
+    if (typeof recents !== 'undefined' && recents){
+      recents = recents.map(function(x){ return x === oldId ? newId : x; });
+      try{ localStorage.setItem('nmp.iphone.recents', JSON.stringify(recents)); }catch(e){}
+    }
+    if (cardFav[oldId]){ delete cardFav[oldId]; cardFav[newId] = true; }
+  }
+  function deleteMine(id){
+    for (var i = DB.length - 1; i >= 0; i--) if (DB[i].id === id && DB[i].cat === 'mine') DB.splice(i, 1);
+    for (var j = ROUTE.length - 1; j >= 0; j--) if (ROUTE[j].id === id) ROUTE.splice(j, 1);
+    if (toWpt >= ROUTE.length) toWpt = Math.max(0, ROUTE.length - 1);
+    if (typeof recents !== 'undefined' && recents){
+      recents = recents.filter(function(x){ return x !== id; });
+      try{ localStorage.setItem('nmp.iphone.recents', JSON.stringify(recents)); }catch(e){}
+    }
+    delete cardFav[id];
+    saveMarks();
   }
   var CAT_ORDER = ['field','fix','strip','mine'];
 
@@ -2264,13 +2350,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function drawRad(){
     $('#radBody').innerHTML = radHTML();
     $$('#radBody .fqr').forEach(function(b){
-      b.addEventListener('click', function(){
-        var f = b.getAttribute('data-f');
-        if (navigator.clipboard && navigator.clipboard.writeText){
-          navigator.clipboard.writeText(f).then(function(){ toast(f + ' copied'); },
-                                                function(){ toast(f); });
-        } else toast(f);
-      });
+      b.addEventListener('click', function(){ copyText(b.getAttribute('data-f')); });
     });
   }
   $('#tbRad').addEventListener('click', function(){
@@ -2848,6 +2928,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#gpsName').innerHTML = gpsRole(gpsIdx) + ' &middot; <b>' + label(p) + '</b>';
     $('#gpsLat').textContent = fn(p.lat, true);
     $('#gpsLon').textContent = fn(p.lon, false);
+    $('#gpsLat').setAttribute('data-cp', fn(p.lat, true) + ' ' + fn(p.lon, false));
+    $('#gpsLon').setAttribute('data-cp', fn(p.lat, true) + ' ' + fn(p.lon, false));
     $('#gpsProg').textContent = 'Point ' + (gpsIdx + 1) + ' of ' + ROUTE.length;
     $('#gpsTabs').innerHTML = ROUTE.map(function(x, i){
       return '<button data-i="' + i + '"' + (i === gpsIdx ? ' class="on"' : '') + '>'
@@ -2860,6 +2942,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         drawGps();
       });
     });
+    wireCopy('#gpsOv');
     var sel = $('#gpsTabs button.on');
     if (sel && sel.scrollIntoView) sel.scrollIntoView({ block:'nearest', inline:'nearest' });
     $$('#gpsOv .gpsfmt button').forEach(function(b){
@@ -2957,6 +3040,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function dbById(id){ for (var i=0;i<DB.length;i++) if (DB[i].id === id) return DB[i]; return null; }
   var CAT_LABEL = { field:'Aerodrome', fix:'Enroute fix', strip:'Strip / village', mine:'My waypoint' };
+  /* copy glyph, shown wherever a value can be tapped to copy */
+  var CPI = '<svg class="cpi" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          + 'stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/>'
+          + '<path d="M15 5.6H6a1.6 1.6 0 0 0-1.6 1.6v9"/></svg>';
   var CAT_SHORT = { field:'RWY', fix:'FIX', strip:'STRIP', mine:'WPT' };
 
   /* ---- sun times: real NOAA calculation, PNG is UTC+10 ---- */
@@ -3006,9 +3093,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + '<span>' + (fi ? 'Elevation ' + fi.elev.toLocaleString() + '\'' + (fi.iata ? ' &middot; ' + fi.iata : '')
                        : (CAT_LABEL[f.cat] || '')) + '</span></div></div>';
 
+    var pair = ddm(f.lat, true) + ' ' + ddm(f.lon, false);
     h += '<div class="csec">Position</div>'
-      +  '<div class="kv"><span class="k">Latitude</span><span class="v amb">' + ddm(f.lat, true) + '</span></div>'
-      +  '<div class="kv"><span class="k">Longitude</span><span class="v amb">' + ddm(f.lon, false) + '</span></div>';
+      +  '<button class="kv cp" data-cp="' + pair + '"><span class="k">Latitude</span>'
+      +    '<span class="v amb">' + ddm(f.lat, true) + '</span>' + CPI + '</button>'
+      +  '<button class="kv cp" data-cp="' + pair + '"><span class="k">Longitude</span>'
+      +    '<span class="v amb">' + ddm(f.lon, false) + '</span>' + CPI + '</button>';
 
     if (ROUTE.length){
       var from = ROUTE[Math.max(0, Math.min(toWpt, ROUTE.length - 1))];
@@ -3032,6 +3122,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       fi.freq.forEach(function(r){
         h += '<div class="kv"><span class="k">' + r[0] + '</span><span class="v acc">' + r[1] + '</span></div>';
       });
+    }
+
+    if (f.cat === 'mine'){
+      h += '<div class="csec">Waypoint</div>'
+        +  '<div class="setrow"><span class="lb">Name</span>'
+        +    '<input class="fin wide" data-wp="name" type="text" value="' + f.id + '"></div>'
+        +  '<div class="setrow"><span class="lb">Latitude</span>'
+        +    '<input class="fin" data-wp="lat" type="text" value="' + ddm(f.lat, true) + '"></div>'
+        +  '<div class="setrow"><span class="lb">Longitude</span>'
+        +    '<input class="fin" data-wp="lon" type="text" value="' + ddm(f.lon, false) + '"></div>'
+        +  '<div class="wpbtns"><button data-wp="here">Move to map centre</button>'
+        +    '<button class="del" data-wp="del">Delete</button></div>';
     }
 
     h += '<div class="cnote">Coordinates, distance, bearing and sun times are computed. '
@@ -3135,6 +3237,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   /* ---- render ---- */
+  function wireCopy(root){
+    $$(root + ' [data-cp]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        copyText(b.getAttribute('data-cp'), 'Position');
+      });
+    });
+  }
+
   function drawCard(){
     var f = cardAdHoc || dbById(cardId); if (!f) return;
     var fi = f.id ? FIELD_INFO[f.id] : null;
@@ -3182,6 +3293,68 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $$('#cardAct button').forEach(function(b){
       b.addEventListener('click', function(){ cardAction(b.getAttribute('data-ca'), f); });
     });
+    wireCopy('#cardBody');
+
+    /* personal-waypoint editing */
+    var delArmed = null;
+    $$('#cardBody [data-wp]').forEach(function(el){
+      var w = el.getAttribute('data-wp');
+
+      if (w === 'name'){
+        el.addEventListener('change', function(){
+          var v = el.value.trim().toUpperCase();
+          if (!v){ el.value = f.id; return; }
+          if (v !== f.id && dbById(v)){ toast('A point called ' + v + ' already exists'); el.value = f.id; return; }
+          var old = f.id;
+          f.id = v; renameMine(old, v);
+          if (cardId === old) cardId = v;
+          saveMarks(); drawCard(); renderMap(); drawFpl();
+          toast('Renamed to ' + v);
+        });
+      }
+
+      if (w === 'lat' || w === 'lon'){
+        el.addEventListener('change', function(){
+          var isLat = (w === 'lat');
+          var v = parseDDM(el.value, isLat);
+          if (v === null){
+            toast(isLat ? 'Use S06 34.2' : 'Use E146 43.6');
+            el.value = ddm(isLat ? f.lat : f.lon, isLat);
+            return;
+          }
+          if (isLat) f.lat = v; else f.lon = v;
+          ROUTE.forEach(function(p){ if (p.id === f.id){ p.lat = f.lat; p.lon = f.lon; } });
+          saveMarks(); drawCard(); renderMap(); drawFpl();
+        });
+      }
+
+      if (w === 'here'){
+        el.addEventListener('click', function(){
+          f.lat = (VIEW.n + VIEW.s) / 2;
+          f.lon = (VIEW.w + VIEW.e) / 2;
+          ROUTE.forEach(function(p){ if (p.id === f.id){ p.lat = f.lat; p.lon = f.lon; } });
+          saveMarks(); drawCard(); renderMap(); drawFpl();
+          toast('Moved to ' + ddm(f.lat, true) + ' ' + ddm(f.lon, false));
+        });
+      }
+
+      if (w === 'del'){
+        el.addEventListener('click', function(){
+          if (delArmed){
+            clearTimeout(delArmed); delArmed = null;
+            var gone = f.id;
+            deleteMine(gone);
+            card.classList.remove('on');
+            renderMap(); drawFpl();
+            toast(gone + ' deleted');
+            return;
+          }
+          el.classList.add('arm');
+          toast('Tap again to delete ' + f.id);
+          delArmed = setTimeout(function(){ delArmed = null; el.classList.remove('arm'); }, 3000);
+        });
+      }
+    });
   }
 
   function cardAction(a, f){
@@ -3210,11 +3383,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (a === 'wx'){  cardTab = 'wx';  drawCard(); return; }
     if (a === 'ntm'){ cardTab = 'ntm'; drawCard(); return; }
     if (a === 'copy'){
-      var s = ddm(f.lat, true) + ' ' + ddm(f.lon, false);
-      if (navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(s).then(function(){ toast(s + ' copied'); },
-                                              function(){ toast(s); });
-      } else toast(s);
+      copyText(ddm(f.lat, true) + ' ' + ddm(f.lon, false), 'Position');
       return;
     }
     toast('Placeholder');
