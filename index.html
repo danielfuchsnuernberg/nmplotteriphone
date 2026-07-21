@@ -16,6 +16,13 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v38 2026-07-22  Share button added to the FPL footer beside clear
+                       and reverse. Opens Save to Flights plus the three
+                       route strings - names, ForeFlight DDMMSS and
+                       OzRunways - each tap to copy. The two coordinate
+                       formatters are lifted verbatim from the desktop
+                       build so output is byte-identical. The desktop
+                       modal has no Garmin format, so neither does this.
        v37 2026-07-22  Flights built as the saved-route library. Save
                        the current route, see distance, ETE and point
                        count per entry, and the one matching your active
@@ -1074,6 +1081,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .vempty{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
   color:var(--text-fainter);font-size:var(--t-sm);letter-spacing:.1em;text-transform:uppercase}
 
+/* ---- Share route ------------------------------------------ */
+.shrow{width:100%;text-align:left;display:block;padding:11px 0;
+  border-bottom:1px solid var(--border)}
+.shrow .top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.shrow .top b{flex:1 1 auto;font-size:var(--t-sm);font-weight:700;color:var(--text)}
+.shrow .top .cp{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent-2)}
+.shrow .val{font-family:var(--mono);font-size:var(--t-sm);line-height:1.5;color:var(--accent);
+  word-break:break-all}
+.shrow .sub2{margin-top:3px;font-size:var(--t-2xs);color:var(--text-fainter)}
+.shrow:active{background:var(--inset)}
+.shsave{width:100%;height:var(--mod-b);margin-bottom:6px;border-radius:var(--radius);
+  background:var(--accent);color:#0a0e13;font-size:var(--t-sm);font-weight:700}
+
 /* ---- Flights: saved routes -------------------------------- */
 .flbar{display:flex;align-items:center;gap:var(--gut);padding-bottom:12px}
 .flbar .cnt{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;
@@ -1408,6 +1429,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <button class="dtool" id="fplRev" aria-label="Reverse route">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 8h13l-3.4-3.4M20 16H7l3.4 3.4"/></svg>
     </button>
+    <button class="dtool" id="fplShare" aria-label="Share route">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M12 15.4V4.2"/><path d="M8.4 7.8L12 4.2l3.6 3.6"/><path d="M5.4 12.6v6.2a1.4 1.4 0 0 0 1.4 1.4h10.4a1.4 1.4 0 0 0 1.4-1.4v-6.2"/></svg>
+    </button>
     <span class="spacer"></span>
     <button class="dtab on" data-ft="route">Route</button>
     <button class="dtab" data-ft="navlog">NavLog</button>
@@ -1499,6 +1523,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <button class="x" id="typeScClose" aria-label="Close">&times;</button>
     </div>
     <div class="tedlist" id="typeScList"></div>
+  </div>
+</div>
+
+<!-- Share / export route -->
+<div class="ted" id="shEd">
+  <div class="tedw">
+    <div class="tedh">
+      <b>Share route</b>
+      <button class="x" id="shEdClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="tedlist" id="shList"></div>
   </div>
 </div>
 
@@ -1618,7 +1653,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v37';
+  var VERSION = 'v38';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1678,6 +1713,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (railEd) railEd.classList.remove('on');
     if (noteEd) noteEd.classList.remove('on');
     if (flEd) flEd.classList.remove('on');
+    if (shEd) shEd.classList.remove('on');
     if (actsEd) actsEd.classList.remove('on');
     if (wpt) wpt.classList.remove('on');
     if (sPanel){ sPanel.classList.remove('on'); sBox.classList.remove('on'); }
@@ -3749,6 +3785,99 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- view layer ---------- */
   var viewLayer = $('#viewLayer'), viewCache = {};
+
+  /* ============================================================
+     SHARE ROUTE
+     The three string formats are lifted verbatim from the desktop
+     build's copy-route modal (formatAviationCoord, formatOzrCoord,
+     sanitizeRouteName) so a route copied here is byte-identical to one
+     copied on the desktop. Do not reimplement these.
+     ============================================================ */
+  function sanitizeRouteName(lbl, idx){
+    var s = String(lbl || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!s) s = 'WP' + String(idx + 1).padStart(2, '0');
+    if (s.length > 10) s = s.slice(0, 10);
+    return s;
+  }
+  function ffCoord(lat, lon){
+    function build(absVal, degWidth, hemPos, hemNeg, signed){
+      var deg = Math.floor(absVal);
+      var minFloat = (absVal - deg) * 60;
+      var min = Math.floor(minFloat);
+      var sec = Math.round((minFloat - min) * 60);
+      if (sec >= 60){ sec -= 60; min += 1; }
+      if (min >= 60){ min -= 60; deg += 1; }
+      return String(deg).padStart(degWidth, '0')
+           + String(min).padStart(2, '0')
+           + String(sec).padStart(2, '0')
+           + (signed >= 0 ? hemPos : hemNeg);
+    }
+    return build(Math.abs(lat), 2, 'N', 'S', lat) + '/' + build(Math.abs(lon), 3, 'E', 'W', lon);
+  }
+  function ozrCoord(lat, lon){
+    function build(absVal, degWidth){
+      var deg = Math.floor(absVal);
+      var minFloat = (absVal - deg) * 60;
+      var min = Math.floor(minFloat);
+      var sec = Math.round((minFloat - min) * 60);
+      if (sec >= 60){ sec -= 60; min += 1; }
+      if (min >= 60){ min -= 60; deg += 1; }
+      return String(deg).padStart(degWidth, '0') + String(min).padStart(2, '0')
+           + String(sec).padStart(2, '0');
+    }
+    return (lat >= 0 ? 'N' : 'S') + build(Math.abs(lat), 2)
+         + (lon >= 0 ? 'E' : 'W') + build(Math.abs(lon), 3);
+  }
+
+  var shEd = $('#shEd');
+  function drawShare(){
+    if (ROUTE.length < 2){
+      $('#shList').innerHTML = '<div class="cempty">Add at least two points to the route.</div>';
+      return;
+    }
+    var names  = ROUTE.map(function(p, i){ return sanitizeRouteName(label(p), i); }).join(' ');
+    var ffs    = ROUTE.map(function(p){ return ffCoord(p.lat, p.lon); }).join(' ');
+    var ozr    = ROUTE.map(function(p){ return ozrCoord(p.lat, p.lon); }).join(' ');
+    var rows = [
+      ['Route names', names, 'Waypoint identifiers, stripped and capped at 10 characters'],
+      ['ForeFlight',  ffs,   'DDMMSS with hemisphere suffix, slash separated'],
+      ['OzRunways',   ozr,   'Hemisphere-prefixed DDMMSS']
+    ];
+    $('#shList').innerHTML =
+        '<button class="shsave" data-sh="save">Save to Flights</button>'
+      + rows.map(function(r){
+          return '<button class="shrow" data-cpv="' + esc(r[1]) + '">'
+               + '<span class="top"><b>' + r[0] + '</b><span class="cp">Copy</span></span>'
+               + '<span class="val">' + esc(r[1]) + '</span>'
+               + '<span class="sub2">' + r[2] + '</span></button>';
+        }).join('')
+      + '<div class="wnote">Identical to the desktop build\u2019s copy-route output. '
+      + 'Advisory only \u2014 verify anything you load into another system.</div>';
+
+    $$('#shList [data-cpv]').forEach(function(b){
+      b.addEventListener('click', function(){
+        copyText(b.getAttribute('data-cpv'), b.querySelector('b').textContent);
+      });
+    });
+    $$('#shList [data-sh="save"]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var f = {
+          id:'f' + Date.now().toString(36),
+          nm: flAutoName(ROUTE),
+          pts: ROUTE.map(function(p){ return { id:p.id, nm:p.nm, cat:p.cat, lat:p.lat, lon:p.lon }; }),
+          ts: Date.now()
+        };
+        FLIGHTS.push(f); saveFlights(); refreshFlightsView();
+        shEd.classList.remove('on');
+        toast('Saved to Flights as ' + f.nm);
+      });
+    });
+  }
+  $('#fplShare').addEventListener('click', function(){
+    closeAll(); drawShare(); shEd.classList.add('on');
+  });
+  $('#shEdClose').addEventListener('click', function(){ shEd.classList.remove('on'); });
+  shEd.addEventListener('click', function(e){ if (e.target === shEd) shEd.classList.remove('on'); });
 
   /* ============================================================
      FLIGHTS - the saved-route library
