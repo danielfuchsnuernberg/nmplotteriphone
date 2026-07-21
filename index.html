@@ -16,6 +16,12 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v19 2026-07-21  Terrain button wired. Full-panel route profile
+                       with an altitude grid, waypoint ticks, drag
+                       scrubber, terrain above (cruise - clearance)
+                       shaded red, a lowest-safe figure, and a cruise
+                       altitude stepper that updates everything live.
+                       Last unwired toolbar button is gone.
        v18 2026-07-21  Paired sw.js added so the shell works with no
                        signal once installed; cache namespaced to
                        nmplotter-iphone- so it can never evict the live
@@ -592,6 +598,31 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   transition:background .12s}
 .dgrip.on span{background:var(--accent)}
 
+/* ---- terrain: route profile, full panel ---- */
+.trbar{display:flex;align-items:center;gap:var(--gut);margin-bottom:var(--gut)}
+.trbar .lb{flex:1 1 auto;min-width:0;font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--text-muted)}
+.trstep{display:flex;align-items:center;gap:0;border:1px solid var(--border-strong);
+  border-radius:var(--radius);overflow:hidden}
+.trstep button{width:34px;height:var(--mod-a);background:var(--bg-2);color:var(--text-2);
+  font-size:var(--t-md);font-weight:700}
+.trstep button:active{background:var(--inset)}
+.trstep .val{min-width:74px;height:var(--mod-a);display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--accent);
+  border-left:1px solid var(--border-strong);border-right:1px solid var(--border-strong)}
+.trprof{position:relative;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;touch-action:none}
+.trprof svg{display:block;width:100%;height:250px}
+.trlegend{display:flex;gap:14px;margin-top:8px;font-size:var(--t-2xs);color:var(--text-fainter)}
+.trlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;
+  vertical-align:-1px}
+.trsafe{margin-top:12px;display:flex;align-items:center;gap:10px;
+  background:var(--inset);border:1px solid var(--border-strong);border-radius:8px;padding:10px 12px}
+.trsafe .k{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-muted)}
+.trsafe .v{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--good)}
+.trsafe .v.warn{color:var(--bad)}
+
 /* ---- radio: frequencies in route order ---- */
 .fqp{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;
   padding:10px;margin-bottom:2px}
@@ -1017,7 +1048,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <button class="tb" id="tbSet" aria-label="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2L5.4 5.4"/></svg>
       </button>
-      <button class="tb" id="tbProf" aria-label="Terrain profile">
+      <button class="tb" id="tbTerr" aria-label="Terrain profile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 18l5-7 4 4 4-6 7 9z"/></svg>
       </button>
       <button class="tb on" id="tbActy" aria-label="Activity bar">
@@ -1168,6 +1199,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   <div class="dgrip" id="fplGrip" aria-label="Resize panel"><span></span></div>
 </div>
 
+<!-- Terrain: route profile -->
+<div class="drop" id="dropTerr">
+  <div class="dbody" id="terrBody"></div>
+  <div class="dgrip" id="terrGrip" aria-label="Resize panel"><span></span></div>
+</div>
+
 <!-- Radio: frequencies in route order -->
 <div class="drop" id="dropRad">
   <div class="dbody" id="radBody"></div>
@@ -1300,7 +1337,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v18';
+  var VERSION = 'v19';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1331,6 +1368,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#tbLayers').classList.remove('on');
     $('#tbFpl').classList.remove('on');
     if (radDrop){ radDrop.classList.remove('on'); $('#tbRad').classList.remove('on'); }
+    if (terrDrop){ terrDrop.classList.remove('on'); $('#tbTerr').classList.remove('on'); }
     renderTabs();
   }
   scrim.addEventListener('click', closeAll);
@@ -1840,6 +1878,197 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     toast('Tap again to clear the route');
     clrArmed = setTimeout(function(){ clrArmed = null; b.classList.remove('arm'); }, 3000);
   });
+
+  /* ============================================================
+     TERRAIN - the plotted route's terrain, given the whole panel.
+     Answers "what altitude do I need", which the compact Profile tab
+     in FPL cannot. Terrain rising above (cruise - clearance) is shaded
+     red, and the cruise altitude is adjustable in place.
+     ============================================================ */
+  var terrDrop = $('#dropTerr');
+  var TERR_KEY = 'nmp.iphone.terrh', terrMax = 400;
+  var terrFrac = (function(){
+    try{ var v = parseFloat(localStorage.getItem(TERR_KEY)); if (v > 0.2 && v <= 1) return v; }catch(e){}
+    return 0.86;
+  })();
+  function sizeTerr(){
+    var top  = $('#chrome').getBoundingClientRect().bottom;
+    var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
+    terrMax = Math.max(FPL_MIN, window.innerHeight - top - tabH - 10);
+    terrDrop.style.top = top + 'px';
+    terrDrop.style.height = Math.max(FPL_MIN, Math.min(terrMax, Math.round(terrFrac * terrMax))) + 'px';
+  }
+
+  function terrHTML(){
+    buildProfile();
+    if (!profSamples.length) return '<div class="chipempty">Add at least two route points in FPL.</div>';
+    return '<div class="trbar"><span class="lb">Cruise altitude</span>'
+      +    '<span class="trstep"><button data-alt="-500">\u2212</button>'
+      +      '<span class="val" id="terrAlt"></span>'
+      +      '<button data-alt="500">+</button></span></div>'
+      +  '<div class="trprof" id="terrBox"></div>'
+      +  '<div class="trlegend">'
+      +    '<span><i style="background:rgba(127,179,213,.35)"></i>Terrain</span>'
+      +    '<span><i style="background:rgba(240,80,110,.45)"></i>Above minimum</span>'
+      +    '<span><i style="background:var(--accent)"></i>Cruise</span>'
+      +  '</div>'
+      +  '<div class="trsafe"><span class="k">Lowest safe for this route</span>'
+      +    '<span class="v" id="terrSafe"></span></div>'
+      +  '<div class="profstats" id="terrStats"></div>'
+      +  '<div class="cnote">Terrain in this shell is a model, not survey data. In the real '
+      +  'build this reads the Terrarium tiles. Lowest safe is the highest point on track plus '
+      +  'your clearance setting, rounded up to the next 500 ft, and takes no account of '
+      +  'corridor width, obstacles or MSA. Advisory only.</div>';
+  }
+
+  function terrPaint(){
+    var box = $('#terrBox'); if (!box) return;
+    var T = totals();
+    var W = 340, H = 250, PADL = 30, PADR = 8, TOP = 12, BOT = 20;
+    var maxE = Math.max(AC.alt + 2000,
+                Math.max.apply(null, profSamples.map(function(s){ return s.e; })) + 1200);
+    var x = function(d){ return PADL + (d / T.nm) * (W - PADL - PADR); };
+    var y = function(e){ return H - BOT - (e / maxE) * (H - TOP - BOT); };
+    var floor = AC.alt - SET.clr;
+
+    var d = 'M' + x(0) + ',' + (H - BOT);
+    profSamples.forEach(function(s){ d += ' L' + x(s.d).toFixed(1) + ',' + y(s.e).toFixed(1); });
+    d += ' L' + x(T.nm) + ',' + (H - BOT) + ' Z';
+
+    var hi = 0, hiD = 0;
+    profSamples.forEach(function(s){ if (s.e > hi){ hi = s.e; hiD = s.d; } });
+
+    /* altitude grid */
+    var grid = '';
+    for (var a = 0; a <= maxE; a += 2000){
+      grid += '<line x1="' + PADL + '" y1="' + y(a).toFixed(1) + '" x2="' + (W - PADR)
+           +  '" y2="' + y(a).toFixed(1) + '" stroke="#1a2330" stroke-width="1"/>'
+           +  '<text x="2" y="' + (y(a) + 3).toFixed(1) + '" fill="#5f7186" font-size="8" '
+           +  'font-family="monospace">' + (a / 1000) + 'k</text>';
+    }
+
+    /* waypoint ticks and labels */
+    var ticks = '', cum = 0;
+    ROUTE.forEach(function(p, i){
+      if (i > 0) cum += T.legs[i-1].nm;
+      var px = x(cum);
+      ticks += '<line x1="' + px.toFixed(1) + '" y1="' + TOP + '" x2="' + px.toFixed(1)
+            +  '" y2="' + (H - BOT) + '" stroke="#2a3744" stroke-width="1"/>'
+            +  '<text x="' + px.toFixed(1) + '" y="' + (H - 6) + '" fill="#8a9bb0" font-size="8" '
+            +  'font-family="monospace" text-anchor="' + (i === 0 ? 'start' : (i === ROUTE.length - 1 ? 'end' : 'middle'))
+            +  '">' + (p.id || '\u2022') + '</text>';
+    });
+
+    var sx = x(profScrub * T.nm);
+    var se = profSamples[Math.round(profScrub * PROF_N)] || profSamples[0];
+
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">'
+      + '<defs><clipPath id="tclip"><path d="' + d + '"/></clipPath></defs>'
+      + grid
+      + '<path d="' + d + '" fill="rgba(127,179,213,.30)" stroke="#7fb3d5" stroke-width="1.2"/>'
+      + '<rect x="0" y="0" width="' + W + '" height="' + Math.max(0, y(floor)).toFixed(1)
+      +   '" clip-path="url(#tclip)" fill="rgba(240,80,110,.45)"/>'
+      + ticks
+      + '<line x1="' + PADL + '" y1="' + y(floor).toFixed(1) + '" x2="' + (W - PADR) + '" y2="' + y(floor).toFixed(1)
+      +   '" stroke="#f0506e" stroke-width="1" stroke-dasharray="3 3"/>'
+      + '<line x1="' + PADL + '" y1="' + y(AC.alt).toFixed(1) + '" x2="' + (W - PADR) + '" y2="' + y(AC.alt).toFixed(1)
+      +   '" stroke="#ffb020" stroke-width="1.6" stroke-dasharray="6 4"/>'
+      + '<line x1="' + sx.toFixed(1) + '" y1="' + TOP + '" x2="' + sx.toFixed(1) + '" y2="' + (H - BOT)
+      +   '" stroke="#dce6f0" stroke-width="1"/>'
+      + '<circle cx="' + sx.toFixed(1) + '" cy="' + y(se.e).toFixed(1) + '" r="3.5" fill="#dce6f0"/>'
+      + '</svg>';
+
+    var safe = Math.ceil((hi + SET.clr) / 500) * 500;
+    var sEl = $('#terrSafe');
+    if (sEl){
+      sEl.textContent = safe.toLocaleString() + '\'';
+      sEl.classList.toggle('warn', AC.alt < safe);
+    }
+    var aEl = $('#terrAlt');
+    if (aEl) aEl.textContent = AC.alt.toLocaleString() + '\'';
+
+    var st = $('#terrStats');
+    if (st) st.innerHTML =
+        '<div><span class="k">At cursor</span><span class="v">' + se.e.toLocaleString() + '</span></div>'
+      + '<div><span class="k">Cursor clr</span><span class="v' + ((AC.alt - se.e) < SET.clr ? ' warn' : '') + '">'
+      +   Math.round(AC.alt - se.e).toLocaleString() + '</span></div>'
+      + '<div><span class="k">Dist along</span><span class="v">' + (profScrub * T.nm).toFixed(1) + '</span></div>'
+      + '<div><span class="k">Highest pt</span><span class="v">' + hi.toLocaleString() + '</span></div>'
+      + '<div><span class="k">Clearance</span><span class="v' + ((AC.alt - hi) < SET.clr ? ' warn' : '') + '">'
+      +   Math.round(AC.alt - hi).toLocaleString() + '</span></div>'
+      + '<div><span class="k">At</span><span class="v">' + hiD.toFixed(1) + ' nm</span></div>';
+  }
+
+  function drawTerr(){
+    $('#terrBody').innerHTML = terrHTML();
+    terrPaint();
+    $$('#terrBody .trstep button').forEach(function(b){
+      b.addEventListener('click', function(){
+        AC.alt = Math.max(1000, Math.min(20000, AC.alt + parseInt(b.getAttribute('data-alt'), 10)));
+        saveSet(); terrPaint(); drawFpl();
+      });
+    });
+    var box = $('#terrBox'); if (!box) return;
+    function at(cx){
+      var r = box.getBoundingClientRect();
+      profScrub = Math.max(0, Math.min(1, (cx - r.left) / r.width));
+      terrPaint();
+    }
+    function begin(cx){
+      at(cx);
+      function tm(e){ e.preventDefault(); at(e.touches[0].clientX); }
+      function mm(e){ at(e.clientX); }
+      function end(){
+        document.removeEventListener('touchmove', tm); document.removeEventListener('touchend', end);
+        document.removeEventListener('touchcancel', end);
+        document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', end);
+      }
+      document.addEventListener('touchmove', tm, { passive:false });
+      document.addEventListener('touchend', end);
+      document.addEventListener('touchcancel', end);
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', end);
+    }
+    box.addEventListener('touchstart', function(e){ e.preventDefault(); begin(e.touches[0].clientX); }, { passive:false });
+    box.addEventListener('mousedown',  function(e){ e.preventDefault(); begin(e.clientX); });
+  }
+
+  $('#tbTerr').addEventListener('click', function(){
+    var open = terrDrop.classList.contains('on');
+    closeAll();
+    if (open) return;
+    sizeTerr(); drawTerr();
+    terrDrop.classList.add('on');
+    scrim.classList.add('on');
+    $('#tbTerr').classList.add('on');
+  });
+  window.addEventListener('resize', function(){ if (terrDrop.classList.contains('on')) sizeTerr(); });
+  (function(){
+    var grip = $('#terrGrip');
+    function begin(y0){
+      var startH = terrDrop.getBoundingClientRect().height;
+      grip.classList.add('on');
+      function move(y){
+        var hh = Math.max(FPL_MIN, Math.min(terrMax, startH + (y - y0)));
+        terrDrop.style.height = hh + 'px';
+        terrFrac = hh / terrMax;
+      }
+      function tm(e){ e.preventDefault(); move(e.touches[0].clientY); }
+      function mm(e){ move(e.clientY); }
+      function end(){
+        grip.classList.remove('on');
+        try{ localStorage.setItem(TERR_KEY, String(terrFrac)); }catch(e){}
+        document.removeEventListener('touchmove', tm); document.removeEventListener('touchend', end);
+        document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', end);
+      }
+      document.addEventListener('touchmove', tm, { passive:false });
+      document.addEventListener('touchend', end);
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', end);
+    }
+    grip.addEventListener('touchstart', function(e){ e.preventDefault(); begin(e.touches[0].clientY); }, { passive:false });
+    grip.addEventListener('mousedown',  function(e){ e.preventDefault(); begin(e.clientY); });
+  })();
 
   /* ============================================================
      RADIO - frequencies in the order you will fly them
@@ -3371,9 +3600,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- misc stubs ---------- */
   $('#tbSet').addEventListener('click', openSet);
-  ['#tbProf'].forEach(function(sel){
-    $(sel).addEventListener('click', function(){ closeAll(); toast('Placeholder'); });
-  });
+
 
   /* ---------- Track my position: Off -> Centre -> Follow ---------- */
   var LOC_STATES = ['Off', 'Centred', 'Follow \u00b7 track up'];
