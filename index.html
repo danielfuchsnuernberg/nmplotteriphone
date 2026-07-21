@@ -12,6 +12,37 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v18 2026-07-21  Toolbar slot 6 decided: Radio - the frequencies
+                       for the route in the order they are flown.
+                       Derived from the route, aerodrome frequencies
+                       from the live dataset, sorted ATIS/APP/TWR/GND/
+                       CTAF, tower and CTAF emphasised, active point
+                       highlighted, tap a frequency to copy. Enroute
+                       bands show what is published at the adjoining
+                       fields and state that FIR sectors are not
+                       modelled in this shell.
+       v17 2026-07-21  Settings built, on the gear button and in More.
+                       Aircraft, cruise altitude, ETD, low-clearance
+                       threshold, label declutter, route line and the
+                       default coordinate format all change real
+                       behaviour and persist. The three layout editors
+                       moved out of More into Settings. Tapping outside
+                       the airport card dismisses it; a tap on a field
+                       dot switches it instead.
+       v16 2026-07-21  Search bar is live. Real input in the chrome,
+                       full-height results panel, grouped by category,
+                       recents when empty, typed coordinates offered as
+                       a result. Every result opens the card, so fixes,
+                       villages and personal waypoints get Direct-to and
+                       Add-to-route like aerodromes; non-aerodromes show
+                       an Info-only card. New Centre action drops a
+                       pulsing marker on the placeholder map.
+       v15 2026-07-21  Replaced the invented airfield data with the real
+                       records from the live build (elevation, IATA,
+                       municipality, frequencies, runway designators and
+                       true bearings). Runway lengths now derived from
+                       threshold coordinates. The invented set was wrong
+                       on nearly every value.
        v14 2026-07-21  Airport card built out. Five live tabs (Info,
                        Weather with METAR/TAF/Winds, Runway with wind
                        components, Procedure, NOTAM). Position, distance
@@ -208,12 +239,67 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .search{
   height:var(--mod-a);width:100%;
   display:flex;align-items:center;gap:8px;
-  padding:0 10px;
+  padding:0 6px 0 10px;
   background:var(--inset);border:1px solid var(--border);
   border-radius:var(--radius);
-  color:var(--text-faint);font-size:var(--t-sm);
+  color:var(--text-faint);
 }
+.search.on{border-color:var(--accent)}
 .search svg{width:15px;height:15px;flex:0 0 auto}
+.search input{
+  flex:1 1 auto;min-width:0;height:100%;
+  background:none;border:0;outline:none;padding:0;
+  color:var(--text);font-family:var(--sans);font-size:var(--t-in);
+  -webkit-appearance:none;
+}
+.search input::placeholder{color:var(--text-faint);font-size:var(--t-sm)}
+.search .sx{flex:0 0 auto;width:24px;height:24px;display:none;
+  align-items:center;justify-content:center;font-size:18px;color:var(--text-muted)}
+.search .sx.on{display:flex}
+
+/* ---- search results panel ---- */
+.spanel{
+  position:fixed;left:0;right:0;z-index:950;display:none;
+  flex-direction:column;
+  background:var(--panel);
+  border-bottom:1px solid var(--border-strong);
+  box-shadow:0 12px 26px rgba(0,0,0,.55);
+}
+.spanel.on{display:flex}
+.slistw{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.ctabs.off{display:none}
+/* ---- Settings ---- */
+.setv{
+  position:fixed;inset:0;z-index:1100;background:var(--bg);display:none;
+  flex-direction:column;
+  padding-top:calc(var(--sat) + var(--top-pad));padding-bottom:var(--sabp);
+}
+.setv.on{display:flex}
+.setrow{display:flex;align-items:center;gap:10px;padding:11px 0;
+  border-bottom:1px solid var(--border);font-size:var(--t-sm)}
+.setrow .lb{flex:1 1 auto;min-width:0;color:var(--text)}
+.setrow .lb small{display:block;font-size:var(--t-2xs);color:var(--text-fainter);margin-top:2px}
+.setrow .fin{width:96px;flex:0 0 96px}
+.setrow .fseg{flex:0 0 auto}
+.setrow .fseg button{flex:0 0 auto;padding:0 10px;height:28px}
+.swi{flex:0 0 44px;width:44px;height:26px;border-radius:13px;background:var(--bg-2);
+  border:1px solid var(--border-strong);position:relative;transition:background .15s}
+.swi i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:10px;
+  background:var(--text-faint);transition:transform .15s,background .15s}
+.swi.on{background:rgba(255,176,32,.2);border-color:var(--accent)}
+.swi.on i{transform:translateX(18px);background:var(--accent)}
+.setgo{width:100%;height:var(--mod-b);display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);font-size:var(--t-sm);color:var(--text);text-align:left}
+.setgo .ch{margin-left:auto;color:var(--text-fainter)}
+.mkflash{
+  position:absolute;transform:translate(-50%,-50%);z-index:15;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+}
+.mkflash i{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent);
+  background:rgba(255,176,32,.25);animation:mkp 1.1s ease-out infinite}
+.mkflash b{font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;color:var(--accent);
+  background:rgba(10,14,19,.85);border-radius:3px;padding:1px 4px;white-space:nowrap}
+@keyframes mkp{0%{transform:scale(.7);opacity:1}100%{transform:scale(2.2);opacity:0}}
 
 /* ============================================================
    MAP (placeholder)
@@ -497,6 +583,36 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .dgrip span{width:46px;height:4px;border-radius:2px;background:var(--border-strong);
   transition:background .12s}
 .dgrip.on span{background:var(--accent)}
+
+/* ---- radio: frequencies in route order ---- */
+.fqp{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;
+  padding:10px;margin-bottom:2px}
+.fqp.act{border-color:var(--route);background:rgba(240,165,0,.06)}
+.fqh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fqh .ix{flex:0 0 18px;height:18px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;background:var(--bg);color:var(--text-fainter);
+  font-family:var(--mono);font-size:var(--t-2xs);font-weight:700}
+.fqp.act .fqh .ix{background:var(--route);color:#0a0e13}
+.fqh b{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fqp.act .fqh b{color:var(--route)}
+.fqh span{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.fqr{width:100%;display:flex;align-items:center;gap:10px;padding:7px 0;
+  border-top:1px solid var(--border);text-align:left}
+.fqr .t{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fqr .f{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--accent-2)}
+.fqr.pri .t{color:var(--text-2)}
+.fqr.pri .f{color:var(--accent)}
+.fqnone{padding:6px 0;font-size:var(--t-sm);color:var(--text-fainter);border-top:1px solid var(--border)}
+.fqleg{display:flex;align-items:center;gap:10px;padding:8px 0 8px 26px;
+  position:relative;font-size:var(--t-sm);color:var(--text-muted)}
+.fqleg:before{content:'';position:absolute;left:9px;top:0;bottom:0;
+  border-left:2px dotted var(--border-strong)}
+.fqleg .d{flex:0 0 auto;font-family:var(--mono);color:var(--text-fainter);font-size:var(--t-2xs)}
+.fqleg .e{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:var(--t-sm);color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---- waypoint entry sheet ---- */
 .wsearch{padding:12px 12px 8px}
@@ -899,8 +1015,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <button class="tb on" id="tbActy" aria-label="Activity bar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.4"/><path d="M12 12l4-3.4"/></svg>
       </button>
-      <button class="tb" id="tbDct" aria-label="Direct to">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4.6 19.4L19.4 4.6"/><path d="M13.4 4.6h6v6"/><circle cx="6.2" cy="17.8" r="2.6"/></svg>
+      <button class="tb" id="tbRad" aria-label="Frequencies in route order">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"/><path d="M5.4 5.4a9.4 9.4 0 0 0 0 13.2M18.6 5.4a9.4 9.4 0 0 1 0 13.2"/></svg>
       </button>
       <button class="tb gps" id="tbLoc" aria-label="Track my position">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><path d="M12 1.8v3.4M12 18.8v3.4M22.2 12h-3.4M5.2 12H1.8"/></svg>
@@ -909,7 +1025,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <div class="searchrow">
       <div class="search" id="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.6"/><path d="M15.4 15.4L21 21"/></svg>
-        <span>Search field, waypoint, navaid, airspace</span>
+        <input id="searchIn" type="text" placeholder="Search fields, fixes, places"
+               autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button class="sx" id="searchX" aria-label="Clear">&times;</button>
       </div>
     </div>
   </header>
@@ -1042,6 +1160,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   <div class="dgrip" id="fplGrip" aria-label="Resize panel"><span></span></div>
 </div>
 
+<!-- Radio: frequencies in route order -->
+<div class="drop" id="dropRad">
+  <div class="dbody" id="radBody"></div>
+  <div class="dgrip" id="radGrip" aria-label="Resize panel"><span></span></div>
+</div>
+
 <!-- Waypoint entry / chip actions -->
 <div class="ted" id="wptSheet">
   <div class="tedw">
@@ -1060,7 +1184,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <button class="stile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
     <button class="stile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2L5.4 5.4"/></svg><span class="lab">Settings</span></button>
   </div>
-  <div class="shead"><span class="k">Views</span><button class="a" id="editTabs">Edit bottom bar</button></div>
+  <div class="shead"><span class="k">Views</span><button class="a" id="editTabs">Edit</button></div>
   <div class="slist" id="moreList"></div>
   <div class="sver" id="sver"></div>
 </div>
@@ -1116,6 +1240,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   </div>
 </div>
 
+<!-- Settings -->
+<div class="setv" id="setView">
+  <div class="vhead">
+    <b>Settings</b>
+    <button class="back" id="setClose" style="height:26px;padding:0 10px;border-radius:var(--radius);display:flex;align-items:center;background:var(--bg-2);border:1px solid var(--border-strong);font-size:var(--t-sm);font-weight:600;color:var(--text-2)">Done</button>
+  </div>
+  <div class="vbody" id="setBody"></div>
+</div>
+
+<!-- Search results -->
+<div class="spanel" id="searchPanel">
+  <div class="slistw" id="searchList"></div>
+</div>
+
 <!-- Activity-bar editor -->
 <div class="ted" id="actEd">
   <div class="tedw">
@@ -1154,7 +1292,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v14';
+  var VERSION = 'v18';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1179,10 +1317,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (actEd) actEd.classList.remove('on');
     if (typeSc) typeSc.classList.remove('on');
     if (wpt) wpt.classList.remove('on');
+    if (sPanel){ sPanel.classList.remove('on'); sBox.classList.remove('on'); }
     if (ted) ted.classList.remove('on');
     scrim.classList.remove('on');
     $('#tbLayers').classList.remove('on');
     $('#tbFpl').classList.remove('on');
+    if (radDrop){ radDrop.classList.remove('on'); $('#tbRad').classList.remove('on'); }
     renderTabs();
   }
   scrim.addEventListener('click', closeAll);
@@ -1228,7 +1368,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      DEMO ONLY - not for navigation.
      ============================================================ */
 
-  var AC = { tas: 110, burn: 176, fob: 500, resMin: 30, alt: 9500 };
+  var AC  = { reg:'P2-LAW', type:'BK117', tas:110, burn:176, fob:500, resMin:30, alt:9500 };
+  var SET = { clr:1000, labels:'auto', routeLine:true, coordFmt:'ddm' };
+  var SET_KEY = 'nmp.iphone.set', savedEtd = null;
+  (function(){
+    try{
+      var s = JSON.parse(localStorage.getItem(SET_KEY));
+      if (s){
+        if (s.AC)  for (var k in s.AC)  AC[k]  = s.AC[k];
+        if (s.SET) for (var j in s.SET) SET[j] = s.SET[j];
+        if (typeof s.etd === 'number') savedEtd = s.etd;
+      }
+    }catch(e){}
+  })();
+  function saveSet(){
+    try{ localStorage.setItem(SET_KEY, JSON.stringify({ AC:AC, SET:SET, etd:ETD_MIN })); }catch(e){}
+  }
 
   /* Searchable points. cat drives the section grouping in the picker.
      Fields are ICAO/IATA real. Fixes, villages and personal waypoints
@@ -1340,7 +1495,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (m === 60){ h += 1; m = 0; }
     return h + ':' + String(m).padStart(2, '0');
   }
-  var ETD_MIN = 3 * 60 + 8;                       /* 0308Z, demo */
+  var ETD_MIN = (savedEtd !== null) ? savedEtd : 3 * 60 + 8;
   function clock(hr){
     var t = Math.round(ETD_MIN + hr * 60) % 1440;
     return String(Math.floor(t / 60)).padStart(2,'0') + String(t % 60).padStart(2,'0');
@@ -1392,7 +1547,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +   '<div><span class="k">ETE</span><span class="v">' + hhmm(l.hr) + '</span></div>'
         +   '<div><span class="k">ETA</span><span class="v">' + clock(l.cum) + '</span></div>'
         +   '<div><span class="k">Fuel</span><span class="v">' + Math.round(l.fuel) + '</span></div>'
-        +   '<div><span class="k">Max terr</span><span class="v' + (clr < 1000 ? ' warn' : '') + '">'
+        +   '<div><span class="k">Max terr</span><span class="v' + (clr < SET.clr ? ' warn' : '') + '">'
         +     l.hi.toLocaleString() + '</span></div>'
         + '</div></button>';
     }).join('');
@@ -1464,11 +1619,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
     $('#profStats').innerHTML =
         '<div><span class="k">At cursor</span><span class="v">' + se.e.toLocaleString() + '</span></div>'
-      + '<div><span class="k">Cursor clr</span><span class="v' + ((AC.alt - se.e) < 1000 ? ' warn' : '') + '">'
+      + '<div><span class="k">Cursor clr</span><span class="v' + ((AC.alt - se.e) < SET.clr ? ' warn' : '') + '">'
       +   Math.round(AC.alt - se.e).toLocaleString() + '</span></div>'
       + '<div><span class="k">Dist along</span><span class="v">' + (profScrub * T.nm).toFixed(1) + '</span></div>'
       + '<div><span class="k">Highest pt</span><span class="v">' + hi.toLocaleString() + '</span></div>'
-      + '<div><span class="k">Clearance</span><span class="v' + (clr < 1000 ? ' warn' : '') + '">'
+      + '<div><span class="k">Clearance</span><span class="v' + (clr < SET.clr ? ' warn' : '') + '">'
       +   clr.toLocaleString() + '</span></div>'
       + '<div><span class="k">At</span><span class="v">' + hiD.toFixed(1) + ' nm</span></div>';
   }
@@ -1677,6 +1832,133 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     toast('Tap again to clear the route');
     clrArmed = setTimeout(function(){ clrArmed = null; b.classList.remove('arm'); }, 3000);
   });
+
+  /* ============================================================
+     RADIO - frequencies in the order you will fly them
+     Derived from the route. Aerodrome frequencies come from the live
+     dataset. Enroute sectors are NOT modelled here: the panel shows
+     the CNTR/RDO frequencies published at the adjoining fields and
+     says so. In the real build this reads AIP ENR 2 sectors.
+     ============================================================ */
+  var FQ_ORDER = ['ATIS','APP','DEP','TWR','GND','MTAF','CTAF','RDO','CNTR'];
+  function fqRank(d){
+    var u = d.toUpperCase();
+    for (var i = 0; i < FQ_ORDER.length; i++) if (u.indexOf(FQ_ORDER[i]) >= 0) return i;
+    return 99;
+  }
+  function fqPrimary(d){
+    var u = d.toUpperCase();
+    return u.indexOf('TWR') >= 0 || u.indexOf('CTAF') >= 0 || u.indexOf('MTAF') >= 0;
+  }
+  function fqEnroute(fi){
+    if (!fi) return [];
+    return fi.freq.filter(function(r){
+      var u = r[0].toUpperCase();
+      return u.indexOf('CNTR') >= 0 || u.indexOf('RDO') >= 0;
+    });
+  }
+
+  function radHTML(){
+    if (ROUTE.length < 1) return '<div class="chipempty">No route. Build one in FPL.</div>';
+    var h = '', T = totals();
+    ROUTE.forEach(function(p, i){
+      var fi = p.id ? FIELD_INFO[p.id] : null;
+      var role = (i === 0) ? 'Departure' : (i === ROUTE.length - 1) ? 'Destination' : 'Enroute point';
+      h += '<div class="fqp' + (i === toWpt ? ' act' : '') + '">'
+        +  '<div class="fqh"><span class="ix">' + (i + 1) + '</span>'
+        +  '<b>' + label(p) + '</b><span>' + role + '</span></div>';
+      if (fi){
+        fi.freq.slice().sort(function(a, b){ return fqRank(a[0]) - fqRank(b[0]); })
+          .forEach(function(r){
+            h += '<button class="fqr' + (fqPrimary(r[0]) ? ' pri' : '') + '" data-f="' + r[1] + '">'
+               + '<span class="t">' + r[0] + '</span><span class="f">' + r[1] + '</span></button>';
+          });
+      } else {
+        h += '<div class="fqnone">'
+          +  (p.cat === 'strip' ? 'No published frequency &mdash; expect CTAF/MTAF, confirm before departure'
+                                : 'No published frequency at this point') + '</div>';
+      }
+      h += '</div>';
+
+      if (i < ROUTE.length - 1){
+        var leg = T.legs[i];
+        var en = fqEnroute(FIELD_INFO[p.id]).concat(fqEnroute(FIELD_INFO[ROUTE[i+1].id]));
+        var seen = {}, uniq = [];
+        en.forEach(function(r){ if (!seen[r[1]]){ seen[r[1]] = 1; uniq.push(r); } });
+        h += '<div class="fqleg"><span class="d">' + (leg ? leg.nm.toFixed(0) + ' nm' : '') + '</span>'
+          +  '<span class="e">' + (uniq.length
+               ? uniq.map(function(r){ return r[0] + ' ' + r[1]; }).join('  \u00b7  ')
+               : 'Enroute frequency not in this shell') + '</span></div>';
+      }
+    });
+    return h + '<div class="cnote">Aerodrome frequencies are from the live NM Plotter dataset. '
+      + 'Enroute entries are the CNTR/RDO frequencies published at the adjoining fields, not FIR '
+      + 'sector boundaries &mdash; those come from AIP ENR 2 in the real build. '
+      + 'Tap a frequency to copy it. Advisory only.</div>';
+  }
+
+  var radDrop = $('#dropRad');
+  var RAD_KEY = 'nmp.iphone.radh';
+  var radFrac = (function(){
+    try{ var v = parseFloat(localStorage.getItem(RAD_KEY)); if (v > 0.2 && v <= 1) return v; }catch(e){}
+    return 0.72;
+  })();
+  var radMax = 400;
+  function sizeRad(){
+    var top  = $('#chrome').getBoundingClientRect().bottom;
+    var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
+    radMax = Math.max(FPL_MIN, window.innerHeight - top - tabH - 10);
+    radDrop.style.top = top + 'px';
+    radDrop.style.height = Math.max(FPL_MIN, Math.min(radMax, Math.round(radFrac * radMax))) + 'px';
+  }
+  function drawRad(){
+    $('#radBody').innerHTML = radHTML();
+    $$('#radBody .fqr').forEach(function(b){
+      b.addEventListener('click', function(){
+        var f = b.getAttribute('data-f');
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(f).then(function(){ toast(f + ' copied'); },
+                                                function(){ toast(f); });
+        } else toast(f);
+      });
+    });
+  }
+  $('#tbRad').addEventListener('click', function(){
+    var open = radDrop.classList.contains('on');
+    closeAll();
+    if (open) return;
+    sizeRad(); drawRad();
+    radDrop.classList.add('on');
+    scrim.classList.add('on');
+    $('#tbRad').classList.add('on');
+  });
+  window.addEventListener('resize', function(){ if (radDrop.classList.contains('on')) sizeRad(); });
+  (function(){
+    var grip = $('#radGrip');
+    function begin(y0){
+      var startH = radDrop.getBoundingClientRect().height;
+      grip.classList.add('on');
+      function move(y){
+        var hh = Math.max(FPL_MIN, Math.min(radMax, startH + (y - y0)));
+        radDrop.style.height = hh + 'px';
+        radFrac = hh / radMax;
+      }
+      function tm(e){ e.preventDefault(); move(e.touches[0].clientY); }
+      function mm(e){ move(e.clientY); }
+      function end(){
+        grip.classList.remove('on');
+        try{ localStorage.setItem(RAD_KEY, String(radFrac)); }catch(e){}
+        document.removeEventListener('touchmove', tm); document.removeEventListener('touchend', end);
+        document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', end);
+      }
+      document.addEventListener('touchmove', tm, { passive:false });
+      document.addEventListener('touchend', end);
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', end);
+    }
+    grip.addEventListener('touchstart', function(e){ e.preventDefault(); begin(e.touches[0].clientY); }, { passive:false });
+    grip.addEventListener('mousedown',  function(e){ e.preventDefault(); begin(e.clientY); });
+  })();
 
   /* ============================================================
      WAYPOINT SHEET - chip actions and point entry
@@ -2015,7 +2297,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- GPS window ---------- */
   var gps = $('#gpsOv');
-  var gpsIdx = 0, gpsFmt = 'ddm';
+  var gpsIdx = 0, gpsFmt = SET.coordFmt;
 
   /* The window reads the live route. It must never show a point the
      route does not contain - these are the numbers that get typed
@@ -2092,45 +2374,56 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      placeholders pending transcription from the AIP.
      ============================================================ */
 
+  /* Lifted verbatim from the live NM Plotter build (OurAirports +
+     PNG AIP). Runway lengths are derived from the threshold
+     coordinates, not typed in. METAR/TAF remain demo strings - in the
+     real build they come from the Cloudflare worker. */
   var FIELD_INFO = {
-    AYNZ:{ elev:239, town:'Lae, Morobe',
-      rwy:[{id:'09/27', len:2438, wid:45, surf:'Asphalt'}],
-      freq:[['TWR','118.1'],['ATIS','126.4'],['GND','121.9'],['APP','124.7']],
+    AYNZ:{ elev:239, town:'Lae', iata:'LAE',
+      rwy:[{l:'09', h:'27', b:95.0,  e:[-6.56887,146.715,-6.57078,146.737]}],
+      freq:[['APP','118.6'],['ATIS','128.6'],['LAE RDO','120.7'],['TWR','121.7']],
       metar:'AYNZ 210600Z 09008KT 9999 FEW020 SCT090 29/23 Q1010',
       taf:'AYNZ 210500Z 2106/2118 09010KT 9999 SCT020 TEMPO 2108/2112 4000 SHRA BKN012' },
-    AYGA:{ elev:5282, town:'Goroka, Eastern Highlands',
-      rwy:[{id:'17/35', len:1585, wid:30, surf:'Asphalt'}],
-      freq:[['TWR','118.5'],['CTAF','118.5']],
+    AYGA:{ elev:5282, town:'Goroka', iata:'GKA',
+      rwy:[{l:'17L', h:'35R', b:176.0, e:[-6.07496,145.392,-6.08625,145.39301]},
+           {l:'17R', h:'35L', b:176.0, e:[-6.07532,145.39101,-6.09023,145.392]}],
+      freq:[['TWR','118.7']],
       metar:'AYGA 210600Z 14006KT 9999 SCT025 BKN080 24/14 Q1017',
       taf:'AYGA 210500Z 2106/2118 14008KT 9999 SCT025 TEMPO 2107/2110 3000 SHRA BKN015' },
-    AYMH:{ elev:5388, town:'Mount Hagen, Western Highlands',
-      rwy:[{id:'12/30', len:2225, wid:30, surf:'Asphalt'}],
-      freq:[['TWR','119.1'],['CTAF','119.1']],
+    AYMH:{ elev:5388, town:'Mount Hagen', iata:'HGU',
+      rwy:[{l:'08', h:'26', b:85.0,  e:[-5.82708,144.293,-5.82615,144.30299]},
+           {l:'12', h:'30', b:121.0, e:[-5.82376,144.291,-5.83398,144.308]}],
+      freq:[['ATIS','128.4'],['HAGEN TWR','120.5']],
       metar:'AYMH 210600Z 12007KT 8000 SCT020 BKN070 23/15 Q1018',
       taf:'AYMH 210500Z 2106/2118 12010KT 9999 SCT020 TEMPO 2108/2113 2000 TSRA BKN010CB' },
-    AYMD:{ elev:20, town:'Madang, Madang Province',
-      rwy:[{id:'07/25', len:1585, wid:30, surf:'Asphalt'}],
-      freq:[['TWR','118.3'],['CTAF','118.3']],
+    AYMD:{ elev:20, town:'Madang', iata:'MAG',
+      rwy:[{l:'07', h:'25', b:75.0, e:[-5.20893,145.782,-5.20524,145.79601]}],
+      freq:[['ATIS','127.8'],['MADANG CNTR','120.1'],['TWR','118.1']],
       metar:'AYMD 210600Z 04010KT 9999 FEW018 SCT100 31/25 Q1009',
       taf:'AYMD 210500Z 2106/2118 05010KT 9999 FEW018 SCT100' },
-    AYPY:{ elev:146, town:'Port Moresby, NCD',
-      rwy:[{id:'14L/32R', len:2750, wid:45, surf:'Asphalt'},
-           {id:'14R/32L', len:2200, wid:30, surf:'Asphalt'}],
-      freq:[['TWR','118.1'],['ATIS','127.6'],['GND','121.7'],['APP','125.5'],['DEP','125.5']],
+    AYPY:{ elev:146, town:'Port Moresby', iata:'POM',
+      rwy:[{l:'14L', h:'32R', b:148.4, e:[-9.43087,147.214,-9.4521,147.22701]},
+           {l:'14R', h:'32L', b:142.0, e:[-9.43471,147.213,-9.45063,147.22301]}],
+      freq:[['JACKSONS APP','125.8'],['ATIS','128.0'],['JACKSONS GND','121.7'],['JACKSONS TWR','118.1']],
       metar:'AYPY 210600Z 13012KT 9999 FEW025 SCT090 32/22 Q1008',
       taf:'AYPY 210500Z 2106/2206 13012KT 9999 FEW025 SCT090' },
-    AYTK:{ elev:32, town:'Tokua, East New Britain',
-      rwy:[{id:'12/30', len:2200, wid:45, surf:'Asphalt'}],
-      freq:[['TWR','118.7'],['CTAF','118.7']],
+    AYTK:{ elev:49, town:'Kokopo', iata:'RAB',
+      rwy:[{l:'10', h:'28', b:106.0, e:[-4.33822,152.37199,-4.34262,152.38699]}],
+      freq:[['LAE RDO','127.1'],['MTAF','120.9'],['TWR','118.2']],
       metar:'AYTK 210600Z 11009KT 9999 SCT020 BKN090 30/24 Q1010',
       taf:'AYTK 210500Z 2106/2118 11010KT 9999 SCT020' }
   };
+  function rwyLenM(r){
+    return Math.round(nmBetween({lat:r.e[0],lon:r.e[1]}, {lat:r.e[2],lon:r.e[3]}) * 1852);
+  }
 
   var cardId = null, cardTab = 'info', cardSub = 'metar', cardFav = {};
   var CARD_TABS = [['info','Info'],['wx','Weather'],['rwy','Runway'],['proc','Procedure'],['ntm','NOTAM']];
   var WX_SUBS   = [['metar','METAR'],['taf','TAF'],['wind','Winds']];
 
   function dbById(id){ for (var i=0;i<DB.length;i++) if (DB[i].id === id) return DB[i]; return null; }
+  var CAT_LABEL = { field:'Aerodrome', fix:'Enroute fix', strip:'Strip / village', mine:'My waypoint' };
+  var CAT_SHORT = { field:'RWY', fix:'FIX', strip:'STRIP', mine:'WPT' };
 
   /* ---- sun times: real NOAA calculation, PNG is UTC+10 ---- */
   function sunTimes(lat, lon, date){
@@ -2173,10 +2466,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* ---- tabs ---- */
   function cardInfo(f, fi){
     var now = new Date(), st = sunTimes(f.lat, f.lon, now);
-    var h = '<div class="cinfo"><div class="cthumb">' + (fi ? 'RWY' : 'N/A') + '</div>'
+    var h = '<div class="cinfo"><div class="cthumb">' + (CAT_SHORT[f.cat] || 'WPT') + '</div>'
       + '<div class="m"><b>' + f.nm + '</b>'
-      + '<span>' + (fi ? fi.town : 'Papua New Guinea') + '</span>'
-      + '<span>Elevation ' + (fi ? fi.elev.toLocaleString() + '\'' : '\u2014') + '</span></div></div>';
+      + '<span>' + (fi ? fi.town : (CAT_LABEL[f.cat] || 'Waypoint')) + '</span>'
+      + '<span>' + (fi ? 'Elevation ' + fi.elev.toLocaleString() + '\'' + (fi.iata ? ' &middot; ' + fi.iata : '')
+                       : (CAT_LABEL[f.cat] || '')) + '</span></div></div>';
 
     h += '<div class="csec">Position</div>'
       +  '<div class="kv"><span class="k">Latitude</span><span class="v amb">' + ddm(f.lat, true) + '</span></div>'
@@ -2199,18 +2493,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       h += '<div class="cempty">Not computable</div>';
     }
 
-    h += '<div class="csec">Frequencies</div>';
     if (fi){
+      h += '<div class="csec">Frequencies</div>';
       fi.freq.forEach(function(r){
         h += '<div class="kv"><span class="k">' + r[0] + '</span><span class="v acc">' + r[1] + '</span></div>';
       });
-    } else {
-      h += '<div class="cempty">Not in demo data</div>';
     }
 
     h += '<div class="cnote">Coordinates, distance, bearing and sun times are computed. '
-      +  'Elevation, runways, frequencies, weather, procedures and NOTAMs are demo placeholders '
-      +  'pending transcription from the AIP. Not for navigation.</div>';
+      +  (fi ? 'Elevation, runways and frequencies come from the live NM Plotter dataset. '
+              + 'Weather, procedures and NOTAMs are demo placeholders in this shell. '
+            : 'Coordinates for fixes, villages and personal waypoints are demo placeholders. ')
+      +  'Not for navigation.</div>';
     return h;
   }
 
@@ -2252,31 +2546,33 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function cardRwy(f, fi){
     if (!fi) return '<div class="cempty">Not in demo data</div>';
-    var w = metarWind(fi.metar);
-    var h = '';
+    var w = metarWind(fi.metar), h = '';
     fi.rwy.forEach(function(r){
-      var ends = r.id.split('/');
-      h += '<div class="rwyc"><div class="rh"><b>' + r.id + '</b><span>' + r.surf + '</span></div>'
+      var m = rwyLenM(r);
+      h += '<div class="rwyc"><div class="rh"><b>' + r.l + '/' + r.h + '</b>'
+        + '<span>' + r.b.toFixed(0) + '\u00b0 true</span></div>'
         + '<div class="rwyg">'
-        + '<div><span class="k">Length</span><span class="v">' + r.len.toLocaleString() + ' m</span></div>'
-        + '<div><span class="k">Width</span><span class="v">' + r.wid + ' m</span></div>'
-        + '<div><span class="k">Feet</span><span class="v">' + Math.round(r.len * 3.28084).toLocaleString() + '</span></div>'
+        + '<div><span class="k">Length</span><span class="v">' + m.toLocaleString() + ' m</span></div>'
+        + '<div><span class="k">Feet</span><span class="v">' + Math.round(m * 3.28084).toLocaleString() + '</span></div>'
+        + '<div><span class="k">Bearing</span><span class="v">' + r.b.toFixed(0) + '\u00b0</span></div>'
         + '</div>';
       if (w && w.dir !== null){
         h += '<div class="csec" style="margin-top:12px">Wind component</div><div class="rwyg">';
-        ends.forEach(function(e){
-          var hdg = parseInt(e, 10) * 10;
-          var d = ((w.dir - hdg + 540) % 360) - 180;
+        [[r.l, r.b], [r.h, (r.b + 180) % 360]].forEach(function(end){
+          var d = ((w.dir - end[1] + 540) % 360) - 180;
           var head = w.kt * Math.cos(d * Math.PI / 180);
           var cross = Math.abs(w.kt * Math.sin(d * Math.PI / 180));
-          h += '<div><span class="k">Rwy ' + e + '</span><span class="v ' + (head >= 0 ? 'ok' : 'warn') + '">'
-             + (head >= 0 ? 'H' : 'T') + Math.abs(head).toFixed(0) + ' X' + cross.toFixed(0) + '</span></div>';
+          h += '<div><span class="k">Rwy ' + end[0] + '</span>'
+             + '<span class="v ' + (head >= 0 ? 'ok' : 'warn') + '">'
+             + (head >= 0 ? 'H' : 'T') + Math.abs(head).toFixed(0)
+             + ' X' + cross.toFixed(0) + '</span></div>';
         });
         h += '</div>';
       }
       h += '</div>';
     });
-    return h + '<div class="cnote">H = headwind, T = tailwind, X = crosswind, from the METAR above. Demo data.</div>';
+    return h + '<div class="cnote">Runway data from the live NM Plotter dataset; lengths derived '
+      + 'from threshold coordinates. H = headwind, T = tailwind, X = crosswind, from the demo METAR above.</div>';
   }
 
   function cardProc(f){
@@ -2306,20 +2602,23 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---- render ---- */
   function drawCard(){
-    var f = dbById(cardId); if (!f) return;
-    var fi = FIELD_INFO[f.id];
-    $('#cardIcao').textContent = f.id;
+    var f = cardAdHoc || dbById(cardId); if (!f) return;
+    var fi = f.id ? FIELD_INFO[f.id] : null;
+    $('#cardIcao').textContent = f.id || label(f);
     $('#cardName').textContent = f.nm;
-    $('#cardStar').classList.toggle('on', !!cardFav[f.id]);
+    $('#cardStar').classList.toggle('on', !!(f.id && cardFav[f.id]));
 
     var inRoute = ROUTE.some(function(p){ return p.id === f.id; });
     $('#cardAct').innerHTML =
         '<button data-ca="dct" style="color:var(--route)">Direct to</button>'
       + '<button data-ca="add" style="color:var(--magenta)">' + (inRoute ? 'In route' : 'Add to route') + '</button>'
-      + '<button data-ca="chart" style="color:var(--accent-2)">Charts</button>'
-      + '<button data-ca="freq" style="color:var(--navaid)">Freqs</button>';
+      + '<button data-ca="ctr" style="color:var(--accent-2)">Centre</button>'
+      + (fi ? '<button data-ca="freq" style="color:var(--navaid)">Freqs</button>' : '');
 
-    $('#cardTabs').innerHTML = CARD_TABS.map(function(t){
+    /* Only aerodromes have weather, runways, procedures and NOTAMs. */
+    if (!fi) cardTab = 'info';
+    $('#cardTabs').classList.toggle('off', !fi);
+    $('#cardTabs').innerHTML = !fi ? '' : CARD_TABS.map(function(t){
       return '<button data-ct="' + t[0] + '"' + (cardTab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
     }).join('');
 
@@ -2370,11 +2669,40 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       if (s[2]) s[2].scrollIntoView({ block:'start', behavior:'smooth' });
       return;
     }
+    if (a === 'ctr'){ card.classList.remove('on'); flashPoint(f); return; }
     toast('Placeholder');
   }
 
+  /* The demo map is a placeholder, so "Centre" drops a pulsing marker
+     at the point's position within a PNG bounding box rather than
+     pretending to pan a real map. */
+  var PNG_BOX = { n:-1.5, s:-11.0, w:140.0, e:156.0 };
+  var flashT = null;
+  function flashPoint(p){
+    var old = document.querySelector('.mkflash'); if (old) old.remove();
+    clearTimeout(flashT);
+    var x = (p.lon - PNG_BOX.w) / (PNG_BOX.e - PNG_BOX.w);
+    var y = (PNG_BOX.n - p.lat) / (PNG_BOX.n - PNG_BOX.s);
+    var el = document.createElement('div');
+    el.className = 'mkflash';
+    el.style.left = Math.max(6, Math.min(94, x * 100)) + '%';
+    el.style.top  = Math.max(8, Math.min(88, y * 100)) + '%';
+    el.innerHTML = '<i></i><b>' + label(p) + '</b>';
+    $('#map').appendChild(el);
+    flashT = setTimeout(function(){ if (el.parentNode) el.remove(); }, 3200);
+    toast('Centred on ' + label(p));
+  }
+
+  var cardAdHoc = null, cardOpenTs = 0;
   function openCard(id){
-    cardId = id; cardTab = 'info';
+    cardOpenTs = Date.now();
+    cardAdHoc = null; cardId = id; cardTab = 'info';
+    sizeCard(); drawCard();
+    card.classList.add('on');
+  }
+  function openCardPoint(p){
+    cardOpenTs = Date.now();
+    cardAdHoc = p; cardId = null; cardTab = 'info';
     sizeCard(); drawCard();
     card.classList.add('on');
   }
@@ -2423,6 +2751,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     f.addEventListener('click', function(){ openCard(f.getAttribute('data-fld')); });
   });
   $('#cardBack').addEventListener('click', function(){ card.classList.remove('on'); });
+
+  /* Tap anywhere outside the card to dismiss it. Taps on a field dot
+     pass through so they switch the card rather than closing it, and
+     the timestamp guard stops the opening tap closing it again. */
+  document.addEventListener('click', function(e){
+    if (!card.classList.contains('on')) return;
+    if (Date.now() - cardOpenTs < 350) return;
+    if (card.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('.fld')) return;
+    card.classList.remove('on');
+  });
   $('#cardStar').addEventListener('click', function(){
     if (!cardId) return;
     cardFav[cardId] = !cardFav[cardId];
@@ -2577,20 +2916,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
         + svg(v.k) + '</span>' + v.t + '</button>';
   });
-  mh += '<button class="srow" data-go="__type"><span class="sq" style="background:var(--accent)">'
-      + svg('notes') + '</span>Type scale</button>';
-  mh += '<button class="srow" data-go="__acty"><span class="sq" style="background:var(--accent)">'
-      + svg('more') + '</span>Edit activity bar</button>';
-  mh += '<button class="srow" data-go="__metrics"><span class="sq" style="background:var(--accent)">'
-      + svg('notes') + '</span>Layout metrics</button>';
+  mh += '<button class="srow" data-go="__set"><span class="sq" style="background:var(--accent)">'
+      + svg('more') + '</span>Settings</button>';
   $('#moreList').innerHTML = mh;
   $('#sver').textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
   $$('#moreList .srow').forEach(function(r){
     r.addEventListener('click', function(){
       var k = r.getAttribute('data-go');
-      if (k === '__metrics'){ closeAll(); showMetrics(); return; }
-      if (k === '__acty'){ openActEd(); return; }
-      if (k === '__type'){ openType(); return; }
+      if (k === '__set'){ openSet(); return; }
       goTo(k);
     });
   });
@@ -2797,9 +3130,240 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   renderTabs();
   showView(activeTab);
 
-  /* ---------- Search / misc stubs ---------- */
-  $('#search').addEventListener('click', function(){ toast('Search — placeholder'); });
-  ['#tbSet','#tbProf','#tbDct'].forEach(function(sel){
+  /* ============================================================
+     SEARCH
+     Same matcher as the FPL point picker. Every result opens the
+     card, so a fix or a village gets Direct-to and Add-to-route
+     exactly like an aerodrome.
+     ============================================================ */
+  var sPanel = $('#searchPanel'), sIn = $('#searchIn'), sBox = $('#search');
+  var REC_KEY = 'nmp.iphone.recents';
+  function loadRec(){
+    try{ var a = JSON.parse(localStorage.getItem(REC_KEY)); if (a && a.length) return a; }catch(e){}
+    return [];
+  }
+  var recents = loadRec();
+  function pushRec(id){
+    recents = [id].concat(recents.filter(function(x){ return x !== id; })).slice(0, 8);
+    try{ localStorage.setItem(REC_KEY, JSON.stringify(recents)); }catch(e){}
+  }
+
+  function sizeSearch(){
+    var top  = $('#chrome').getBoundingClientRect().bottom;
+    var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
+    sPanel.style.top = top + 'px';
+    sPanel.style.height = Math.max(200, window.innerHeight - top - tabH) + 'px';
+  }
+
+  function searchRows(items, heading){
+    var h = heading ? '<div class="wsec">' + heading + '</div>' : '';
+    items.forEach(function(p){
+      h += '<button class="wrow" data-sid="' + p.id + '">'
+         + '<span class="id">' + p.id + '</span>'
+         + '<span class="nm2">' + p.nm + '</span>'
+         + '<span class="cat">' + (p.ia || CAT_SHORT[p.cat] || '') + '</span></button>';
+    });
+    return h;
+  }
+
+  function drawSearch(){
+    var q = sIn.value.trim().toUpperCase(), h = '';
+    $('#searchX').classList.toggle('on', !!q);
+
+    if (!q){
+      if (recents.length){
+        var rs = recents.map(dbById).filter(Boolean);
+        if (rs.length) h += searchRows(rs, 'Recent');
+      }
+      h += searchRows(DB.filter(function(p){ return p.cat === 'field'; }).slice(0, 8), 'Fields');
+      $('#searchList').innerHTML = h;
+      wireSearchRows();
+      return;
+    }
+
+    var cm = q.match(/^([NS]\s*\d[\d\s.\u00b0]*)[,/ ]+([EW]\s*\d[\d\s.\u00b0]*)$/);
+    if (cm){
+      var la = parseDDM(cm[1], true), lo = parseDDM(cm[2], false);
+      if (la !== null && lo !== null){
+        h += '<div class="wsec">Coordinate</div>'
+           + '<button class="wrow" data-scoord="' + la + ',' + lo + '">'
+           + '<span class="id">GPS</span>'
+           + '<span class="nm2">' + ddm(la, true) + ' ' + ddm(lo, false) + '</span>'
+           + '<span class="cat">Open</span></button>';
+      }
+    }
+
+    var hits = DB.filter(function(p){
+      return (p.id && p.id.toUpperCase().indexOf(q) >= 0)
+          || (p.ia && p.ia.toUpperCase().indexOf(q) === 0)
+          || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
+    });
+    CAT_ORDER.forEach(function(c){
+      var inCat = hits.filter(function(p){ return p.cat === c; });
+      if (inCat.length) h += searchRows(inCat, CAT_NM[c]);
+    });
+    if (!h) h = '<div class="chipempty">No match for &ldquo;' + q + '&rdquo;</div>';
+    $('#searchList').innerHTML = h;
+    wireSearchRows();
+  }
+
+  function wireSearchRows(){
+    $$('#searchList .wrow').forEach(function(b){
+      b.addEventListener('click', function(){
+        var cd = b.getAttribute('data-scoord');
+        if (cd){
+          var pr = cd.split(',');
+          closeSearch();
+          openCardPoint({ id:null, nm:'Coordinate', cat:'mine',
+                          lat:parseFloat(pr[0]), lon:parseFloat(pr[1]) });
+          return;
+        }
+        var id = b.getAttribute('data-sid');
+        pushRec(id);
+        closeSearch();
+        openCard(id);
+      });
+    });
+  }
+
+  function openSearch(){
+    closeAll();
+    sizeSearch();
+    sBox.classList.add('on');
+    sPanel.classList.add('on');
+    drawSearch();
+  }
+  function closeSearch(){
+    sPanel.classList.remove('on');
+    sBox.classList.remove('on');
+    sIn.blur();
+  }
+  sIn.addEventListener('focus', openSearch);
+  sIn.addEventListener('input', function(){
+    if (!sPanel.classList.contains('on')) openSearch(); else drawSearch();
+  });
+  sIn.addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){
+      var first = $('#searchList .wrow');
+      if (first) first.click();
+    }
+    if (e.key === 'Escape') closeSearch();
+  });
+  $('#searchX').addEventListener('click', function(){
+    sIn.value = ''; drawSearch(); sIn.focus();
+  });
+  window.addEventListener('resize', function(){ if (sPanel.classList.contains('on')) sizeSearch(); });
+
+  /* ============================================================
+     SETTINGS - everything here changes real behaviour
+     ============================================================ */
+  var setV = $('#setView');
+  function snum(v, d){ var n = parseFloat(v); return isNaN(n) ? d : n; }
+  function etdStr(){ return String(Math.floor(ETD_MIN/60)).padStart(2,'0') + String(ETD_MIN%60).padStart(2,'0'); }
+
+  function setRow(lab, sub, ctrl){
+    return '<div class="setrow"><span class="lb">' + lab
+         + (sub ? '<small>' + sub + '</small>' : '') + '</span>' + ctrl + '</div>';
+  }
+  function segCtrl(name, opts, cur){
+    return '<span class="fseg" data-seg="' + name + '">' + opts.map(function(o){
+      return '<button data-v="' + o[0] + '"' + (String(o[0]) === String(cur) ? ' class="on"' : '')
+           + '>' + o[1] + '</button>';
+    }).join('') + '</span>';
+  }
+  function inCtrl(name, val){
+    return '<input class="fin" data-set="' + name + '" type="text" inputmode="decimal" value="' + val + '">';
+  }
+  function swiCtrl(name, on){
+    return '<span class="swi' + (on ? ' on' : '') + '" data-swi="' + name + '"><i></i></span>';
+  }
+
+  function drawSet(){
+    $('#setBody').innerHTML =
+        '<div class="csec" style="margin-top:0">Aircraft</div>'
+      + setRow('Registration', null, '<input class="fin" data-set="reg" type="text" value="' + AC.reg + '">')
+      + setRow('Type', null, '<input class="fin" data-set="type" type="text" value="' + AC.type + '">')
+      + setRow('Cruise TAS', 'kt', inCtrl('tas', AC.tas))
+      + setRow('Fuel burn', 'kg per hour', inCtrl('burn', AC.burn))
+      + setRow('Fuel on board', 'kg', inCtrl('fob', AC.fob))
+      + setRow('Reserve', 'minutes', segCtrl('resMin', [[15,'15'],[30,'30'],[45,'45'],[60,'60']], AC.resMin))
+
+      + '<div class="csec">Flight plan</div>'
+      + setRow('Cruise altitude', 'feet', inCtrl('alt', AC.alt))
+      + setRow('ETD', 'UTC, hhmm', '<input class="fin" data-set="etd" type="text" inputmode="numeric" value="' + etdStr() + '">')
+      + setRow('Low clearance warning', 'NavLog and Profile turn red below this',
+               segCtrl('clr', [[500,'500'],[1000,'1000'],[1500,'1500']], SET.clr))
+
+      + '<div class="csec">Map</div>'
+      + setRow('Airfield labels', 'declutter', segCtrl('labels', [['off','Off'],['auto','Auto'],['always','Always']], SET.labels))
+      + setRow('Route line', null, swiCtrl('routeLine', SET.routeLine))
+
+      + '<div class="csec">Units</div>'
+      + setRow('Coordinate format', 'default for the GPS window',
+               segCtrl('coordFmt', [['ddm', "D\u00b0M.M'"], ['dms', 'D\u00b0M\u2032S\u2033']], SET.coordFmt))
+
+      + '<div class="csec">Layout</div>'
+      + '<button class="setgo" data-go2="tabs">Edit bottom bar<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="acty">Edit activity bar<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>'
+
+      + '<div class="csec">About</div>'
+      + setRow('Version', BUILD, '<span style="font-family:var(--mono);color:var(--accent)">' + VERSION + '</span>')
+      + '<div class="cnote">NM Plotter is advisory only and is a backup to the certified '
+      + 'avionics. Garmin remains primary at all times. Every data layer carries its AIP '
+      + 'edition date. Not for navigation.</div>';
+
+    $$('#setBody input[data-set]').forEach(function(el){
+      el.addEventListener('change', function(){
+        var k = el.getAttribute('data-set'), v = el.value;
+        if (k === 'reg' || k === 'type'){ AC[k] = v.trim() || AC[k]; }
+        else if (k === 'etd'){
+          var m = String(v).replace(/\D/g, '').padStart(4, '0').slice(0, 4);
+          var hh = parseInt(m.slice(0, 2), 10), mm = parseInt(m.slice(2), 10);
+          if (hh < 24 && mm < 60) ETD_MIN = hh * 60 + mm; else toast('ETD must be 0000-2359');
+        }
+        else AC[k] = snum(v, AC[k]);
+        saveSet(); drawSet(); drawFpl();
+      });
+    });
+    $$('#setBody .fseg').forEach(function(g){
+      var name = g.getAttribute('data-seg');
+      Array.prototype.forEach.call(g.children, function(b){
+        b.addEventListener('click', function(){
+          var v = b.getAttribute('data-v');
+          if (name === 'resMin')      AC.resMin = parseInt(v, 10);
+          else if (name === 'clr')    SET.clr = parseInt(v, 10);
+          else { SET[name] = v; if (name === 'coordFmt') gpsFmt = v; }
+          saveSet(); drawSet(); drawFpl(); applyMapOpts();
+        });
+      });
+    });
+    $$('#setBody .swi').forEach(function(s){
+      s.addEventListener('click', function(){
+        SET[s.getAttribute('data-swi')] = !SET[s.getAttribute('data-swi')];
+        saveSet(); drawSet(); applyMapOpts();
+      });
+    });
+    $$('#setBody .setgo').forEach(function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-go2');
+        closeSet();
+        if (k === 'tabs')    openEd();
+        if (k === 'acty')    openActEd();
+        if (k === 'type')    openType();
+        if (k === 'metrics') showMetrics();
+      });
+    });
+  }
+
+  function openSet(){ closeAll(); drawSet(); setV.classList.add('on'); }
+  function closeSet(){ setV.classList.remove('on'); }
+  $('#setClose').addEventListener('click', closeSet);
+
+  /* ---------- misc stubs ---------- */
+  $('#tbSet').addEventListener('click', openSet);
+  ['#tbProf'].forEach(function(sel){
     $(sel).addEventListener('click', function(){ closeAll(); toast('Placeholder'); });
   });
 
@@ -2841,6 +3405,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     setTimeout(function(){ mx.classList.remove('on'); mx.innerHTML = ''; mxOn = false; }, 6000);
   }
 
+  /* ---------- map placeholder options ---------- */
+  function applyMapOpts(){
+    $$('.fld b').forEach(function(el){
+      el.style.display = (SET.labels === 'off') ? 'none' : '';
+      el.style.opacity = (SET.labels === 'auto') ? '.75' : '1';
+    });
+    $$('.leg').forEach(function(el){ el.style.display = SET.routeLine ? '' : 'none'; });
+  }
+
   /* ---------- fake route legs between the airfield dots ---------- */
   function drawLegs(){
     var map = $('#map');
@@ -2862,6 +3435,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       el.style.transform = 'rotate(' + ang + 'deg)';
       map.insertBefore(el, map.querySelector('.fld'));
     }
+    applyMapOpts();
   }
   window.addEventListener('resize', drawLegs);
   setTimeout(drawLegs, 60);
