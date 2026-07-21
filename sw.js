@@ -13,7 +13,7 @@
    Bump CACHE on every version so devices pull the new copy instead
    of serving an old cached one.
    ============================================================ */
-const CACHE = 'nmplotter-iphone-v33';
+const CACHE = 'nmplotter-iphone-v37';
 
 const SHELL = [
   './',

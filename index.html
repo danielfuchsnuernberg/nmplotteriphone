@@ -16,6 +16,29 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v37 2026-07-22  Flights built as the saved-route library. Save
+                       the current route, see distance, ETE and point
+                       count per entry, and the one matching your active
+                       route is marked loaded. Sheet gives rename, load,
+                       duplicate and delete. Loading over an existing
+                       route of more than one point arms first and needs
+                       a second tap, and says how many points it will
+                       replace.
+       v36 2026-07-22  Notes built. List with All / Airfield / General,
+                       full editor with title, optional airfield and
+                       body, arm-then-confirm delete, persisted. A note
+                       attached to a field also appears in a My notes
+                       section on that field's card, and can be created
+                       from there with the field pre-filled.
+       v35 2026-07-22  Bottom bar gains a fourth user slot, five tabs
+                       with More. Editor follows automatically. An
+                       existing three-slot layout is migrated rather
+                       than reset. Tab labels shrink a step at five
+                       across so nothing truncates on a 375pt screen.
+       v34 2026-07-21  GPS button is now a filled navigation arrow. The
+                       old crosshair was concentric circles, the same
+                       shape family as the Radio button two slots along,
+                       so the two read as a pair at a glance.
        v33 2026-07-21  Copy actually works. navigator.clipboard fails
                        silently on iOS from a home-screen PWA, so there
                        is now a contentEditable + Range fallback and the
@@ -1051,6 +1074,87 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .vempty{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
   color:var(--text-fainter);font-size:var(--t-sm);letter-spacing:.1em;text-transform:uppercase}
 
+/* ---- Flights: saved routes -------------------------------- */
+.flbar{display:flex;align-items:center;gap:var(--gut);padding-bottom:12px}
+.flbar .cnt{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.flbar button{flex:0 0 auto;height:var(--mod-a);padding:0 14px;border-radius:var(--radius);
+  background:var(--accent);color:#0a0e13;font-size:var(--t-sm);font-weight:700}
+.flbar button[disabled]{background:var(--bg-2);border:1px solid var(--border);
+  color:var(--text-fainter)}
+.flc{width:100%;text-align:left;display:block;background:var(--bg-2);
+  border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:var(--gut)}
+.flc:active{border-color:var(--border-strong)}
+.flc .top{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.flc .top b{flex:1 1 auto;min-width:0;font-size:var(--t-sm);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flc .top .ts{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-fainter)}
+.flc .rt{font-family:var(--mono);font-size:var(--t-sm);color:var(--accent);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flc .st{display:flex;gap:14px;margin-top:7px}
+.flc .st span{font-size:var(--t-2xs);color:var(--text-muted)}
+.flc .st b{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--text-2)}
+.flc.cur{border-color:var(--accent)}
+.flc .cur-tag{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent)}
+
+/* ---- Notes ------------------------------------------------ */
+.ntbar{display:flex;align-items:center;gap:var(--gut);padding-bottom:12px}
+.ntbar .cnt{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.ntbar button{flex:0 0 auto;height:var(--mod-a);padding:0 14px;border-radius:var(--radius);
+  background:var(--accent);color:#0a0e13;font-size:var(--t-sm);font-weight:700}
+.ntseg{display:flex;gap:var(--gut);padding-bottom:12px}
+.ntseg button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted)}
+.ntseg button.on{background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13}
+.ntc{width:100%;text-align:left;display:block;background:var(--bg-2);
+  border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:var(--gut)}
+.ntc:active{border-color:var(--border-strong)}
+.ntc .top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.ntc .ap{flex:0 0 auto;height:19px;padding:0 7px;border-radius:4px;display:flex;align-items:center;
+  background:var(--inset);border:1px solid var(--border-strong);
+  font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;color:var(--accent-2)}
+.ntc .ap.gen{color:var(--text-fainter)}
+.ntc b{flex:1 1 auto;min-width:0;font-size:var(--t-sm);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ntc .ts{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-fainter)}
+.ntc p{margin:0;font-size:var(--t-sm);line-height:1.45;color:var(--text-dim);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.ntv{position:fixed;inset:0;z-index:1150;background:var(--bg);display:none;
+  flex-direction:column;padding-top:calc(var(--sat) + var(--top-pad));padding-bottom:var(--sabp)}
+.ntv.on{display:flex}
+.ntfld{margin-bottom:12px}
+.ntfld label{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-muted);margin-bottom:5px}
+.ntfld input,.ntfld textarea{
+  width:100%;background:var(--inset);border:1px solid var(--border-strong);
+  border-radius:var(--radius);color:var(--text);font-family:var(--sans);
+  font-size:var(--t-in);padding:9px 10px;outline:none;-webkit-appearance:none}
+.ntfld input:focus,.ntfld textarea:focus{border-color:var(--accent)}
+.ntfld textarea{min-height:180px;line-height:1.5;resize:none}
+.ntfld .hint{margin-top:5px;font-size:var(--t-2xs);color:var(--text-fainter)}
+.ntacts{display:flex;gap:var(--gut);margin-top:4px}
+.ntacts button{flex:1 1 0;height:var(--mod-b);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border-strong);
+  font-size:var(--t-sm);font-weight:700;color:var(--text-2)}
+.ntacts button.save{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.ntacts button.del{color:var(--bad)}
+.ntacts button.del.arm{border-color:var(--bad);background:rgba(240,80,110,.12)}
+
+/* notes on the airfield card */
+.cnotes{margin-top:2px}
+.cnotes .row{width:100%;text-align:left;display:block;padding:9px 0;
+  border-bottom:1px solid var(--border)}
+.cnotes .row b{display:block;font-size:var(--t-sm);font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnotes .row span{display:block;font-size:var(--t-2xs);color:var(--text-fainter);margin-top:2px}
+.cnotes .add{width:100%;height:var(--mod-a);margin-top:10px;border-radius:var(--radius);
+  background:var(--bg);border:1px dashed var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted)}
+
 /* ---- Nearest / airports list ------------------------------ */
 .npseg{display:flex;gap:var(--gut);padding:0 0 12px}
 .npseg button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
@@ -1207,7 +1311,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"/><path d="M5.4 5.4a9.4 9.4 0 0 0 0 13.2M18.6 5.4a9.4 9.4 0 0 1 0 13.2"/></svg>
       </button>
       <button class="tb gps" id="tbLoc" aria-label="Track my position">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><path d="M12 1.8v3.4M12 18.8v3.4M22.2 12h-3.4M5.2 12H1.8"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3.2 10.9L20.8 3.2l-7.7 17.6-2.1-7.8z" fill="currentColor"/></svg>
       </button>
     </div>
     <div class="searchrow">
@@ -1398,6 +1502,44 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   </div>
 </div>
 
+<!-- Saved-route sheet -->
+<div class="ted" id="flEd">
+  <div class="tedw">
+    <div class="tedh">
+      <b>Saved route</b>
+      <button class="x" id="flEdClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="tedpage">
+      <div class="ntfld" style="margin:0"><label for="flName">Name</label>
+        <input id="flName" type="text" placeholder="Route name"></div>
+    </div>
+    <div class="tedhint" id="flRoute"></div>
+    <div class="tedlist" id="flActs"></div>
+  </div>
+</div>
+
+<!-- Note editor -->
+<div class="ntv" id="noteEd">
+  <div class="vhead">
+    <b id="noteEdTtl">Note</b>
+    <button class="back" id="noteEdClose" style="height:26px;padding:0 10px;border-radius:var(--radius);display:flex;align-items:center;background:var(--bg-2);border:1px solid var(--border-strong);font-size:var(--t-sm);font-weight:600;color:var(--text-2)">Close</button>
+  </div>
+  <div class="vbody">
+    <div class="ntfld"><label for="noteTtl">Title</label>
+      <input id="noteTtl" type="text" placeholder="Short title"></div>
+    <div class="ntfld"><label for="noteAp">Airfield</label>
+      <input id="noteAp" type="text" placeholder="AYGA, or leave blank"
+             autocapitalize="characters" autocorrect="off" spellcheck="false">
+      <div class="hint" id="noteApHint">Attach the note to a field and it shows on that field's card.</div></div>
+    <div class="ntfld"><label for="noteTxt">Note</label>
+      <textarea id="noteTxt" placeholder="What you want to remember"></textarea></div>
+    <div class="ntacts">
+      <button class="del" id="noteDel">Delete</button>
+      <button class="save" id="noteSave">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Settings -->
 <div class="setv" id="setView">
   <div class="vhead">
@@ -1476,7 +1618,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v33';
+  var VERSION = 'v37';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1534,6 +1676,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (actEd) actEd.classList.remove('on');
     if (typeSc) typeSc.classList.remove('on');
     if (railEd) railEd.classList.remove('on');
+    if (noteEd) noteEd.classList.remove('on');
+    if (flEd) flEd.classList.remove('on');
     if (actsEd) actsEd.classList.remove('on');
     if (wpt) wpt.classList.remove('on');
     if (sPanel){ sPanel.classList.remove('on'); sBox.classList.remove('on'); }
@@ -3136,6 +3280,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +    '<button class="del" data-wp="del">Delete</button></div>';
     }
 
+    if (f.id){
+      var mine = notesFor(f.id);
+      h += '<div class="csec">My notes' + (mine.length ? ' (' + mine.length + ')' : '') + '</div>'
+        +  '<div class="cnotes">'
+        +  mine.map(function(n){
+             return '<button class="row" data-cn="' + n.id + '"><b>' + esc(n.ttl || 'Untitled')
+                  + '</b><span>' + noteAge(n.ts) + '</span></button>';
+           }).join('')
+        +  '<button class="add" data-cnadd="' + f.id + '">Add a note for ' + f.id + '</button>'
+        +  '</div>';
+    }
+
     h += '<div class="cnote">Coordinates, distance, bearing and sun times are computed. '
       +  (fi ? 'Elevation, runways and frequencies come from the live NM Plotter dataset. '
               + 'Weather, procedures and NOTAMs are demo placeholders in this shell. '
@@ -3294,6 +3450,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       b.addEventListener('click', function(){ cardAction(b.getAttribute('data-ca'), f); });
     });
     wireCopy('#cardBody');
+    $$('#cardBody [data-cn]').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); openNote(b.getAttribute('data-cn')); });
+    });
+    $$('#cardBody [data-cnadd]').forEach(function(b){
+      b.addEventListener('click', function(e){ e.stopPropagation(); openNote(null, b.getAttribute('data-cnadd')); });
+    });
 
     /* personal-waypoint editing */
     var delArmed = null;
@@ -3561,13 +3723,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return k;
   }
 
-  var STORE_KEY = 'nmp.iphone.tabs';
+  var STORE_KEY = 'nmp.iphone.tabs', TAB_SLOTS = 4;
   function loadCfg(){
     try{
       var s = localStorage.getItem(STORE_KEY);
-      if (s){ var a = JSON.parse(s); if (a && a.length === 3) return a; }
+      if (s){
+        var a = JSON.parse(s);
+        if (a && a.length === TAB_SLOTS) return a;
+        /* migrate an older three-slot layout rather than discarding it */
+        if (a && a.length === 3){
+          var fill = ['charts','freq','notes','flights','wb'];
+          for (var i = 0; i < fill.length && a.length < TAB_SLOTS; i++){
+            if (a.indexOf(fill[i]) < 0) a.push(fill[i]);
+          }
+          if (a.length === TAB_SLOTS) return a;
+        }
+      }
     }catch(e){}
-    return ['airports','map','fuel'];
+    return ['airports','map','charts','fuel'];
   }
   function saveCfg(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(tabCfg)); }catch(e){} }
 
@@ -3576,6 +3749,300 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- view layer ---------- */
   var viewLayer = $('#viewLayer'), viewCache = {};
+
+  /* ============================================================
+     FLIGHTS - the saved-route library
+     Loading is always explicit and confirmed. Nothing here ever
+     overwrites the route you are flying without you saying so twice.
+     ============================================================ */
+  var FL_KEY = 'nmp.iphone.flights';
+  var FLIGHTS = (function(){
+    try{ var a = JSON.parse(localStorage.getItem(FL_KEY)); if (a && a.length) return a; }catch(e){}
+    return [];
+  })();
+  function saveFlights(){ try{ localStorage.setItem(FL_KEY, JSON.stringify(FLIGHTS)); }catch(e){} }
+  function flById(id){ for (var i=0;i<FLIGHTS.length;i++) if (FLIGHTS[i].id === id) return FLIGHTS[i]; return null; }
+
+  function flStats(pts){
+    var nm = 0;
+    for (var i = 0; i < pts.length - 1; i++) nm += nmBetween(pts[i], pts[i+1]);
+    return { nm: nm, min: AC.tas > 0 ? (nm / AC.tas) * 60 : 0 };
+  }
+  function flString(pts){ return pts.map(function(p){ return label(p); }).join(' \u203a '); }
+  function flAutoName(pts){
+    if (!pts.length) return 'Route';
+    if (pts.length === 1) return label(pts[0]);
+    return label(pts[0]) + ' \u2013 ' + label(pts[pts.length - 1]);
+  }
+  function flSame(pts){
+    if (pts.length !== ROUTE.length) return false;
+    for (var i = 0; i < pts.length; i++) if (pts[i].id !== ROUTE[i].id) return false;
+    return true;
+  }
+
+  function flightsHTML(){
+    var h = '<div class="flbar"><span class="cnt">' + FLIGHTS.length
+          + (FLIGHTS.length === 1 ? ' route' : ' routes') + '</span>'
+          + '<button data-fl="save"' + (ROUTE.length < 2 ? ' disabled' : '')
+          + '>Save current</button></div>';
+
+    if (!FLIGHTS.length){
+      return h + '<div class="cempty">No saved routes yet.<br>Build a route in FPL, '
+               + 'then tap Save current.</div>';
+    }
+
+    FLIGHTS.slice().sort(function(a, b){ return b.ts - a.ts; }).forEach(function(f){
+      var st = flStats(f.pts), cur = flSame(f.pts);
+      h += '<button class="flc' + (cur ? ' cur' : '') + '" data-flid="' + f.id + '">'
+        +  '<span class="top"><b>' + esc(f.nm) + '</b>'
+        +    (cur ? '<span class="cur-tag">loaded</span>' : '')
+        +    '<span class="ts">' + noteAge(f.ts) + '</span></span>'
+        +  '<div class="rt">' + esc(flString(f.pts)) + '</div>'
+        +  '<div class="st"><span>DIST <b>' + st.nm.toFixed(0) + '</b> nm</span>'
+        +    '<span>ETE <b>' + hhmm(st.min) + '</b></span>'
+        +    '<span>PTS <b>' + f.pts.length + '</b></span></div>'
+        +  '</button>';
+    });
+    return h;
+  }
+
+  function wireFlights(el){
+    Array.prototype.forEach.call(el.querySelectorAll('[data-fl="save"]'), function(b){
+      b.addEventListener('click', function(){
+        if (ROUTE.length < 2){ toast('Build a route in FPL first'); return; }
+        var f = {
+          id:'f' + Date.now().toString(36),
+          nm: flAutoName(ROUTE),
+          pts: ROUTE.map(function(p){
+                 return { id:p.id, nm:p.nm, cat:p.cat, lat:p.lat, lon:p.lon };
+               }),
+          ts: Date.now()
+        };
+        FLIGHTS.push(f); saveFlights();
+        refreshFlightsView();
+        toast('Saved as ' + f.nm);
+      });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-flid]'), function(b){
+      b.addEventListener('click', function(){ openFl(b.getAttribute('data-flid')); });
+    });
+  }
+  function refreshFlightsView(){
+    var v = viewCache['flights'];
+    if (v){ v.querySelector('.vbody').innerHTML = flightsHTML(); wireFlights(v); }
+  }
+
+  /* ---- sheet: rename, load, duplicate, delete ---- */
+  var flEd = $('#flEd'), flEditing = null, flLoadArm = null, flDelArm = null;
+  function openFl(id){
+    flEditing = flById(id); if (!flEditing) return;
+    closeAll();
+    $('#flName').value = flEditing.nm;
+    $('#flRoute').textContent = flString(flEditing.pts);
+    clearTimeout(flLoadArm); flLoadArm = null;
+    clearTimeout(flDelArm);  flDelArm = null;
+    drawFlActs();
+    flEd.classList.add('on');
+  }
+  function closeFl(){ flEd.classList.remove('on'); }
+  $('#flEdClose').addEventListener('click', closeFl);
+  flEd.addEventListener('click', function(e){ if (e.target === flEd) closeFl(); });
+
+  function drawFlActs(){
+    var busy = ROUTE.length > 1 && !flSame(flEditing.pts);
+    $('#flActs').innerHTML =
+        '<button class="tedrow" data-fa="load" style="color:var(--route)">'
+      +   (flLoadArm ? 'Tap again to replace the current route' : 'Load into flight plan')
+      +   (busy && !flLoadArm ? '<span style="margin-left:auto;font-size:var(--t-2xs);'
+          + 'color:var(--text-fainter)">replaces ' + ROUTE.length + ' points</span>' : '')
+      + '</button>'
+      + '<button class="tedrow" data-fa="dupe">Duplicate</button>'
+      + '<button class="tedrow" data-fa="del" style="color:var(--bad)">'
+      +   (flDelArm ? 'Tap again to delete' : 'Delete') + '</button>';
+
+    $$('#flActs .tedrow').forEach(function(b){
+      b.addEventListener('click', function(){ flAction(b.getAttribute('data-fa')); });
+    });
+  }
+
+  function flAction(a){
+    if (!flEditing) return;
+    if (a === 'load'){
+      if (ROUTE.length > 1 && !flSame(flEditing.pts) && !flLoadArm){
+        flLoadArm = setTimeout(function(){ flLoadArm = null; drawFlActs(); }, 4000);
+        drawFlActs();
+        return;
+      }
+      clearTimeout(flLoadArm); flLoadArm = null;
+      ROUTE.length = 0;
+      flEditing.pts.forEach(function(p){
+        ROUTE.push({ id:p.id, nm:p.nm, cat:p.cat, lat:p.lat, lon:p.lon });
+      });
+      toWpt = Math.min(1, ROUTE.length - 1);
+      drawFpl(); renderMap(); refreshFlightsView();
+      closeFl();
+      toast(flEditing.nm + ' loaded');
+      return;
+    }
+    if (a === 'dupe'){
+      var c = {
+        id:'f' + Date.now().toString(36),
+        nm: flEditing.nm + ' copy',
+        pts: flEditing.pts.map(function(p){ return { id:p.id, nm:p.nm, cat:p.cat, lat:p.lat, lon:p.lon }; }),
+        ts: Date.now()
+      };
+      FLIGHTS.push(c); saveFlights(); refreshFlightsView(); closeFl();
+      toast('Duplicated');
+      return;
+    }
+    if (a === 'del'){
+      if (!flDelArm){
+        flDelArm = setTimeout(function(){ flDelArm = null; drawFlActs(); }, 3000);
+        drawFlActs();
+        return;
+      }
+      clearTimeout(flDelArm); flDelArm = null;
+      FLIGHTS = FLIGHTS.filter(function(x){ return x.id !== flEditing.id; });
+      saveFlights(); flEditing = null;
+      refreshFlightsView(); closeFl();
+      toast('Deleted');
+    }
+  }
+
+  $('#flName').addEventListener('change', function(){
+    if (!flEditing) return;
+    var v = $('#flName').value.trim();
+    if (!v){ $('#flName').value = flEditing.nm; return; }
+    flEditing.nm = v; flEditing.ts = Date.now();
+    saveFlights(); refreshFlightsView();
+    toast('Renamed');
+  });
+
+  /* ============================================================
+     NOTES
+     A note can be attached to a field, in which case it also appears
+     on that field's card, or left general. Persisted.
+     ============================================================ */
+  var NOTE_KEY = 'nmp.iphone.notes';
+  var NOTES = (function(){
+    try{ var a = JSON.parse(localStorage.getItem(NOTE_KEY)); if (a && a.length) return a; }catch(e){}
+    return [
+      { id:'n1', ap:'AYGA', ttl:'Goroka 17L', txt:'Watch for stock on the strip early morning. Circuit tight to the south, terrain rises fast on the go-around.', ts:Date.now() - 86400000 * 3 },
+      { id:'n2', ap:'',     ttl:'Company', txt:'Ops wants fuel state passed on first call inbound, not on the ground.', ts:Date.now() - 86400000 * 9 }
+    ];
+  })();
+  function saveNotes(){ try{ localStorage.setItem(NOTE_KEY, JSON.stringify(NOTES)); }catch(e){} }
+  function notesFor(id){ return NOTES.filter(function(n){ return n.ap === id; }); }
+  function noteById(id){ for (var i=0;i<NOTES.length;i++) if (NOTES[i].id === id) return NOTES[i]; return null; }
+  function noteAge(ts){
+    var d = Math.floor((Date.now() - ts) / 86400000);
+    if (d <= 0) return 'today';
+    if (d === 1) return 'yesterday';
+    if (d < 30)  return d + 'd ago';
+    return new Date(ts).toISOString().slice(0, 10);
+  }
+
+  var npNoteMode = 'all';
+  function notesHTML(){
+    var list = NOTES.slice().sort(function(a, b){ return b.ts - a.ts; });
+    if (npNoteMode === 'field') list = list.filter(function(n){ return n.ap; });
+    if (npNoteMode === 'gen')   list = list.filter(function(n){ return !n.ap; });
+
+    var h = '<div class="ntbar"><span class="cnt">' + list.length
+          + (list.length === 1 ? ' note' : ' notes') + '</span>'
+          + '<button data-nt="new">New note</button></div>'
+          + '<div class="ntseg">'
+          + [['all','All'],['field','Airfield'],['gen','General']].map(function(m){
+              return '<button data-ntm="' + m[0] + '"' + (npNoteMode === m[0] ? ' class="on"' : '')
+                   + '>' + m[1] + '</button>';
+            }).join('') + '</div>';
+
+    if (!list.length) return h + '<div class="cempty">Nothing here yet</div>';
+
+    list.forEach(function(n){
+      h += '<button class="ntc" data-nid="' + n.id + '">'
+        +  '<span class="top"><span class="ap' + (n.ap ? '' : ' gen') + '">'
+        +    (n.ap || 'GEN') + '</span><b>' + esc(n.ttl || 'Untitled') + '</b>'
+        +    '<span class="ts">' + noteAge(n.ts) + '</span></span>'
+        +  '<p>' + esc(n.txt || '') + '</p></button>';
+    });
+    return h;
+  }
+  function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function wireNotes(el){
+    Array.prototype.forEach.call(el.querySelectorAll('[data-ntm]'), function(b){
+      b.addEventListener('click', function(){
+        npNoteMode = b.getAttribute('data-ntm');
+        el.querySelector('.vbody').innerHTML = notesHTML();
+        wireNotes(el);
+      });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-nt="new"]'), function(b){
+      b.addEventListener('click', function(){ openNote(null, ''); });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-nid]'), function(b){
+      b.addEventListener('click', function(){ openNote(b.getAttribute('data-nid')); });
+    });
+  }
+
+  /* ---- editor ---- */
+  var noteEd = $('#noteEd'), noteEditing = null, noteDelArm = null;
+  function openNote(id, presetAp){
+    closeAll();
+    noteEditing = id ? noteById(id) : null;
+    $('#noteEdTtl').textContent = noteEditing ? 'Edit note' : 'New note';
+    $('#noteTtl').value = noteEditing ? (noteEditing.ttl || '') : '';
+    $('#noteAp').value  = noteEditing ? (noteEditing.ap || '') : (presetAp || '');
+    $('#noteTxt').value = noteEditing ? (noteEditing.txt || '') : '';
+    $('#noteDel').style.visibility = noteEditing ? 'visible' : 'hidden';
+    $('#noteDel').classList.remove('arm');
+    clearTimeout(noteDelArm); noteDelArm = null;
+    noteEd.classList.add('on');
+  }
+  function closeNote(){ noteEd.classList.remove('on'); refreshNotesView(); }
+  function refreshNotesView(){
+    var v = viewCache['notes'];
+    if (v){ v.querySelector('.vbody').innerHTML = notesHTML(); wireNotes(v); }
+    if (card && card.classList.contains('on')) drawCard();
+  }
+  $('#noteEdClose').addEventListener('click', closeNote);
+
+  $('#noteSave').addEventListener('click', function(){
+    var ap  = $('#noteAp').value.trim().toUpperCase();
+    var ttl = $('#noteTtl').value.trim();
+    var txt = $('#noteTxt').value;
+    if (ap && !dbById(ap)){ toast('No point called ' + ap); return; }
+    if (!ttl && !txt.trim()){ toast('Nothing to save'); return; }
+    if (noteEditing){
+      noteEditing.ap = ap; noteEditing.ttl = ttl; noteEditing.txt = txt; noteEditing.ts = Date.now();
+    } else {
+      NOTES.push({ id:'n' + Date.now().toString(36), ap:ap, ttl:ttl, txt:txt, ts:Date.now() });
+    }
+    saveNotes();
+    noteEd.classList.remove('on');
+    refreshNotesView();
+    toast('Note saved');
+  });
+
+  $('#noteDel').addEventListener('click', function(){
+    if (!noteEditing) return;
+    var b = $('#noteDel');
+    if (noteDelArm){
+      clearTimeout(noteDelArm); noteDelArm = null;
+      NOTES = NOTES.filter(function(n){ return n.id !== noteEditing.id; });
+      saveNotes(); noteEditing = null;
+      noteEd.classList.remove('on');
+      refreshNotesView();
+      toast('Note deleted');
+      return;
+    }
+    b.classList.add('arm');
+    toast('Tap again to delete');
+    noteDelArm = setTimeout(function(){ noteDelArm = null; b.classList.remove('arm'); }, 3000);
+  });
 
   /* ---- Airports: nearest first, with the full list one tap away ---- */
   var npMode = 'near';
@@ -3656,11 +4123,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                  : (k === 'airports') ? '<div class="vhead"><b>Airports</b>'
                      + '<span class="sub">nearest first</span></div>'
                      + '<div class="vbody">' + airportsHTML() + '</div>'
+                 : (k === 'notes')    ? '<div class="vhead"><b>Notes</b></div>'
+                     + '<div class="vbody">' + notesHTML() + '</div>'
+                 : (k === 'flights')  ? '<div class="vhead"><b>Flights</b>'
+                     + '<span class="sub">saved routes</span></div>'
+                     + '<div class="vbody">' + flightsHTML() + '</div>'
                  : stubHTML(k);
     viewLayer.appendChild(el);
     viewCache[k] = el;
     if (k === 'fuel') initFuel(el);
     if (k === 'airports') wireAirports(el);
+    if (k === 'notes') wireNotes(el);
+    if (k === 'flights') wireFlights(el);
     return el;
   }
 
@@ -3673,6 +4147,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (k === 'airports'){
       el.querySelector('.vbody').innerHTML = airportsHTML();
       wireAirports(el);
+    }
+    if (k === 'notes'){
+      el.querySelector('.vbody').innerHTML = notesHTML();
+      wireNotes(el);
+    }
+    if (k === 'flights'){
+      el.querySelector('.vbody').innerHTML = flightsHTML();
+      wireFlights(el);
     }
     el.classList.add('on');
     viewLayer.classList.add('on');
@@ -3762,7 +4244,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function drawEd(){
     var s = '';
-    for (var i = 0; i < 3; i++){
+    for (var i = 0; i < TAB_SLOTS; i++){
       s += '<button class="tslot' + (i === tedSlot ? ' sel' : '') + '" data-slot="' + i + '">'
          + '<span class="n">Slot ' + (i + 1) + '</span>'
          + '<span class="v">' + vTitle(tabCfg[i]) + '</span></button>';
