@@ -16,6 +16,41 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v25 2026-07-21  Fix: tapping a rail layer button closed the
+                       column. v23 made the rail regenerate its markup
+                       on every toggle, so the tapped node was detached
+                       before the click reached the map listener, whose
+                       "is this inside the rail" guard then failed.
+                       Split into buildRail() (structure, rare) and
+                       syncRail() (classes only), plus stopPropagation
+                       on rail buttons.
+       v24 2026-07-21  Split "Airspace & danger" into two independent
+                       layers: Controlled airspace (blue dashed) and
+                       Danger & restricted (red hatched). They are
+                       different things you need at different times and
+                       should never have shared one switch. Pool is now
+                       ten. Default rail: airports, airspace, my
+                       waypoints, route, terrain.
+       v23 2026-07-21  The five layer-rail slots are user-assignable,
+                       same slot-and-swap editor as the bottom bar and
+                       activity bar. Pool of nine: airports, strips,
+                       fixes, my waypoints, route, airspace, flight
+                       category, terrain, labels. Layer names and glyphs
+                       now come from one LAYER_META table shared by the
+                       rail, the popover and the editor. Settings >
+                       Layout > Edit layer rail.
+       v22 2026-07-21  Left rail layer buttons wired to the same LAYERS
+                       object as the Layers popover. Airports, Airspace,
+                       Waypoints, Routes and Terrain now toggle real map
+                       content, and the two surfaces stay in sync in
+                       both directions. The rail is a five-item
+                       shortcut; the popover remains the full set.
+       v21 2026-07-21  Layers popover: Terrain shading and Labels moved
+                       back into the left column under an Overlays
+                       heading, with the basemaps. Left column is now
+                       "how the map is drawn", right column is "what
+                       data sits on it". Labels toggles against the
+                       declutter mode set in Settings and remembers it.
        v20 2026-07-21  Layers popover is live. Map markers are now
                        projected from the same DB search and FPL use,
                        so every toggle changes what is drawn: three
@@ -355,6 +390,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:repeating-linear-gradient(45deg,rgba(240,80,110,.13) 0 6px,transparent 6px 12px)}
 .dgr b{position:absolute;top:2px;left:4px;font-family:var(--mono);font-size:var(--t-2xs);
   font-weight:700;color:#f0506e;white-space:nowrap}
+.asp{position:absolute;pointer-events:none;border:1px dashed rgba(127,179,213,.8);
+  border-radius:3px;background:rgba(127,179,213,.07)}
+.asp b{position:absolute;top:2px;left:4px;font-family:var(--mono);font-size:var(--t-2xs);
+  font-weight:700;color:var(--accent-2);white-space:nowrap}
 .mapnote{
   position:absolute;left:0;right:0;top:44%;
   text-align:center;font-size:var(--t-sm);
@@ -1112,25 +1151,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <!-- Left rail -->
     <div class="rail" id="rail">
 
-      <!-- open state: layer toggles -->
-      <div class="rgrp open-only">
-        <button class="rb on" id="rbVfrOpen"><span class="lab">VFR</span></button>
-        <button class="rb lyr on" data-lyr="Airports">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l8 15H4z"/></svg>
-        </button>
-        <button class="rb lyr" data-lyr="Airspace">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l7.4 4.3v8.6L12 20.6 4.6 16.3V7.7z"/></svg>
-        </button>
-        <button class="rb lyr on" data-lyr="Waypoints">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.2l2.3 6.5 6.5 2.3-6.5 2.3-2.3 6.5-2.3-6.5L3.2 12l6.5-2.3z"/></svg>
-        </button>
-        <button class="rb lyr on" data-lyr="Routes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="6" r="2.4"/><path d="M6.9 16.3L17.1 7.7"/></svg>
-        </button>
-        <button class="rb lyr" data-lyr="Terrain">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 19l6-9 4 5.5 2.5-3.5L21 19z"/></svg>
-        </button>
-      </div>
+      <!-- open state: layer toggles (generated from RAIL_CFG) -->
+      <div class="rgrp open-only" id="railLyr"></div>
 
       <!-- collapsed state -->
       <div class="rgrp collapsed-only">
@@ -1311,6 +1333,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   <div class="slistw" id="searchList"></div>
 </div>
 
+<!-- Layer-rail editor -->
+<div class="ted" id="railEd">
+  <div class="tedw">
+    <div class="tedh">
+      <b>Layer rail</b>
+      <button class="x" id="railEdClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="tedpage" id="railSlots"></div>
+    <div class="tedhint" id="railHint"></div>
+    <div class="tedlist" id="railList"></div>
+  </div>
+</div>
+
 <!-- Activity-bar editor -->
 <div class="ted" id="actEd">
   <div class="tedw">
@@ -1349,7 +1384,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v20';
+  var VERSION = 'v25';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -1373,6 +1408,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (gps) gps.classList.remove('on');
     if (actEd) actEd.classList.remove('on');
     if (typeSc) typeSc.classList.remove('on');
+    if (railEd) railEd.classList.remove('on');
     if (wpt) wpt.classList.remove('on');
     if (sPanel){ sPanel.classList.remove('on'); sBox.classList.remove('on'); }
     if (ted) ted.classList.remove('on');
@@ -2422,6 +2458,44 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   });
   drawActy();
 
+  /* ---------- Layer-rail editor ---------- */
+  var railEd = $('#railEd'), railSel = 0;
+  function openRailEd(){ closeAll(); railSel = 0; drawRailEd(); railEd.classList.add('on'); }
+  function closeRailEd(){ railEd.classList.remove('on'); }
+  $('#railEdClose').addEventListener('click', closeRailEd);
+  railEd.addEventListener('click', function(e){ if (e.target === railEd) closeRailEd(); });
+
+  function drawRailEd(){
+    var s = '<div class="pl">Rail slots, top to bottom</div><div class="row">';
+    for (var i = 0; i < 5; i++){
+      s += '<button class="tslot sm' + (i === railSel ? ' sel' : '') + '" data-rs="' + i + '">'
+         + '<span class="n">' + (i + 1) + '</span>'
+         + '<span class="v">' + LAYER_META[RAIL_CFG[i]].t.replace(/&amp;.*/, '').trim() + '</span></button>';
+    }
+    s += '</div>';
+    $('#railSlots').innerHTML = s;
+    $$('#railSlots .tslot').forEach(function(b){
+      b.addEventListener('click', function(){ railSel = parseInt(b.getAttribute('data-rs'), 10); drawRailEd(); });
+    });
+    $('#railHint').textContent = 'Choose what goes in rail slot ' + (railSel + 1) + '.';
+
+    $('#railList').innerHTML = RAIL_POOL.map(function(k){
+      var at = RAIL_CFG.indexOf(k);
+      return '<button class="tedrow" data-rk="' + k + '">'
+           + '<span class="ic">' + laySvg(k) + '</span>' + LAYER_META[k].t
+           + (at >= 0 ? '<span class="badge">' + (at + 1) + '</span>' : '') + '</button>';
+    }).join('');
+    $$('#railList .tedrow').forEach(function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-rk'), at = RAIL_CFG.indexOf(k);
+        if (at === railSel) return;
+        if (at >= 0) RAIL_CFG[at] = RAIL_CFG[railSel];   /* swap, never duplicate */
+        RAIL_CFG[railSel] = k;
+        saveRail(); drawRailEd(); buildRail();
+      });
+    });
+  }
+
   /* ---------- Type scale reference ---------- */
   var TYPE_ROWS = [
     { v:'--t-2xs', px:'9 px',  w:'micro-labels only: form field labels, editor slot captions',
@@ -2510,7 +2584,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var rail = $('#rail');
   function toggleRail(){ rail.classList.toggle('open'); }
   $('#rbVfr').addEventListener('click', toggleRail);
-  $('#rbVfrOpen').addEventListener('click', toggleRail);
 
   /* Tapping the map dismisses the open layer column. The VFR button
      still toggles it; this just adds the reflex of tapping away. */
@@ -2518,12 +2591,38 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (rail.contains(e.target)) return;
     rail.classList.remove('open');
   });
-  $$('.rb.lyr').forEach(function(b){
-    b.addEventListener('click', function(){
-      b.classList.toggle('on');
-      toast(b.getAttribute('data-lyr') + (b.classList.contains('on') ? ' on' : ' off'));
+  /* The rail is a five-slot shortcut, not a second set of switches:
+     it reads and writes the same LAYERS object as the popover, so the
+     two can never disagree. Which five is up to the user. */
+  /* buildRail() rebuilds the markup and is called only when the slot
+     configuration changes. syncRail() just flips classes - toggling a
+     layer must never replace the node that was tapped, or the click
+     bubbles up to a map listener that can no longer tell the tap came
+     from inside the rail, and the column closes under your finger. */
+  function buildRail(){
+    var host = $('#railLyr'); if (!host) return;
+    host.innerHTML = '<button class="rb on" id="rbVfrOpen"><span class="lab">VFR</span></button>'
+      + RAIL_CFG.map(function(k){
+          return '<button class="rb lyr' + (layOn(k) ? ' on' : '') + '" data-lyr="' + k + '" '
+               + 'aria-label="' + LAYER_META[k].t.replace(/&amp;/g,'and') + '">' + laySvg(k) + '</button>';
+        }).join('');
+    $('#rbVfrOpen').addEventListener('click', function(e){ e.stopPropagation(); toggleRail(); });
+    $$('#railLyr .rb.lyr').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var k = b.getAttribute('data-lyr');
+        layToggle(k);
+        syncRail(); renderMap();
+        if (typeof drawLayersPop === 'function') drawLayersPop();
+        toast(LAYER_META[k].t.replace(/&amp;/g,'and') + (layOn(k) ? ' on' : ' off'));
+      });
     });
-  });
+  }
+  function syncRail(){
+    $$('#railLyr .rb.lyr').forEach(function(b){
+      b.classList.toggle('on', layOn(b.getAttribute('data-lyr')));
+    });
+  }
   $('#rbRec').addEventListener('click', function(){
     this.classList.toggle('on');
   });
@@ -3540,6 +3639,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + '<div class="csec">Layout</div>'
       + '<button class="setgo" data-go2="tabs">Edit bottom bar<span class="ch">\u203a</span></button>'
       + '<button class="setgo" data-go2="acty">Edit activity bar<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="rail">Edit layer rail<span class="ch">\u203a</span></button>'
       + '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
       + '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>'
 
@@ -3586,6 +3686,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         closeSet();
         if (k === 'tabs')    openEd();
         if (k === 'acty')    openActEd();
+        if (k === 'rail')    openRailEd();
         if (k === 'type')    openType();
         if (k === 'metrics') showMetrics();
       });
@@ -3647,7 +3748,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var LAYERS = {
     base:'png', terrain:false,
     fields:true, strips:false, fixes:false, mine:true,
-    route:true, danger:false, wxcat:false
+    route:true, airspace:false, danger:false, wxcat:false
   };
   var LAY_KEY = 'nmp.iphone.layers';
   (function(){
@@ -3656,25 +3757,84 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   })();
   function saveLayers(){ try{ localStorage.setItem(LAY_KEY, JSON.stringify(LAYERS)); }catch(e){} }
 
+  /* One place defines each layer's name and glyph. The rail, the
+     popover and the rail editor all read from here. */
+  var LAYER_META = {
+    fields: { t:'Airports',
+      d:'<path d="M12 4l8 15H4z"/>' },
+    strips: { t:'Strips &amp; villages',
+      d:'<circle cx="12" cy="12" r="3.2"/><path d="M12 4.4v2M12 17.6v2M4.4 12h2M17.6 12h2"/>' },
+    fixes:  { t:'Enroute fixes',
+      d:'<path d="M12 3.2l2.3 6.5 6.5 2.3-6.5 2.3-2.3 6.5-2.3-6.5L3.2 12l6.5-2.3z"/>' },
+    mine:   { t:'My waypoints',
+      d:'<path d="M12 21.2s6.4-5.9 6.4-10.6a6.4 6.4 0 1 0-12.8 0C5.6 15.3 12 21.2 12 21.2z"/><circle cx="12" cy="10.4" r="2.2"/>' },
+    route:  { t:'Active route',
+      d:'<circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="6" r="2.4"/><path d="M6.9 16.3L17.1 7.7"/>' },
+    airspace:{ t:'Controlled airspace',
+      d:'<path d="M12 3.4l7.4 4.3v8.6L12 20.6 4.6 16.3V7.7z"/>' },
+    danger: { t:'Danger &amp; restricted',
+      d:'<path d="M12 3.6L21 19.4H3z"/><path d="M12 10v4.2"/><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none"/>' },
+    wxcat:  { t:'Flight category',
+      d:'<circle cx="12" cy="12" r="7.6"/><path d="M12 4.4v15.2"/>' },
+    terrain:{ t:'Terrain shading',
+      d:'<path d="M3 19l6-9 4 5.5 2.5-3.5L21 19z"/>' },
+    labels: { t:'Labels',
+      d:'<path d="M4.6 12.4l7-7.4h7.8v7.8l-7.4 7z"/><circle cx="16" cy="8" r="1.4"/>' },
+    navaid: { t:'Navaids', d:'<circle cx="12" cy="12" r="6.4"/><circle cx="12" cy="12" r="1.6"/>' },
+    proc:   { t:'Procedure fixes', d:'<path d="M12 4.4l6 13H6z"/>' }
+  };
+  function laySvg(k){
+    var m = LAYER_META[k]; if (!m) return '';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+         + 'stroke-linejoin="round" stroke-linecap="round">' + m.d + '</svg>';
+  }
+  function layOn(k){ return (k === 'labels') ? (SET.labels !== 'off') : !!LAYERS[k]; }
+  function layToggle(k){
+    if (k === 'labels'){
+      if (SET.labels === 'off') SET.labels = lastLabelMode;
+      else { lastLabelMode = SET.labels; SET.labels = 'off'; }
+      saveSet();
+    } else {
+      LAYERS[k] = !LAYERS[k];
+      saveLayers();
+    }
+  }
+
+  var RAIL_KEY = 'nmp.iphone.rail';
+  var RAIL_POOL = ['fields','strips','fixes','mine','route','airspace','danger','wxcat','terrain','labels'];
+  var RAIL_CFG = (function(){
+    try{
+      var a = JSON.parse(localStorage.getItem(RAIL_KEY));
+      if (a && a.length === 5 && a.every(function(k){ return RAIL_POOL.indexOf(k) >= 0; })) return a;
+    }catch(e){}
+    return ['fields','airspace','mine','route','terrain'];
+  })();
+  function saveRail(){ try{ localStorage.setItem(RAIL_KEY, JSON.stringify(RAIL_CFG)); }catch(e){} }
+
   var BASES = [
     ['png',   'PNG vector (offline)'],
     ['carto', 'CARTO dark'],
     ['sat',   'Satellite']
   ];
+  /* Left column: the map itself - basemap choice plus the two
+     treatments that change how the map is drawn rather than what
+     data sits on it. Right column: data layers. */
+  var MAP_OVERLAYS = ['terrain', 'labels'];
   var OVERLAYS = [
-    ['fields', 'Airfields',        true],
-    ['strips', 'Strips &amp; villages', true],
-    ['fixes',  'Enroute fixes',    true],
-    ['mine',   'My waypoints',     true],
-    ['route',  'Active route',     true],
-    ['danger', 'Danger areas',     true],
-    ['wxcat',  'Flight category',  true],
-    ['terrain','Terrain shading',  true],
-    ['navaid', 'Navaids',          false],
-    ['proc',   'Procedure fixes',  false]
+    ['fields', true], ['strips', true], ['fixes',  true], ['mine',  true],
+    ['route',  true], ['airspace', true], ['danger', true], ['wxcat',  true],
+    ['navaid', false], ['proc',  false]
   ];
+  var lastLabelMode = (SET.labels === 'off') ? 'auto' : SET.labels;
 
-  /* demo danger areas, boxes in degrees - shape only, not AIP data */
+  /* Demo geometry: boxes in degrees, shape only, NOT AIP data.
+     The real build reads PNG_CTA / PNG_TMA_SECTORS and the ENR 5.1
+     danger and restricted area coordinates. */
+  var AIRSPACE = [
+    { id:'PY TMA',  n:-9.05, s:-9.90, w:146.70, e:147.80 },
+    { id:'NZ CTR',  n:-6.30, s:-6.85, w:146.40, e:147.05 },
+    { id:'MH CTR',  n:-5.55, s:-6.10, w:144.00, e:144.60 }
+  ];
   var DANGER = [
     { id:'D-AYD903', n:-6.20, s:-6.95, w:146.30, e:147.20 },
     { id:'R-AYR921', n:-9.20, s:-9.75, w:146.90, e:147.60 }
@@ -3693,14 +3853,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
     var h = '';
 
-    if (LAYERS.danger){
-      DANGER.forEach(function(d){
-        var l = projX(d.w), t = projY(d.n);
-        h += '<div class="dgr" style="left:' + l.toFixed(2) + '%;top:' + t.toFixed(2)
-          +  '%;width:' + (projX(d.e) - l).toFixed(2) + '%;height:' + (projY(d.s) - t).toFixed(2)
-          +  '%"><b>' + d.id + '</b></div>';
-      });
+    function box(cls, a){
+      var l = projX(a.w), t = projY(a.n);
+      return '<div class="' + cls + '" style="left:' + l.toFixed(2) + '%;top:' + t.toFixed(2)
+           + '%;width:' + (projX(a.e) - l).toFixed(2) + '%;height:' + (projY(a.s) - t).toFixed(2)
+           + '%"><b>' + a.id + '</b></div>';
     }
+    if (LAYERS.airspace) AIRSPACE.forEach(function(a){ h += box('asp', a); });
+    if (LAYERS.danger)   DANGER.forEach(function(a){ h += box('dgr', a); });
 
     if (LAYERS.route && ROUTE.length > 1){
       var rect = map.getBoundingClientRect();
@@ -3743,45 +3903,54 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---------- Layers popover, generated from the model ---------- */
   function drawLayersPop(){
+    var tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
+             + 'stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>';
     var l = '';
     BASES.forEach(function(b){
       l += '<div class="prow' + (LAYERS.base === b[0] ? ' sel' : '') + '" data-base="' + b[0] + '">'
         +  b[1] + '</div>';
     });
+    l += '<div class="psec">Overlays</div>';
+    MAP_OVERLAYS.forEach(function(k){
+      l += '<div class="prow" data-mov="' + k + '">'
+        +  '<span class="ck">' + (layOn(k) ? tick : '') + '</span>'
+        +  LAYER_META[k].t + '</div>';
+    });
     $('#popL').innerHTML = l;
 
-    var tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
-             + 'stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>';
     var r = '';
     OVERLAYS.forEach(function(o){
-      var on = !!LAYERS[o[0]];
-      r += '<div class="prow" data-ov="' + o[0] + '"' + (o[2] ? '' : ' style="opacity:.4"') + '>'
-        +  '<span class="ck">' + (o[2] && on ? tick : '') + '</span>' + o[1]
-        +  (o[2] ? '' : '<span style="margin-left:auto;font-size:var(--t-2xs);color:var(--text-fainter)">no data</span>')
+      var k = o[0], ok = o[1];
+      r += '<div class="prow" data-ov="' + k + '"' + (ok ? '' : ' style="opacity:.4"') + '>'
+        +  '<span class="ck">' + (ok && layOn(k) ? tick : '') + '</span>' + LAYER_META[k].t
+        +  (ok ? '' : '<span style="margin-left:auto;font-size:var(--t-2xs);color:var(--text-fainter)">no data</span>')
         +  '</div>';
     });
     $('#popR').innerHTML = r;
 
     $$('#popL .prow').forEach(function(el){
       el.addEventListener('click', function(){
-        LAYERS.base = el.getAttribute('data-base');
-        saveLayers(); drawLayersPop(); renderMap();
+        var b = el.getAttribute('data-base'), mo = el.getAttribute('data-mov');
+        if (b) LAYERS.base = b;
+        else if (mo) layToggle(mo);
+        saveLayers(); drawLayersPop(); renderMap(); syncRail();
       });
     });
     $$('#popR .prow').forEach(function(el){
       el.addEventListener('click', function(){
         var k = el.getAttribute('data-ov');
-        var meta = null;
-        OVERLAYS.forEach(function(o){ if (o[0] === k) meta = o; });
-        if (!meta || !meta[2]){ toast('No data for this layer in the demo shell'); return; }
-        LAYERS[k] = !LAYERS[k];
-        saveLayers(); drawLayersPop(); renderMap();
+        var ok = false;
+        OVERLAYS.forEach(function(o){ if (o[0] === k) ok = o[1]; });
+        if (!ok){ toast('No data for this layer in the demo shell'); return; }
+        layToggle(k);
+        drawLayersPop(); renderMap(); syncRail();
       });
     });
   }
 
   window.addEventListener('resize', renderMap);
   drawLayersPop();
+  buildRail();
   renderMap();
 
 })();
