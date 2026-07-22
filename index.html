@@ -16,6 +16,15 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v43 2026-07-22  Landscape HUD reworked. Fixes v42, whose HUD CSS
+                       never actually landed. Own-ship now centres on
+                       the middle of the VISIBLE map, biased left of the
+                       frequency panel so the aircraft is never hidden
+                       behind it; closing the panel re-centres to true
+                       middle. Frequency panel is dismissable with a
+                       reopen tab. Bottom-left stack is zoom, centre,
+                       record and layers; record shares one timer with
+                       the portrait rail button.
        v42 2026-07-22  Landscape monitoring HUD. Rotate the phone: the
                        planning UI steps aside and a glance layout takes
                        over - activity readout top-left, to-be-flown
@@ -1110,6 +1119,88 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .vempty{flex:1 1 auto;display:flex;align-items:center;justify-content:center;
   color:var(--text-fainter);font-size:var(--t-sm);letter-spacing:.1em;text-transform:uppercase}
 
+/* ---- Landscape monitoring HUD -----------------------------
+   Portrait plans, landscape monitors. The HUD is an overlay shown only
+   when the phone is wide and short. The map stays as the full-screen
+   background; own-ship centres on the middle of the VISIBLE map, which
+   is the area not covered by the frequency panel. */
+#hud{display:none}
+@media (orientation:landscape) and (max-height:500px){
+  .chrome, .tabs, .rail, .acty, .drop, .card, .setv, .ntv, .ted, .spanel{display:none !important}
+  #map{position:fixed !important;inset:0 !important;width:100% !important;height:100% !important}
+  #hud{display:block;position:fixed;inset:0;z-index:2500;pointer-events:none}
+  #hud > *{pointer-events:auto}
+}
+.hud-act{position:absolute;top:calc(var(--sat) + 8px);left:calc(var(--edge, 0px) + 8px);
+  display:flex;background:rgba(13,18,25,.9);
+  border:1px solid var(--border-strong);border-radius:12px;overflow:hidden;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.hud-act .c{padding:7px 14px;min-width:66px}
+.hud-act .c + .c{border-left:1px solid var(--border)}
+.hud-act .k{display:block;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-muted)}
+.hud-act .v{display:block;font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);
+  line-height:1.15;margin-top:2px}
+.hud-act .v.dash{color:var(--text-fainter)}
+.hud-act .u{font-size:11px;font-weight:600;color:var(--text-muted);margin-left:3px}
+
+.hud-freq{position:absolute;top:calc(var(--sat) + 8px);right:calc(var(--edge, 0px) + 8px);
+  width:300px;max-height:calc(100% - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:rgba(13,18,25,.94);border:1px solid var(--border-strong);border-radius:16px;
+  padding:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  transition:transform .2s ease}
+.hud-freq.hidden{transform:translateX(calc(100% + 24px))}
+.hud-freq .close{position:absolute;top:10px;right:12px;width:26px;height:26px;
+  display:flex;align-items:center;justify-content:center;color:var(--text-muted);
+  font-size:20px;line-height:1;background:none;border:0}
+.hud-freq .area{border:1px solid var(--accent);border-radius:12px;padding:12px 14px;
+  background:rgba(255,176,32,.07)}
+.hud-freq .area .row1{display:flex;align-items:baseline;gap:10px}
+.hud-freq .area .k{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent)}
+.hud-freq .area .f{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--accent);
+  line-height:1;margin-left:auto}
+.hud-freq .area .hf{margin-top:5px;text-align:right;font-family:var(--mono);font-size:10px;
+  color:var(--text-fainter)}
+.hud-freq .nx{margin-top:13px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent-2)}
+.hud-freq .fld{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.hud-freq .fld b{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--text)}
+.hud-freq .fld span{flex:1 1 auto;min-width:0;font-size:12px;color:var(--text-dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud-freq .fld .d{flex:0 0 auto;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text-2)}
+.hud-freq .grid{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:11px}
+.hud-freq .grid .row{display:flex;align-items:baseline;gap:8px}
+.hud-freq .grid .row .t{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--text-muted)}
+.hud-freq .grid .row .v{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent-2)}
+.hud-freq .note{margin-top:12px;font-size:9px;color:var(--text-fainter);text-align:center}
+
+.hud-freqtab{position:absolute;top:calc(var(--sat) + 8px);right:0;
+  width:30px;height:54px;border-radius:12px 0 0 12px;
+  background:rgba(13,18,25,.9);border:1px solid var(--border-strong);border-right:0;
+  display:none;align-items:center;justify-content:center;color:var(--accent-2);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.hud-freqtab.on{display:flex}
+.hud-freqtab svg{width:16px;height:16px}
+
+.hud-ctl{position:absolute;left:calc(var(--edge, 0px) + 8px);bottom:calc(var(--sab, 0px) + 8px);
+  display:flex;flex-direction:column;gap:6px}
+.hud-ctl button{position:relative;width:46px;height:46px;border-radius:12px;
+  background:rgba(13,18,25,.9);border:1px solid var(--border-strong);color:var(--text);
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.hud-ctl button svg{width:22px;height:22px}
+.hud-ctl .ctr.lock{border-color:var(--border-strong);color:var(--text-2)}
+.hud-ctl .ctr.follow{border-color:var(--accent);color:var(--accent);background:rgba(255,176,32,.14)}
+.hud-ctl .rec svg{width:16px;height:16px;color:var(--text-2)}
+.hud-ctl .rec.on{border-color:var(--bad)}
+.hud-ctl .rec.on svg{color:var(--bad)}
+.hud-ctl .rec .rt{position:absolute;bottom:3px;font-family:var(--mono);font-size:8px;font-weight:700;
+  color:var(--bad)}
+
+.nmp-ship{position:absolute;transform:translate(-50%,-50%);z-index:20;pointer-events:none}
+.nmp-ship svg{width:28px;height:28px;display:block;filter:drop-shadow(0 0 3px rgba(0,0,0,.85))}
+
 /* ---- Share route ------------------------------------------ */
 .shhd{font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
   color:var(--text-fainter);margin:2px 0 10px}
@@ -1705,7 +1796,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v42';
+  var VERSION = 'v43';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -3074,11 +3165,23 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---- REC: tap to start or stop, hold to reset ---- */
   var recRun = false, recSec = 0, recT = null, recHold = null, recDidHold = false;
+  function recStr(){
+    return String(Math.floor(recSec / 60)).padStart(2, '0') + ':'
+         + String(recSec % 60).padStart(2, '0');
+  }
   function recPaint(){
     var t = $('#rbRec .tick');
-    if (t) t.textContent = String(Math.floor(recSec / 60)).padStart(2, '0') + ':'
-                         + String(recSec % 60).padStart(2, '0');
+    if (t) t.textContent = recStr();
     $('#rbRec').classList.toggle('on', recRun);
+    var hr = $('#hudRec'), ht = $('#hudRecT');
+    if (hr){ hr.classList.toggle('on', recRun); if (ht) ht.textContent = recRun ? recStr() : ''; }
+  }
+  /* one place to start/stop, shared by the rail and the landscape HUD */
+  function recToggleShared(){
+    recRun = !recRun;
+    if (recRun){ recT = setInterval(recTick, 1000); }
+    else { clearInterval(recT); recT = null; }
+    recPaint();
   }
   function recTick(){ recSec++; if (recSec > 5999) recSec = 0; recPaint(); }
   $('#rbRec').addEventListener('touchstart', function(){
@@ -3096,10 +3199,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   $('#rbRec').addEventListener('click', function(e){
     e.stopPropagation();
     if (recDidHold){ recDidHold = false; return; }
-    recRun = !recRun;
-    if (recRun){ recT = setInterval(recTick, 1000); }
-    else { clearInterval(recT); recT = null; }
-    recPaint();
+    recToggleShared();
   });
   recPaint();
 
@@ -5153,14 +5253,31 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       ship.gs  = AC.tas;
       ship.alt = AC.alt;
     }
-    if (follow && ship.lat !== undefined){
-      var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
-      VIEW.n = ship.lat + hy; VIEW.s = ship.lat - hy;
-      VIEW.w = ship.lon - hx; VIEW.e = ship.lon + hx;
-    }
+    if (follow && ship.lat !== undefined) centreOn(ship.lat, ship.lon);
     renderMap();
     paintShip();
     if (hudOn()) drawHud();
+  }
+
+  /* Centre a lat/lon on the middle of the VISIBLE map. The frequency
+     panel covers the right side, so when it is open the usable area is
+     narrower and its centre sits left of the true screen centre. We
+     bias the view east by half the covered fraction so the point lands
+     in the middle of what the pilot can actually see. */
+  function freqCovers(){
+    var f = $('#hudFreq');
+    if (!f || f.classList.contains('hidden')) return 0;
+    var w = window.innerWidth || 800;
+    return Math.min(0.5, (316 + 16) / w);   /* panel width + margin, capped */
+  }
+  function centreOn(lat, lon){
+    var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
+    var cov = freqCovers();
+    /* shift the view centre east by half the covered fraction of span,
+       which moves the point west on screen, into the visible area */
+    var lonShift = (VIEW.e - VIEW.w) * cov / 2;
+    VIEW.n = lat + hy; VIEW.s = lat - hy;
+    VIEW.w = (lon + lonShift) - hx; VIEW.e = (lon + lonShift) + hx;
   }
 
   function paintShip(){
@@ -5211,8 +5328,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
     if (!nextField){ for (var j = ROUTE.length - 1; j >= 0; j--){ if (FIELD_INFO[ROUTE[j].id]){ nextField = ROUTE[j]; break; } } }
 
-    var h = '<div class="area"><span class="k">Area CTAF</span><span class="f">' + area + '</span></div>'
-          + '<div style="text-align:right;font-family:var(--mono);font-size:10px;color:var(--text-fainter);margin-top:4px">' + hf + '</div>';
+    var h = '<div class="area"><div class="row1"><span class="k">Area CTAF</span>'
+          + '<span class="f">' + area + '</span></div><div class="hf">' + hf + '</div></div>';
 
     if (nextField){
       var fi = FIELD_INFO[nextField.id];
@@ -5234,24 +5351,53 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function drawHud(){
     $('#hudAct').innerHTML = hudActHTML();
-    $('#hudFreq').innerHTML = hudFreqHTML();
+    $('#hudFreq').innerHTML = '<button class="close" id="hudFreqX" aria-label="Hide">&times;</button>'
+                            + hudFreqHTML();
+    var x = $('#hudFreqX');
+    if (x) x.addEventListener('click', function(){ setFreqOpen(false); });
     var c = $('#hudCtr');
     c.classList.toggle('follow', follow);
     c.classList.toggle('lock', !follow);
+    syncHudRec();
   }
 
   $('#hudIn').addEventListener('click',  function(){ viewZoom(0.7); paintShip(); });
   $('#hudOut').addEventListener('click', function(){ viewZoom(1.4); paintShip(); });
   $('#hudCtr').addEventListener('click', function(){
     follow = true;
-    if (ship && ship.lat !== undefined){
-      var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
-      VIEW.n = ship.lat + hy; VIEW.s = ship.lat - hy;
-      VIEW.w = ship.lon - hx; VIEW.e = ship.lon + hx;
-      renderMap(); paintShip();
-    }
+    if (ship && ship.lat !== undefined){ centreOn(ship.lat, ship.lon); renderMap(); paintShip(); }
     drawHud();
     toast('Following aircraft');
+  });
+
+  /* frequency panel open / close - centre re-derives when it changes */
+  function setFreqOpen(open){
+    $('#hudFreq').classList.toggle('hidden', !open);
+    $('#hudFreqTab').classList.toggle('on', !open);
+    if (follow && ship && ship.lat !== undefined){ centreOn(ship.lat, ship.lon); }
+    renderMap(); paintShip();
+  }
+  $('#hudFreqTab').addEventListener('click', function(){ setFreqOpen(true); });
+
+  /* record: shares the same timer state as the portrait rail button */
+  $('#hudRec').addEventListener('click', function(){ recToggleShared(); });
+  function syncHudRec(){
+    var hr = $('#hudRec'); if (!hr) return;
+    hr.classList.toggle('on', recRun);
+    var t = $('#hudRecT');
+    if (t) t.textContent = recRun ? recStr() : '';
+  }
+
+  /* Layers in flight: cycle the basemap, the one layer choice worth a
+     glance. The full popover is toolbar-anchored and belongs to
+     portrait; opening it here would float it in the wrong place. */
+  $('#hudLyr').addEventListener('click', function(){
+    var order = BASES.map(function(b){ return b[0]; });
+    var i = order.indexOf(LAYERS.base);
+    LAYERS.base = order[(i + 1) % order.length];
+    saveLayers(); renderMap(); paintShip();
+    var nm = BASES.filter(function(b){ return b[0] === LAYERS.base; })[0];
+    toast('Basemap: ' + (nm ? nm[1] : LAYERS.base));
   });
 
   /* rotating into landscape starts the sim + HUD; leaving stops it */
