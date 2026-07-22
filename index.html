@@ -16,6 +16,21 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v45 2026-07-22  Landscape HUD polish. Activity readout is smaller
+                       and no longer boxed - plain label-over-value with
+                       a shadow for legibility over the map. Frequency
+                       panel narrowed and height-capped so it no longer
+                       overlaps the activity readout. Close now sticks
+                       (state tracked, close click delegated so it
+                       survives re-renders) and the reopen tab on the
+                       right edge actually brings it back.
+       v44 2026-07-22  Fix: landscape HUD controls sat under the rounded
+                       corner and sensor housing. They were anchored to
+                       --edge (a 16px layout margin), not the real
+                       safe-area insets. HUD now uses landscape-specific
+                       insets (max of env(safe-area-inset-*) and a floor)
+                       so zoom, centre, record and layers clear the
+                       corner on any rotation.
        v43 2026-07-22  Landscape HUD reworked. Fixes v42, whose HUD CSS
                        never actually landed. Own-ship now centres on
                        the middle of the VISIBLE map, biased left of the
@@ -1128,24 +1143,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 @media (orientation:landscape) and (max-height:500px){
   .chrome, .tabs, .rail, .acty, .drop, .card, .setv, .ntv, .ted, .spanel{display:none !important}
   #map{position:fixed !important;inset:0 !important;width:100% !important;height:100% !important}
-  #hud{display:block;position:fixed;inset:0;z-index:2500;pointer-events:none}
+  #hud{display:block;position:fixed;inset:0;z-index:2500;pointer-events:none;
+    /* real device insets for landscape - corner radius + sensor housing.
+       env() gives the housing side; the floor covers the rounded corner
+       on the other side and the home-indicator band along the bottom. */
+    --hl:max(env(safe-area-inset-left,0px), 18px);
+    --hr:max(env(safe-area-inset-right,0px), 18px);
+    --hb:max(env(safe-area-inset-bottom,0px), 12px);
+    --ht:max(env(safe-area-inset-top,0px), 10px);
+  }
   #hud > *{pointer-events:auto}
 }
-.hud-act{position:absolute;top:calc(var(--sat) + 8px);left:calc(var(--edge, 0px) + 8px);
-  display:flex;background:rgba(13,18,25,.9);
-  border:1px solid var(--border-strong);border-radius:12px;overflow:hidden;
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.hud-act .c{padding:7px 14px;min-width:66px}
-.hud-act .c + .c{border-left:1px solid var(--border)}
-.hud-act .k{display:block;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+.hud-act{position:absolute;top:calc(var(--ht) + 6px);left:calc(var(--hl) + 6px);
+  display:flex;gap:18px;pointer-events:none}
+.hud-act .c{display:flex;flex-direction:column;min-width:0}
+.hud-act .k{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
   color:var(--text-muted)}
-.hud-act .v{display:block;font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);
-  line-height:1.15;margin-top:2px}
+.hud-act .v{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);
+  line-height:1.1;margin-top:2px;
+  text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .hud-act .v.dash{color:var(--text-fainter)}
-.hud-act .u{font-size:11px;font-weight:600;color:var(--text-muted);margin-left:3px}
+.hud-act .u{font-size:10px;font-weight:600;color:var(--text-muted);margin-left:2px}
 
-.hud-freq{position:absolute;top:calc(var(--sat) + 8px);right:calc(var(--edge, 0px) + 8px);
-  width:300px;max-height:calc(100% - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;
+.hud-freq{position:absolute;top:calc(var(--ht) + 6px);right:calc(var(--hr) + 6px);
+  width:290px;max-height:calc(100% - var(--ht) - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;
   background:rgba(13,18,25,.94);border:1px solid var(--border-strong);border-radius:16px;
   padding:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   transition:transform .2s ease}
@@ -1175,7 +1196,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .hud-freq .grid .row .v{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent-2)}
 .hud-freq .note{margin-top:12px;font-size:9px;color:var(--text-fainter);text-align:center}
 
-.hud-freqtab{position:absolute;top:calc(var(--sat) + 8px);right:0;
+.hud-freqtab{position:absolute;top:calc(var(--ht) + 6px);right:0;
   width:30px;height:54px;border-radius:12px 0 0 12px;
   background:rgba(13,18,25,.9);border:1px solid var(--border-strong);border-right:0;
   display:none;align-items:center;justify-content:center;color:var(--accent-2);
@@ -1183,7 +1204,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .hud-freqtab.on{display:flex}
 .hud-freqtab svg{width:16px;height:16px}
 
-.hud-ctl{position:absolute;left:calc(var(--edge, 0px) + 8px);bottom:calc(var(--sab, 0px) + 8px);
+.hud-ctl{position:absolute;left:calc(var(--hl) + 6px);bottom:calc(var(--hb) + 6px);
   display:flex;flex-direction:column;gap:6px}
 .hud-ctl button{position:relative;width:46px;height:46px;border-radius:12px;
   background:rgba(13,18,25,.9);border:1px solid var(--border-strong);color:var(--text);
@@ -1796,7 +1817,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v43';
+  var VERSION = 'v45';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -5268,7 +5289,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var f = $('#hudFreq');
     if (!f || f.classList.contains('hidden')) return 0;
     var w = window.innerWidth || 800;
-    return Math.min(0.5, (316 + 16) / w);   /* panel width + margin, capped */
+    return Math.min(0.5, (300 + 30) / w);   /* panel width + right inset, capped */
   }
   function centreOn(lat, lon){
     var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
@@ -5351,10 +5372,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function drawHud(){
     $('#hudAct').innerHTML = hudActHTML();
-    $('#hudFreq').innerHTML = '<button class="close" id="hudFreqX" aria-label="Hide">&times;</button>'
-                            + hudFreqHTML();
-    var x = $('#hudFreqX');
-    if (x) x.addEventListener('click', function(){ setFreqOpen(false); });
+    $('#hudFreq').innerHTML = '<button class="close" aria-label="Hide">&times;</button>' + hudFreqHTML();
+    $('#hudFreq').classList.toggle('hidden', !freqOpen);
+    $('#hudFreqTab').classList.toggle('on', !freqOpen);
     var c = $('#hudCtr');
     c.classList.toggle('follow', follow);
     c.classList.toggle('lock', !follow);
@@ -5371,13 +5391,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   });
 
   /* frequency panel open / close - centre re-derives when it changes */
+  var freqOpen = true;
   function setFreqOpen(open){
+    freqOpen = open;
     $('#hudFreq').classList.toggle('hidden', !open);
     $('#hudFreqTab').classList.toggle('on', !open);
     if (follow && ship && ship.lat !== undefined){ centreOn(ship.lat, ship.lon); }
     renderMap(); paintShip();
   }
   $('#hudFreqTab').addEventListener('click', function(){ setFreqOpen(true); });
+  /* delegate the close click so it survives every drawHud re-render */
+  $('#hudFreq').addEventListener('click', function(e){
+    if (e.target.closest && e.target.closest('.close')) setFreqOpen(false);
+  });
 
   /* record: shares the same timer state as the portrait rail button */
   $('#hudRec').addEventListener('click', function(){ recToggleShared(); });
