@@ -16,6 +16,16 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v46 2026-07-22  Landscape: activity bar restored to the boxy
+                       semi-transparent style, left-aligned, capped at
+                       44%. Added a right-edge vertical toolbar strip
+                       (Layers, FPL, Terrain, Frequencies, Settings)
+                       that opens a slide-out panel over the map, one at
+                       a time, reusing the portrait content builders.
+                       Also fixed the HUD markup, which had drifted out
+                       of sync with the CSS and JS across v43-v45 - the
+                       record button, freq reopen tab and layers control
+                       referenced elements that were never in the page.
        v45 2026-07-22  Landscape HUD polish. Activity readout is smaller
                        and no longer boxed - plain label-over-value with
                        a shadow for legibility over the map. Frequency
@@ -1155,15 +1165,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   #hud > *{pointer-events:auto}
 }
 .hud-act{position:absolute;top:calc(var(--ht) + 6px);left:calc(var(--hl) + 6px);
-  display:flex;gap:18px;pointer-events:none}
-.hud-act .c{display:flex;flex-direction:column;min-width:0}
-.hud-act .k{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  max-width:44%;display:flex;background:rgba(13,18,25,.82);
+  border:1px solid var(--border-strong);border-radius:14px;overflow:hidden;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.hud-act .c{padding:8px 15px;min-width:60px}
+.hud-act .c + .c{border-left:1px solid var(--border)}
+.hud-act .k{display:block;font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
   color:var(--text-muted)}
-.hud-act .v{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);
-  line-height:1.1;margin-top:2px;
-  text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.hud-act .v{display:block;font-family:var(--mono);font-size:19px;font-weight:700;color:var(--text);
+  line-height:1.15;margin-top:2px}
 .hud-act .v.dash{color:var(--text-fainter)}
-.hud-act .u{font-size:10px;font-weight:600;color:var(--text-muted);margin-left:2px}
+.hud-act .u{font-size:11px;font-weight:600;color:var(--text-muted);margin-left:3px}
 
 .hud-freq{position:absolute;top:calc(var(--ht) + 6px);right:calc(var(--hr) + 6px);
   width:290px;max-height:calc(100% - var(--ht) - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -1803,11 +1815,33 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <!-- Landscape monitoring HUD -->
 <div id="hud">
   <div class="hud-act" id="hudAct"></div>
+
+  <!-- right-edge toolbar strip -->
+  <div class="hud-bar" id="hudBar">
+    <button data-hp="layers" aria-label="Layers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l9 4.8-9 4.8-9-4.8z"/><path d="M3.4 12.4L12 17l8.6-4.6"/><path d="M3.4 16.6L12 21.2l8.6-4.6"/></svg></button>
+    <button data-hp="fpl" aria-label="Flight plan"><span class="lab">FPL</span></button>
+    <button data-hp="terr" aria-label="Terrain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 19l6-9 4 5.5 2.5-3.5L21 19z"/></svg></button>
+    <button data-hp="rad" aria-label="Frequencies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"/></svg></button>
+    <button data-hp="set" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg></button>
+  </div>
+
+  <!-- slide-out landscape panel opened by the strip -->
+  <div class="hud-panel" id="hudPanel">
+    <div class="ph"><b id="hudPanelTtl"></b><button class="x" id="hudPanelX" aria-label="Close">&times;</button></div>
+    <div class="ptabs" id="hudPanelTabs"></div>
+    <div class="pb" id="hudPanelBody"></div>
+  </div>
+
+  <!-- frequency window (its own dismissable panel) -->
   <div class="hud-freq" id="hudFreq"></div>
+  <button class="hud-freqtab" id="hudFreqTab" aria-label="Show frequencies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/></svg></button>
+
+  <!-- bottom-left control stack -->
   <div class="hud-ctl">
     <button id="hudIn" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></button>
     <button id="hudOut" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
     <button class="ctr" id="hudCtr" aria-label="Centre on aircraft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2"/></svg></button>
+    <button class="rec" id="hudRec" aria-label="Record"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="6"/></svg><span class="rt" id="hudRecT"></span></button>
   </div>
 </div>
 
@@ -1817,7 +1851,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v45';
+  var VERSION = 'v46';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -5277,7 +5311,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (follow && ship.lat !== undefined) centreOn(ship.lat, ship.lon);
     renderMap();
     paintShip();
-    if (hudOn()) drawHud();
+    if (hudOn()){
+      drawHud();
+      if (hudPanelKey === 'rad' || hudPanelKey === 'terr') drawHudPanel();
+    }
   }
 
   /* Centre a lat/lon on the middle of the VISIBLE map. The frequency
@@ -5414,17 +5451,101 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (t) t.textContent = recRun ? recStr() : '';
   }
 
-  /* Layers in flight: cycle the basemap, the one layer choice worth a
-     glance. The full popover is toolbar-anchored and belongs to
-     portrait; opening it here would float it in the wrong place. */
-  $('#hudLyr').addEventListener('click', function(){
-    var order = BASES.map(function(b){ return b[0]; });
-    var i = order.indexOf(LAYERS.base);
-    LAYERS.base = order[(i + 1) % order.length];
-    saveLayers(); renderMap(); paintShip();
-    var nm = BASES.filter(function(b){ return b[0] === LAYERS.base; })[0];
-    toast('Basemap: ' + (nm ? nm[1] : LAYERS.base));
+  /* ---- right-edge toolbar strip -> slide-out landscape panel ----
+     Reuses the same content builders as portrait (routeHTML, radHTML,
+     terrHTML, drawSet, the layers model). One open at a time. */
+  var hudPanel = $('#hudPanel'), hudPanelKey = null, hudFplTab = 'route';
+
+  var HP = {
+    layers: { t:'Layers' },
+    fpl:    { t:'Flight plan' },
+    terr:   { t:'Terrain' },
+    rad:    { t:'Frequencies' },
+    set:    { t:'Settings' }
+  };
+
+  function hudPanelHTML(k){
+    if (k === 'rad')  return radHTML();
+    if (k === 'terr') return terrHTML();
+    if (k === 'fpl'){
+      return hudFplTab === 'route'  ? routeHTML()
+           : hudFplTab === 'navlog' ? navlogHTML()
+           :                          profileHTML();
+    }
+    if (k === 'layers') return hudLayersHTML();
+    if (k === 'set')    return hudSettingsHTML();
+    return '';
+  }
+  function hudLayersHTML(){
+    var tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>';
+    var h = '<div class="pl" style="margin-bottom:8px">Basemap</div>';
+    BASES.forEach(function(b){
+      h += '<button class="prow' + (LAYERS.base === b[0] ? ' sel' : '') + '" data-hbase="' + b[0] + '">' + b[1] + '</button>';
+    });
+    h += '<div class="pl" style="margin:12px 0 8px">Overlays</div>';
+    OVERLAYS.forEach(function(o){
+      var k = o[0], ok = o[1];
+      h += '<button class="prow" data-hov="' + k + '"' + (ok ? '' : ' style="opacity:.4"') + '>'
+        +  '<span class="ck">' + (ok && layOn(k) ? tick : '') + '</span>' + LAYER_META[k].t + '</button>';
+    });
+    return h;
+  }
+  function hudSettingsHTML(){
+    return '<div class="kv"><span class="k">Aircraft</span><span class="v">' + AC.reg + ' \u00b7 ' + AC.type + '</span></div>'
+      + '<div class="kv"><span class="k">Cruise TAS</span><span class="v">' + AC.tas + ' kt</span></div>'
+      + '<div class="kv"><span class="k">Cruise alt</span><span class="v">' + AC.alt.toLocaleString() + " ft</span></div>"
+      + '<div class="kv"><span class="k">Fuel on board</span><span class="v">' + AC.fob + ' kg</span></div>'
+      + '<div class="cnote">Full settings are in portrait. This is a read-only glance in flight.</div>';
+  }
+
+  function drawHudPanel(){
+    if (!hudPanelKey) return;
+    $('#hudPanelTtl').textContent = HP[hudPanelKey].t;
+    var tabs = $('#hudPanelTabs');
+    if (hudPanelKey === 'fpl'){
+      tabs.style.display = 'flex';
+      tabs.innerHTML = [['route','Route'],['navlog','NavLog'],['profile','Profile']].map(function(t){
+        return '<button data-hft="' + t[0] + '"' + (hudFplTab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
+      }).join('');
+      $$('#hudPanelTabs button').forEach(function(b){
+        b.addEventListener('click', function(){ hudFplTab = b.getAttribute('data-hft'); drawHudPanel(); });
+      });
+    } else {
+      tabs.style.display = 'none'; tabs.innerHTML = '';
+    }
+    $('#hudPanelBody').innerHTML = hudPanelHTML(hudPanelKey);
+
+    if (hudPanelKey === 'layers'){
+      $$('#hudPanelBody [data-hbase]').forEach(function(b){
+        b.addEventListener('click', function(){ LAYERS.base = b.getAttribute('data-hbase'); saveLayers(); renderMap(); paintShip(); drawHudPanel(); });
+      });
+      $$('#hudPanelBody [data-hov]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var k = b.getAttribute('data-hov'), ok = false;
+          OVERLAYS.forEach(function(o){ if (o[0] === k) ok = o[1]; });
+          if (!ok){ toast('No data for this layer in the demo shell'); return; }
+          layToggle(k); renderMap(); paintShip(); drawHudPanel();
+        });
+      });
+    }
+  }
+
+  function openHudPanel(k){
+    if (hudPanelKey === k){ closeHudPanel(); return; }
+    hudPanelKey = k;
+    $$('#hudBar button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-hp') === k); });
+    drawHudPanel();
+    hudPanel.classList.add('on');
+  }
+  function closeHudPanel(){
+    hudPanelKey = null;
+    $$('#hudBar button').forEach(function(b){ b.classList.remove('on'); });
+    hudPanel.classList.remove('on');
+  }
+  $$('#hudBar button').forEach(function(b){
+    b.addEventListener('click', function(){ openHudPanel(b.getAttribute('data-hp')); });
   });
+  $('#hudPanelX').addEventListener('click', closeHudPanel);
 
   /* rotating into landscape starts the sim + HUD; leaving stops it */
   function onOrient(){
@@ -5434,6 +5555,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     } else {
       if (simT){ clearInterval(simT); simT = null; }
       follow = true;
+      closeHudPanel();
       var s = $('#mapLayers') && $('#mapLayers').querySelector('.nmp-ship');
       if (s) s.remove();
     }
