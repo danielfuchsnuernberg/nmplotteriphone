@@ -16,6 +16,35 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v42 2026-07-22  Landscape monitoring HUD. Rotate the phone: the
+                       planning UI steps aside and a glance layout takes
+                       over - activity readout top-left, to-be-flown
+                       frequencies right (area CTAF + next field), zoom
+                       and centre bottom-left. Own-ship is simulated
+                       along the route so auto-follow and Centre (which
+                       re-locks to the aircraft) can be shown; real GPS
+                       drops into this frame in the port. Portrait is
+                       unchanged.
+       v41 2026-07-22  Fix: offline was broken. The service-worker
+                       registration had been stripped from the page
+                       during an earlier port and never restored, so no
+                       cache was ever installed and the app would not
+                       open without signal. Registration restored; sw.js
+                       was already correct. Load once online, then it
+                       works in airplane mode.
+       v40 2026-07-22  Rebuilt the Share sheet for the phone. No more
+                       walls of monospace: a one-line route summary,
+                       then three tall copy targets (ForeFlight and
+                       OzRunways first, then Route names), each tap-to-
+                       copy with a green tick confirmation, and a Save
+                       to Flights button. You never read the string, you
+                       copy it, so the string is no longer shown.
+       v39 2026-07-22  Share sheet spacing fixed. The value and its
+                       description were both inline spans, so margins
+                       collapsed and the grey caption ran into the
+                       wrapped coordinate string. Both are blocks now,
+                       the description sits under the title, and the
+                       string gets its own boxed mono line.
        v38 2026-07-22  Share button added to the FPL footer beside clear
                        and reverse. Opens Save to Flights plus the three
                        route strings - names, ForeFlight DDMMSS and
@@ -1082,18 +1111,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   color:var(--text-fainter);font-size:var(--t-sm);letter-spacing:.1em;text-transform:uppercase}
 
 /* ---- Share route ------------------------------------------ */
-.shrow{width:100%;text-align:left;display:block;padding:11px 0;
-  border-bottom:1px solid var(--border)}
-.shrow .top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.shrow .top b{flex:1 1 auto;font-size:var(--t-sm);font-weight:700;color:var(--text)}
-.shrow .top .cp{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--accent-2)}
-.shrow .val{font-family:var(--mono);font-size:var(--t-sm);line-height:1.5;color:var(--accent);
-  word-break:break-all}
-.shrow .sub2{margin-top:3px;font-size:var(--t-2xs);color:var(--text-fainter)}
-.shrow:active{background:var(--inset)}
-.shsave{width:100%;height:var(--mod-b);margin-bottom:6px;border-radius:var(--radius);
-  background:var(--accent);color:#0a0e13;font-size:var(--t-sm);font-weight:700}
+.shhd{font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-fainter);margin:2px 0 10px}
+.shsum{display:flex;align-items:baseline;gap:8px;margin-bottom:16px}
+.shsum b{font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shsum span{flex:0 0 auto;font-size:var(--t-2xs);color:var(--text-fainter)}
+/* copy targets: one tall tappable card per format */
+.shgrid{display:flex;flex-direction:column;gap:var(--gut)}
+.shcopy{width:100%;text-align:left;display:flex;align-items:center;gap:12px;
+  height:var(--mod-b);padding:0 14px;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border-strong)}
+.shcopy:active{background:var(--inset)}
+.shcopy.done{border-color:var(--good)}
+.shcopy .nm{flex:1 1 auto;min-width:0}
+.shcopy .nm b{display:block;font-size:var(--t-md);font-weight:700;color:var(--text)}
+.shcopy .nm span{display:block;font-size:var(--t-2xs);color:var(--text-fainter);margin-top:1px}
+.shcopy .ico{flex:0 0 auto;width:22px;height:22px;color:var(--accent-2)}
+.shcopy.done .ico{color:var(--good)}
+.shcopy .ico svg{width:22px;height:22px;display:block}
+.shsave{width:100%;height:52px;margin-top:16px;border-radius:var(--radius);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--accent);color:#0a0e13;font-size:var(--t-md);font-weight:700}
+.shsave svg{width:18px;height:18px}
+.shsave.done{background:var(--good)}
 
 /* ---- Flights: saved routes -------------------------------- */
 .flbar{display:flex;align-items:center;gap:var(--gut);padding-bottom:12px}
@@ -1647,13 +1688,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <!-- Metrics overlay -->
 <div class="mx" id="mx"></div>
 
+<!-- Landscape monitoring HUD -->
+<div id="hud">
+  <div class="hud-act" id="hudAct"></div>
+  <div class="hud-freq" id="hudFreq"></div>
+  <div class="hud-ctl">
+    <button id="hudIn" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></button>
+    <button id="hudOut" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
+    <button class="ctr" id="hudCtr" aria-label="Centre on aircraft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2"/></svg></button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
   'use strict';
 
-  var VERSION = 'v38';
+  var VERSION = 'v42';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -3830,33 +3882,52 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   var shEd = $('#shEd');
+  var SH_ICO_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.6H6a1.6 1.6 0 0 0-1.6 1.6v9"/></svg>';
+  var SH_ICO_DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 12.5l5 5 11-11"/></svg>';
+  var SH_ICO_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7"/><path d="M8 20v-6h8v6"/></svg>';
+
   function drawShare(){
     if (ROUTE.length < 2){
       $('#shList').innerHTML = '<div class="cempty">Add at least two points to the route.</div>';
       return;
     }
-    var names  = ROUTE.map(function(p, i){ return sanitizeRouteName(label(p), i); }).join(' ');
-    var ffs    = ROUTE.map(function(p){ return ffCoord(p.lat, p.lon); }).join(' ');
-    var ozr    = ROUTE.map(function(p){ return ozrCoord(p.lat, p.lon); }).join(' ');
-    var rows = [
-      ['Route names', names, 'Waypoint identifiers, stripped and capped at 10 characters'],
-      ['ForeFlight',  ffs,   'DDMMSS with hemisphere suffix, slash separated'],
-      ['OzRunways',   ozr,   'Hemisphere-prefixed DDMMSS']
+    var vals = {
+      names: ROUTE.map(function(p, i){ return sanitizeRouteName(label(p), i); }).join(' '),
+      ff:    ROUTE.map(function(p){ return ffCoord(p.lat, p.lon); }).join(' '),
+      ozr:   ROUTE.map(function(p){ return ozrCoord(p.lat, p.lon); }).join(' ')
+    };
+    /* ForeFlight and OzRunways first - the two you reach for. */
+    var targets = [
+      ['ff',    'ForeFlight', 'DDMMSS route string'],
+      ['ozr',   'OzRunways',  'Hemisphere-prefixed DDMMSS'],
+      ['names', 'Route names','Waypoint identifiers']
     ];
-    $('#shList').innerHTML =
-        '<button class="shsave" data-sh="save">Save to Flights</button>'
-      + rows.map(function(r){
-          return '<button class="shrow" data-cpv="' + esc(r[1]) + '">'
-               + '<span class="top"><b>' + r[0] + '</b><span class="cp">Copy</span></span>'
-               + '<span class="val">' + esc(r[1]) + '</span>'
-               + '<span class="sub2">' + r[2] + '</span></button>';
-        }).join('')
-      + '<div class="wnote">Identical to the desktop build\u2019s copy-route output. '
-      + 'Advisory only \u2014 verify anything you load into another system.</div>';
 
-    $$('#shList [data-cpv]').forEach(function(b){
+    $('#shList').innerHTML =
+        '<div class="shsum"><b>' + esc(flString(ROUTE)) + '</b>'
+      +   '<span>' + ROUTE.length + ' pts</span></div>'
+      + '<div class="shhd">Copy for</div>'
+      + '<div class="shgrid">'
+      + targets.map(function(t){
+          return '<button class="shcopy" data-sk="' + t[0] + '">'
+               + '<span class="nm"><b>' + t[1] + '</b><span>' + t[2] + '</span></span>'
+               + '<span class="ico">' + SH_ICO_COPY + '</span></button>';
+        }).join('')
+      + '</div>'
+      + '<button class="shsave" data-sh="save">' + SH_ICO_SAVE + 'Save to Flights</button>'
+      + '<div class="wnote">Formats match the desktop build exactly. Advisory only \u2014 '
+      + 'verify anything you load into another system.</div>';
+
+    $$('#shList .shcopy').forEach(function(b){
       b.addEventListener('click', function(){
-        copyText(b.getAttribute('data-cpv'), b.querySelector('b').textContent);
+        var k = b.getAttribute('data-sk');
+        copyText(vals[k], b.querySelector('b').textContent);
+        b.classList.add('done');
+        b.querySelector('.ico').innerHTML = SH_ICO_DONE;
+        setTimeout(function(){
+          b.classList.remove('done');
+          b.querySelector('.ico').innerHTML = SH_ICO_COPY;
+        }, 1400);
       });
     });
     $$('#shList [data-sh="save"]').forEach(function(b){
@@ -3868,8 +3939,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           ts: Date.now()
         };
         FLIGHTS.push(f); saveFlights(); refreshFlightsView();
-        shEd.classList.remove('on');
-        toast('Saved to Flights as ' + f.nm);
+        b.classList.add('done');
+        b.innerHTML = SH_ICO_DONE + 'Saved';
+        setTimeout(function(){ shEd.classList.remove('on'); }, 700);
       });
     });
   }
@@ -5054,6 +5126,159 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   drawLayersPop();
   buildRail();
   renderMap();
+
+  /* ============================================================
+     LANDSCAPE MONITORING HUD
+     Portrait plans, landscape monitors. This overlay appears only when
+     the phone is wide and short. Own-ship is SIMULATED here (the demo
+     has no GPS); it advances along the active route so auto-follow and
+     Centre can be shown. In the real build this reads the GPS fix.
+     ============================================================ */
+  var ship = null;          /* {lat,lon,trk,gs,alt} or null */
+  var follow = true;
+  var simT = null;
+
+  /* advance a fake own-ship along the route for the demo */
+  function simStep(){
+    if (!ROUTE.length){ ship = null; return; }
+    if (ROUTE.length === 1){ ship = { lat:ROUTE[0].lat, lon:ROUTE[0].lon, trk:0, gs:0, alt:AC.alt }; }
+    else {
+      if (!ship || ship._leg === undefined){ ship = { _leg:0, _f:0 }; }
+      var a = ROUTE[ship._leg], b = ROUTE[Math.min(ship._leg + 1, ROUTE.length - 1)];
+      ship._f += 0.02;
+      if (ship._f >= 1){ ship._f = 0; ship._leg = (ship._leg + 1) % (ROUTE.length - 1); a = ROUTE[ship._leg]; b = ROUTE[ship._leg + 1]; }
+      ship.lat = a.lat + (b.lat - a.lat) * ship._f;
+      ship.lon = a.lon + (b.lon - a.lon) * ship._f;
+      ship.trk = trkBetween(a, b);
+      ship.gs  = AC.tas;
+      ship.alt = AC.alt;
+    }
+    if (follow && ship.lat !== undefined){
+      var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
+      VIEW.n = ship.lat + hy; VIEW.s = ship.lat - hy;
+      VIEW.w = ship.lon - hx; VIEW.e = ship.lon + hx;
+    }
+    renderMap();
+    paintShip();
+    if (hudOn()) drawHud();
+  }
+
+  function paintShip(){
+    var host = $('#mapLayers'); if (!host) return;
+    var old = host.querySelector('.nmp-ship'); if (old) old.remove();
+    if (!ship || ship.lat === undefined) return;
+    var x = projX(ship.lon), y = projY(ship.lat);
+    if (x < -5 || x > 105 || y < -5 || y > 105) return;
+    var el = document.createElement('div');
+    el.className = 'nmp-ship';
+    el.style.left = x + '%'; el.style.top = y + '%';
+    el.innerHTML = '<svg viewBox="0 0 24 24" style="transform:rotate(' + (ship.trk || 0) + 'deg)">'
+      + '<path d="M12 2l6 18-6-4-6 4z" fill="#2b8cff" stroke="#dce6f0" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+    host.appendChild(el);
+  }
+
+  function hudOn(){
+    return window.matchMedia('(orientation:landscape) and (max-height:500px)').matches;
+  }
+
+  function hudActHTML(){
+    /* the five most useful in-flight fields, live-ish from the sim */
+    var trk = ship ? String(Math.round(ship.trk)).padStart(3,'0') + '\u00b0' : '- - -';
+    var gs  = ship ? String(Math.round(ship.gs)) : '- - -';
+    var alt = ship ? ship.alt.toLocaleString() : '- - -';
+    var nx = ''; var ete = '- - -';
+    if (ROUTE.length > 1 && ship && ship._leg !== undefined){
+      var nextPt = ROUTE[Math.min(ship._leg + 1, ROUTE.length - 1)];
+      nx = label(nextPt);
+      var d = nmBetween({lat:ship.lat,lon:ship.lon}, nextPt);
+      ete = AC.tas > 0 ? hhmm(d / AC.tas) : '- - -';
+    }
+    return '<div class="c"><span class="k">GS</span><span class="v">' + gs + '<span class="u">kt</span></span></div>'
+      + '<div class="c"><span class="k">TRK</span><span class="v">' + trk + '</span></div>'
+      + '<div class="c"><span class="k">ALT</span><span class="v">' + alt + '<span class="u">ft</span></span></div>'
+      + '<div class="c"><span class="k">NEXT</span><span class="v' + (nx ? '' : ' dash') + '">' + (nx || '- - -') + '</span></div>'
+      + '<div class="c"><span class="k">ETE</span><span class="v">' + ete + '</span></div>';
+  }
+
+  function hudFreqHTML(){
+    if (!ROUTE.length) return '<div class="note">No route</div>';
+    /* area CTAF: nearest enroute band; next field: the next aerodrome ahead */
+    var area = '124.1', hf = 'HF 3419 \u00b7 6622 \u00b7 8837';
+    var nextField = null;
+    var from = (ship && ship._leg !== undefined) ? ship._leg : toWpt;
+    for (var i = from + 1; i < ROUTE.length; i++){
+      if (FIELD_INFO[ROUTE[i].id]){ nextField = ROUTE[i]; break; }
+    }
+    if (!nextField){ for (var j = ROUTE.length - 1; j >= 0; j--){ if (FIELD_INFO[ROUTE[j].id]){ nextField = ROUTE[j]; break; } } }
+
+    var h = '<div class="area"><span class="k">Area CTAF</span><span class="f">' + area + '</span></div>'
+          + '<div style="text-align:right;font-family:var(--mono);font-size:10px;color:var(--text-fainter);margin-top:4px">' + hf + '</div>';
+
+    if (nextField){
+      var fi = FIELD_INFO[nextField.id];
+      var d = ship && ship.lat !== undefined ? nmBetween({lat:ship.lat,lon:ship.lon}, nextField) : 0;
+      h += '<div class="nx">Next frequency</div>'
+        +  '<div class="fld"><b>' + nextField.id + '</b><span>' + nextField.nm + '</span>'
+        +    '<span class="d">' + d.toFixed(0) + ' NM</span></div>'
+        +  '<div class="grid">'
+        +  fi.freq.slice().sort(function(a,b){ return fqRank(a[0]) - fqRank(b[0]); })
+             .slice(0, 4).map(function(r){
+               return '<div class="row"><span class="t">' + r[0].replace(/\s.*/,'') + '</span>'
+                    + '<span class="v">' + r[1] + '</span></div>';
+             }).join('')
+        +  '</div>';
+    }
+    h += '<div class="note">Advisory \u00b7 not for navigation</div>';
+    return h;
+  }
+
+  function drawHud(){
+    $('#hudAct').innerHTML = hudActHTML();
+    $('#hudFreq').innerHTML = hudFreqHTML();
+    var c = $('#hudCtr');
+    c.classList.toggle('follow', follow);
+    c.classList.toggle('lock', !follow);
+  }
+
+  $('#hudIn').addEventListener('click',  function(){ viewZoom(0.7); paintShip(); });
+  $('#hudOut').addEventListener('click', function(){ viewZoom(1.4); paintShip(); });
+  $('#hudCtr').addEventListener('click', function(){
+    follow = true;
+    if (ship && ship.lat !== undefined){
+      var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
+      VIEW.n = ship.lat + hy; VIEW.s = ship.lat - hy;
+      VIEW.w = ship.lon - hx; VIEW.e = ship.lon + hx;
+      renderMap(); paintShip();
+    }
+    drawHud();
+    toast('Following aircraft');
+  });
+
+  /* rotating into landscape starts the sim + HUD; leaving stops it */
+  function onOrient(){
+    if (hudOn()){
+      drawHud();
+      if (!simT){ simStep(); simT = setInterval(simStep, 1000); }
+    } else {
+      if (simT){ clearInterval(simT); simT = null; }
+      follow = true;
+      var s = $('#mapLayers') && $('#mapLayers').querySelector('.nmp-ship');
+      if (s) s.remove();
+    }
+  }
+  window.matchMedia('(orientation:landscape) and (max-height:500px)').addEventListener('change', onOrient);
+  window.addEventListener('orientationchange', function(){ setTimeout(onOrient, 120); });
+  onOrient();
+
+  /* Offline: register the paired service worker. This is what makes the
+     app open with no signal once it has loaded online just once. It was
+     lost during an earlier port and is restored here. Guarded so it is
+     a no-op from file:// or any preview without a SW scope. */
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(){ /* offline-only, non-fatal */ });
+    });
+  }
 
 })();
 </script>
