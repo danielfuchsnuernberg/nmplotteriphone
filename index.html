@@ -16,6 +16,49 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v76 2026-07-23  Choosing an ATS route now takes you to the result:
+                       the sheet and the FPL panel close, the map comes
+                       back, and the view frames the whole plan so the
+                       new fixes are on screen. Applies to both inserting
+                       an airway into a leg and loading a route whole.
+       v75 2026-07-23  Calculator: "Use next field" sat off the grid. It
+                       was paired with an empty label that collapses to
+                       nothing, so it rode a label-height above the OAT
+                       box, and it was styled inline rather than with the
+                       tokens. It is now a full-width action beneath the
+                       three fields, which is where an action belongs,
+                       using a proper class.
+       v74 2026-07-23  W&B removed, replaced by Calculator: a working
+                       number pad, a wind triangle (heading, groundspeed,
+                       drift, crosswind and head/tailwind components) and
+                       pressure/density altitude, which can pull elevation,
+                       QNH and OAT from the next field in the plan. Maths
+                       checked against known cases. Also: a saved bottom-
+                       bar layout naming a removed view no longer leaves a
+                       dead tab - unknown keys are dropped and backfilled.
+       v73 2026-07-23  More sheet: Downloads and Settings appeared twice,
+                       once as a tile at the top and again in the list
+                       below. The list now skips anything that already
+                       has a tile.
+       v72 2026-07-23  Fix: tapping any card tab closed the card. The
+                       outside-click handler tested card.contains(target)
+                       at click time, but drawCard had already replaced
+                       the tab row - so the tapped button was detached,
+                       containment read false, and the card dismissed
+                       itself. Containment is now recorded on pointerdown,
+                       before any re-render. Also: a local variable named
+                       "label" was shadowing the label() function inside
+                       drawCard, which would have thrown on a marked
+                       waypoint. And a field's own name is stripped from
+                       its frequency labels - JACKSONS TWR is just TWR on
+                       the Jacksons card, while LAE RDO is left alone.
+       v71 2026-07-23  Card: the field's identity block (name, town,
+                       elevation) now shows above every tab rather than
+                       only Info, so the Weather tab reads like it used
+                       to. The four-box light grid is gone - first and
+                       last light are one plain line in that block.
+                       Sunrise and sunset dropped; only the two times
+                       that decide the job are shown.
        v70 2026-07-23  Fix: the bottom tab bar vanished after tapping
                        Reorder in Fuel. Reorder was rebuilding the entire
                        view wrapper - header and all - when only the
@@ -1469,16 +1512,55 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .shsave svg{width:18px;height:18px}
 .shsave.done{background:var(--good)}
 
+/* ---- Calculator -------------------------------------------- */
+.cseg{display:flex;gap:var(--gut);padding-bottom:14px}
+.cseg button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted)}
+.cseg button.on{background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13}
+
+.calcout{background:var(--inset);border:1px solid var(--border-strong);
+  border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;text-align:right}
+.calcout .expr{font-family:var(--mono);font-size:var(--t-sm);color:var(--text-fainter);
+  min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calcout .now{font-family:var(--mono);font-size:var(--t-disp);font-weight:700;color:var(--text);
+  line-height:1.1;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.pad{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gut)}
+.pad button{height:56px;border-radius:var(--radius);background:var(--bg-2);
+  border:1px solid var(--border-strong);color:var(--text);
+  font-family:var(--mono);font-size:var(--t-lg);font-weight:700}
+.pad button:active{background:var(--inset)}
+.pad button.op{color:var(--accent-2)}
+.pad button.eq{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.pad button.fn{color:var(--text-muted);font-size:var(--t-md)}
+
+.e6{display:flex;flex-direction:column;gap:12px}
+.e6 .row{display:flex;gap:var(--gut)}
+.e6 .row > div{flex:1 1 0}
+.e6 label{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text-muted);margin-bottom:5px}
+.e6 input{width:100%;height:var(--mod-b);background:var(--inset);
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  color:var(--text);font-family:var(--mono);font-size:var(--t-in);font-weight:700;
+  text-align:center;outline:none;-webkit-appearance:none}
+.e6 input:focus{border-color:var(--accent)}
+.e6btn{width:100%;height:var(--mod-b);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-2)}
+.e6btn:active{background:var(--inset)}
+.e6res{margin-top:4px;background:var(--bg-2);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden}
+.e6res .r{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:11px 14px}
+.e6res .r + .r{border-top:1px solid var(--border)}
+.e6res .r .k{font-size:var(--t-sm);color:var(--text-muted)}
+.e6res .r .v{font-family:var(--mono);font-size:var(--t-lg);font-weight:700;color:var(--text)}
+.e6res .r .v.big{font-size:var(--t-disp);color:var(--accent)}
+.e6res .r .v.warn{color:var(--bad)}
+
 /* ---- Card: light times strip -------------------------------- */
-.clight{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:14px;
-  background:var(--border);border:1px solid var(--border);border-radius:var(--radius);
-  overflow:hidden}
-.clight > div{background:var(--bg-2);padding:9px 6px;text-align:center}
-.clight .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--text-muted)}
-.clight .v{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
-  color:var(--text);margin-top:3px}
-.clightn{margin-top:6px;font-size:var(--t-2xs);color:var(--text-fainter);text-align:center}
+.cinfo .m .lt{color:var(--text-dim)}
 
 /* ---- ATS routes -------------------------------------------- */
 .atrow{width:100%;text-align:left;display:block;background:var(--bg-2);
@@ -2294,7 +2376,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v70';
+  var VERSION = 'v76';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -3139,6 +3221,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      says so. In the real build this reads AIP ENR 2 sectors.
      ============================================================ */
   var FQ_ORDER = ['ATIS','APP','DEP','TWR','GND','MTAF','CTAF','RDO','CNTR'];
+  /* "JACKSONS TWR" on the Jacksons card is just "TWR". Strip a leading
+     word only when it repeats this field's own name or town, so a label
+     that genuinely identifies another station (LAE RDO) is left alone. */
+  function freqLabel(id, lb){
+    var p = dbById(id), fi = FIELD_INFO[id];
+    if (!p) return lb;
+    var own = ((p.nm || '') + ' ' + (fi && fi.town ? fi.town : '')).toUpperCase()
+                .replace(/[^A-Z ]/g, ' ').split(/\s+/).filter(Boolean);
+    var parts = String(lb).toUpperCase().split(/\s+/).filter(Boolean);
+    while (parts.length > 1 && own.indexOf(parts[0]) >= 0) parts.shift();
+    return parts.join(' ') || lb;
+  }
+
   function fqRank(d){
     var u = d.toUpperCase();
     for (var i = 0; i < FQ_ORDER.length; i++) if (u.indexOf(FQ_ORDER[i]) >= 0) return i;
@@ -4019,30 +4114,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   /* ---- tabs ---- */
-  function cardInfo(f, fi){
-    var now = new Date();
-    var st = sunTimes(f.lat, f.lon, now);           /* sunrise / sunset */
-    var tw = sunTimes(f.lat, f.lon, now, 96);       /* first / last light */
-    var h = '<div class="cinfo"><div class="cthumb">' + (CAT_SHORT[f.cat] || 'WPT') + '</div>'
+  /* The field's identity. Shown above every tab, not just Info, so you
+     always know what you are looking at. Light times ride here as one
+     line - first and last light are the ones that decide the job. */
+  function cardIdentity(f, fi){
+    var tw = sunTimes(f.lat, f.lon, new Date(), 96);
+    var light = tw
+      ? 'First light ' + hhmmLocal(tw[0], 600) + ' \u00b7 Last light ' + hhmmLocal(tw[1], 600)
+      : '';
+    return '<div class="cinfo"><div class="cthumb">' + (CAT_SHORT[f.cat] || 'WPT') + '</div>'
       + '<div class="m"><b>' + f.nm + '</b>'
       + '<span>' + (fi ? fi.town : (CAT_LABEL[f.cat] || 'Waypoint')) + '</span>'
       + '<span>' + (fi ? 'Elevation ' + fi.elev.toLocaleString() + '\'' + (fi.iata ? ' &middot; ' + fi.iata : '')
-                       : (CAT_LABEL[f.cat] || '')) + '</span></div></div>';
+                       : (CAT_LABEL[f.cat] || '')) + '</span>'
+      + (light ? '<span class="lt">' + light + '</span>' : '')
+      + '</div></div>';
+  }
 
-    /* light times sit at the top - they decide whether the job is legal */
-    if (st || tw){
-      h += '<div class="clight">'
-        +  '<div><span class="k">First light</span><span class="v">'
-        +    (tw ? hhmmLocal(tw[0], 600) : '\u2014') + '</span></div>'
-        +  '<div><span class="k">Sunrise</span><span class="v">'
-        +    (st ? hhmmLocal(st[0], 600) : '\u2014') + '</span></div>'
-        +  '<div><span class="k">Sunset</span><span class="v">'
-        +    (st ? hhmmLocal(st[1], 600) : '\u2014') + '</span></div>'
-        +  '<div><span class="k">Last light</span><span class="v">'
-        +    (tw ? hhmmLocal(tw[1], 600) : '\u2014') + '</span></div>'
-        +  '</div><div class="clightn">Local time. Civil twilight for first and last light.</div>';
-    }
-
+  function cardInfo(f, fi){
+    var h = '';
     var pair = ddm(f.lat, true) + ' ' + ddm(f.lon, false);
     h += '<div class="csec">Position</div>'
       +  '<button class="kv cp" data-cp="' + pair + '"><span class="k">Coordinates</span>'
@@ -4060,7 +4150,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       var frows = allFreqFor(f.id);
       h += '<div class="csec">Frequencies</div>';
       frows.forEach(function(r){
-        h += '<div class="kv"><span class="k">' + esc(r.lb)
+        h += '<div class="kv"><span class="k">' + esc(freqLabel(f.id, r.lb))
           +  (r.mine ? ' <span style="color:var(--accent);font-size:var(--t-2xs);'
           +            'letter-spacing:.08em">MINE</span>' : '')
           +  '</span><span class="v acc">' + esc(r.vl) + '</span></div>';
@@ -4301,8 +4391,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       return fi || !CARD_ACTS[k].fld;      /* aerodrome-only actions drop out elsewhere */
     }).map(function(k){
       var a = CARD_ACTS[k];
-      var label = (k === 'add' && inRoute) ? 'In route' : a.t;
-      return '<button data-ca="' + k + '" style="color:' + a.c + '">' + label + '</button>';
+      var lab = (k === 'add' && inRoute) ? 'In route' : a.t;   /* not 'label' - that shadows label() */
+      return '<button data-ca="' + k + '" style="color:' + a.c + '">' + lab + '</button>';
     }).join('');
 
     /* Only aerodromes have weather, runways, procedures and NOTAMs. */
@@ -4324,11 +4414,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
 
     $('#cardBody').innerHTML =
+        cardIdentity(f, fi) + (
         cardTab === 'info' ? cardInfo(f, fi)
       : cardTab === 'wx'   ? cardWx(f, fi)
       : cardTab === 'rwy'  ? cardRwy(f, fi)
       : cardTab === 'proc' ? cardProc(f)
-      :                      cardNtm(f);
+      :                      cardNtm(f));
 
     $$('#cardTabs button').forEach(function(b){
       b.addEventListener('click', function(){ cardTab = b.getAttribute('data-ct'); drawCard(); });
@@ -4567,11 +4658,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* Tap anywhere outside the card to dismiss it. Taps on a field dot
      pass through so they switch the card rather than closing it, and
      the timestamp guard stops the opening tap closing it again. */
+  /* Whether the press started inside the card is recorded on pointerdown,
+     BEFORE any handler can re-render and detach the element. Testing
+     card.contains(e.target) at click time was closing the card whenever a
+     handler rebuilt the thing that was tapped - which is every tab. */
+  var pressInCard = false, pressOnFld = false;
+  document.addEventListener('pointerdown', function(e){
+    pressInCard = !!(card && card.contains(e.target));
+    pressOnFld  = !!(e.target.closest && e.target.closest('.fld'));
+  }, true);
   document.addEventListener('click', function(e){
     if (!card.classList.contains('on')) return;
     if (Date.now() - cardOpenTs < 350) return;
-    if (card.contains(e.target)) return;
-    if (e.target.closest && e.target.closest('.fld')) return;
+    if (pressInCard || card.contains(e.target)) return;
+    if (pressOnFld || (e.target.closest && e.target.closest('.fld'))) return;
     card.classList.remove('on');
   });
   $('#cardStar').addEventListener('click', function(){
@@ -4613,7 +4713,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { k:'airports', t:'Airports' },
     { k:'fuel',     t:'Fuel'     },
     { k:'charts',   t:'Charts'   },
-    { k:'wb',       t:'W&amp;B'  },
+    { k:'calc',     t:'Calculator' },
     { k:'freq',     t:'Freqs'    },
     { k:'flights',  t:'Flights'  },
     { k:'notes',    t:'Notes'    },
@@ -4634,15 +4734,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   var STORE_KEY = 'nmp.iphone.tabs', TAB_SLOTS = 4;
+  /* a saved slot may name a view that no longer exists - W&B was removed,
+     and anything else might be one day. Drop unknown keys and backfill so
+     a stale config can never leave a dead tab in the bar. */
+  function knownTab(k){
+    if (isAct(k)) return true;
+    for (var i = 0; i < VIEWS.length; i++) if (VIEWS[i].k === k) return true;
+    return false;
+  }
   function loadCfg(){
+    var fill = ['charts','freq','notes','flights','calc','fuel','airports','map'];
     try{
       var s = localStorage.getItem(STORE_KEY);
       if (s){
         var a = JSON.parse(s);
-        if (a && a.length === TAB_SLOTS) return a;
-        /* migrate an older three-slot layout rather than discarding it */
-        if (a && a.length === 3){
-          var fill = ['charts','freq','notes','flights','wb'];
+        if (a && a.length){
+          a = a.filter(knownTab);
           for (var i = 0; i < fill.length && a.length < TAB_SLOTS; i++){
             if (a.indexOf(fill[i]) < 0) a.push(fill[i]);
           }
@@ -4866,6 +4973,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     atsView.classList.remove('on'); clearTimeout(atsArm); atsArm = null;
   });
 
+  /* Picking a route should end with you looking at it. Close the sheet
+     and the FPL panel, return to the map, and frame the whole plan. */
+  function atsShowOnMap(msg){
+    atsView.classList.remove('on');
+    closeAll();
+    goTo('map');
+    if (ROUTE.length){ viewFit(ROUTE, 0.4); }
+    renderMap();
+    toast(msg);
+  }
+
   function useAts(rd){
     var r = null;
     ATS_ROUTES.forEach(function(x){ if (x.rd === rd) r = x; });
@@ -4883,9 +5001,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         return { id:p.n, nm:p.n + ' \u00b7 ' + rd, cat:'fix', lat:p.a, lon:p.o };
       });
       Array.prototype.splice.apply(ROUTE, [m.leg + 1, 0].concat(ins));
-      drawFpl(); renderMap();
-      atsView.classList.remove('on');
-      toast(ins.length + ' fixes from ' + rd + ' added');
+      drawFpl();
+      atsShowOnMap(ins.length + ' fixes from ' + rd + ' added');
       return;
     }
 
@@ -4901,9 +5018,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       ROUTE.push({ id:p.n, nm:p.n + ' \u00b7 ' + rd, cat:'fix', lat:p.a, lon:p.o });
     });
     toWpt = Math.min(1, ROUTE.length - 1);
-    drawFpl(); renderMap();
-    atsView.classList.remove('on');
-    toast(rd + ' loaded');
+    drawFpl();
+    atsShowOnMap(rd + ' loaded');
   }
 
   /* ---- quick edit for the FPL header buttons ---- */
@@ -5325,6 +5441,223 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     toast('Tap again to delete');
     fqDelArm = setTimeout(function(){ fqDelArm = null; b.classList.remove('arm'); }, 3000);
   });
+
+  /* ============================================================
+     CALCULATOR
+     A working number pad plus the two E6B answers that actually matter
+     in the highlands: the wind triangle, and density altitude. PNG
+     terrain means a BK117 is often operating where DA decides whether
+     the job happens, so that one is front and centre.
+     Advisory - check against the aircraft flight manual.
+     ============================================================ */
+  var calcTab = 'pad';
+  var calcAcc = null, calcOp = null, calcCur = '0', calcFresh = true;
+
+  function calcHTML(){
+    var segs = [['pad','Calculator'],['wind','Wind'],['alt','Altitude']];
+    var h = '<div class="cseg">' + segs.map(function(s){
+      return '<button data-cg="' + s[0] + '"' + (calcTab === s[0] ? ' class="on"' : '') + '>'
+           + s[1] + '</button>';
+    }).join('') + '</div>';
+
+    if (calcTab === 'pad'){
+      var expr = (calcAcc === null) ? '' : (fmtNum(calcAcc) + ' ' + (calcOp || ''));
+      h += '<div class="calcout"><div class="expr">' + expr + '</div>'
+        +  '<div class="now">' + calcCur + '</div></div>'
+        +  '<div class="pad">'
+        +  key('C','fn') + key('\u00b1','fn') + key('%','fn') + key('\u00f7','op')
+        +  key('7') + key('8') + key('9') + key('\u00d7','op')
+        +  key('4') + key('5') + key('6') + key('\u2212','op')
+        +  key('1') + key('2') + key('3') + key('+','op')
+        +  key('0') + key('.') + key('\u232b','fn') + key('=','eq')
+        +  '</div>';
+      return h;
+    }
+
+    if (calcTab === 'wind'){
+      return h + '<div class="e6">'
+        + '<div class="row">'
+        +   '<div><label>Wind from</label><input id="e6wd" inputmode="numeric" placeholder="090"></div>'
+        +   '<div><label>Wind kt</label><input id="e6ws" inputmode="numeric" placeholder="15"></div>'
+        + '</div>'
+        + '<div class="row">'
+        +   '<div><label>Course \u00b0T</label><input id="e6tc" inputmode="numeric" placeholder="284"></div>'
+        +   '<div><label>TAS kt</label><input id="e6tas" inputmode="numeric" placeholder="120"></div>'
+        + '</div>'
+        + '<div class="e6res" id="e6windOut"></div>'
+        + '<div class="cnote">True course and true wind. Crosswind is signed: positive from '
+        + 'the right. Advisory only.</div></div>';
+    }
+
+    /* altitude */
+    return h + '<div class="e6">'
+      + '<div class="row">'
+      +   '<div><label>Elevation ft</label><input id="e6el" inputmode="numeric" placeholder="5388"></div>'
+      +   '<div><label>QNH hPa</label><input id="e6qnh" inputmode="numeric" placeholder="1013"></div>'
+      +   '<div><label>OAT \u00b0C</label><input id="e6oat" inputmode="numeric" placeholder="24"></div>'
+      + '</div>'
+      + '<button class="e6btn" id="e6fromfld">Use next field</button>'
+      + '<div class="e6res" id="e6altOut"></div>'
+      + '<div class="cnote">Pressure altitude uses 30 ft per hPa; density altitude uses 120 ft '
+      + 'per \u00b0C above ISA. Rules of thumb \u2014 check the flight manual for performance.</div></div>';
+  }
+
+  function key(t, cls){
+    return '<button data-k="' + t + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + t + '</button>';
+  }
+  function fmtNum(n){
+    if (!isFinite(n)) return '\u2014';
+    var r = Math.round(n * 1e8) / 1e8;
+    return String(r).length > 12 ? r.toPrecision(10) : String(r);
+  }
+
+  function calcApply(){
+    var a = calcAcc, b = parseFloat(calcCur);
+    if (a === null || !calcOp) return b;
+    if (calcOp === '+') return a + b;
+    if (calcOp === '\u2212') return a - b;
+    if (calcOp === '\u00d7') return a * b;
+    if (calcOp === '\u00f7') return b === 0 ? NaN : a / b;
+    return b;
+  }
+
+  function calcKey(k, el){
+    if (/^[0-9]$/.test(k)){
+      calcCur = (calcFresh || calcCur === '0') ? k : calcCur + k;
+      calcFresh = false;
+    } else if (k === '.'){
+      if (calcFresh){ calcCur = '0.'; calcFresh = false; }
+      else if (calcCur.indexOf('.') < 0) calcCur += '.';
+    } else if (k === 'C'){
+      calcAcc = null; calcOp = null; calcCur = '0'; calcFresh = true;
+    } else if (k === '\u232b'){
+      calcCur = calcCur.length > 1 ? calcCur.slice(0, -1) : '0';
+      if (calcCur === '0') calcFresh = true;
+    } else if (k === '\u00b1'){
+      calcCur = calcCur.charAt(0) === '-' ? calcCur.slice(1) : '-' + calcCur;
+    } else if (k === '%'){
+      calcCur = fmtNum(parseFloat(calcCur) / 100); calcFresh = true;
+    } else if (k === '=' ){
+      if (calcOp){ calcCur = fmtNum(calcApply()); calcAcc = null; calcOp = null; calcFresh = true; }
+    } else {
+      /* an operator: fold any pending one first */
+      if (calcOp && !calcFresh){ calcCur = fmtNum(calcApply()); }
+      calcAcc = parseFloat(calcCur); calcOp = k; calcFresh = true;
+    }
+    redrawCalc(el);
+  }
+
+  /* wind triangle */
+  function windSolve(wd, ws, tc, tas){
+    if (![wd, ws, tc, tas].every(function(n){ return isFinite(n); }) || tas <= 0) return null;
+    var rel = (wd - tc) * Math.PI / 180;
+    var xw = ws * Math.sin(rel);          /* + from the right */
+    var hw = ws * Math.cos(rel);          /* + headwind */
+    var s = xw / tas;
+    if (Math.abs(s) > 1) return { over:true };
+    var wca = Math.asin(s) * 180 / Math.PI;
+    var gs = tas * Math.cos(wca * Math.PI / 180) - hw;
+    return { wca:wca, hd:(tc + wca + 360) % 360, gs:gs, xw:xw, hw:hw };
+  }
+  /* pressure and density altitude */
+  function altSolve(el, qnh, oat){
+    if (!isFinite(el) || !isFinite(qnh)) return null;
+    var pa = el + (1013.25 - qnh) * 30;
+    if (!isFinite(oat)) return { pa:pa };
+    var isa = 15 - 2 * (pa / 1000);
+    return { pa:pa, isa:isa, da:pa + 120 * (oat - isa) };
+  }
+
+  function redrawCalc(el){
+    var body = el.querySelector('.vbody');
+    if (!body) return;
+    body.innerHTML = calcHTML();
+    wireCalc(el);
+  }
+
+  function wireCalc(el){
+    var body = el.querySelector('.vbody');
+    Array.prototype.forEach.call(body.querySelectorAll('[data-cg]'), function(b){
+      b.addEventListener('click', function(){ calcTab = b.getAttribute('data-cg'); redrawCalc(el); });
+    });
+    Array.prototype.forEach.call(body.querySelectorAll('[data-k]'), function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        calcKey(b.getAttribute('data-k'), el);
+      });
+    });
+
+    function num(id){ var i = body.querySelector('#' + id); return i ? parseFloat(i.value) : NaN; }
+
+    if (calcTab === 'wind'){
+      var out = body.querySelector('#e6windOut');
+      function solveWind(){
+        var r = windSolve(num('e6wd'), num('e6ws'), num('e6tc'), num('e6tas'));
+        if (!r){ out.innerHTML = '<div class="r"><span class="k">Enter all four</span></div>'; return; }
+        if (r.over){
+          out.innerHTML = '<div class="r"><span class="k">Crosswind exceeds TAS</span>'
+            + '<span class="v warn">no solution</span></div>';
+          return;
+        }
+        out.innerHTML =
+            '<div class="r"><span class="k">Heading \u00b0T</span><span class="v big">'
+          +   String(Math.round(r.hd)).padStart(3, '0') + '</span></div>'
+          + '<div class="r"><span class="k">Groundspeed</span><span class="v big">'
+          +   Math.round(r.gs) + '</span></div>'
+          + '<div class="r"><span class="k">Drift</span><span class="v">'
+          +   (r.wca >= 0 ? 'R ' : 'L ') + Math.abs(r.wca).toFixed(1) + '\u00b0</span></div>'
+          + '<div class="r"><span class="k">Crosswind</span><span class="v">'
+          +   (r.xw >= 0 ? 'R ' : 'L ') + Math.abs(r.xw).toFixed(0) + ' kt</span></div>'
+          + '<div class="r"><span class="k">' + (r.hw >= 0 ? 'Headwind' : 'Tailwind')
+          +   '</span><span class="v">' + Math.abs(r.hw).toFixed(0) + ' kt</span></div>';
+      }
+      ['e6wd','e6ws','e6tc','e6tas'].forEach(function(id){
+        var i = body.querySelector('#' + id);
+        if (i) i.addEventListener('input', solveWind);
+      });
+      solveWind();
+    }
+
+    if (calcTab === 'alt'){
+      var aout = body.querySelector('#e6altOut');
+      function solveAlt(){
+        var r = altSolve(num('e6el'), num('e6qnh'), num('e6oat'));
+        if (!r){ aout.innerHTML = '<div class="r"><span class="k">Enter elevation and QNH</span></div>'; return; }
+        var h = '<div class="r"><span class="k">Pressure altitude</span><span class="v">'
+              + Math.round(r.pa).toLocaleString() + ' ft</span></div>';
+        if (r.da !== undefined){
+          var hot = r.da > r.pa + 1000;
+          h += '<div class="r"><span class="k">ISA temp</span><span class="v">'
+            +  r.isa.toFixed(1) + ' \u00b0C</span></div>'
+            +  '<div class="r"><span class="k">Density altitude</span><span class="v big'
+            +  (hot ? ' warn' : '') + '">' + Math.round(r.da).toLocaleString() + ' ft</span></div>';
+        }
+        aout.innerHTML = h;
+      }
+      ['e6el','e6qnh','e6oat'].forEach(function(id){
+        var i = body.querySelector('#' + id);
+        if (i) i.addEventListener('input', solveAlt);
+      });
+      var ff = body.querySelector('#e6fromfld');
+      if (ff) ff.addEventListener('click', function(){
+        /* pull elevation and QNH from the next aerodrome in the plan */
+        var t = null;
+        for (var i = 0; i < ROUTE.length; i++){
+          if (FIELD_INFO[ROUTE[i].id]){ t = ROUTE[i]; break; }
+        }
+        if (!t){ toast('No field with data in the plan'); return; }
+        var fi = FIELD_INFO[t.id];
+        body.querySelector('#e6el').value = fi.elev;
+        var q = fi.metar && fi.metar.match(/Q(\d{4})/);
+        if (q) body.querySelector('#e6qnh').value = q[1];
+        var tp = fi.metar && fi.metar.match(/\s(M?\d{2})\/M?\d{2}\s/);
+        if (tp) body.querySelector('#e6oat').value = tp[1].replace('M', '-');
+        solveAlt();
+        toast('From ' + t.id);
+      });
+      solveAlt();
+    }
+  }
 
   /* ============================================================
      CHARTS
@@ -5934,6 +6267,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                  : (k === 'freq')     ? '<div class="vhead"><b>Frequencies</b>'
                      + '<span class="sub">yours and published</span></div>'
                      + '<div class="vbody">' + freqsHTML() + '</div>'
+                 : (k === 'calc')     ? '<div class="vhead"><b>Calculator</b></div>'
+                     + '<div class="vbody">' + calcHTML() + '</div>'
                  : (k === 'downloads')? '<div class="vhead"><b>Downloads</b>'
                      + '<span class="sub">offline data</span></div>'
                      + '<div class="vbody">' + downloadsHTML() + '</div>'
@@ -5947,6 +6282,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (k === 'charts') wireCharts(el);
     if (k === 'freq') wireFreqs(el);
     if (k === 'downloads') wireDownloads(el);
+    if (k === 'calc') wireCalc(el);
     return el;
   }
 
@@ -6034,15 +6370,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     charts:'var(--accent-2)', wb:'var(--navaid)', freq:'var(--magenta)',
     flights:'var(--good)', notes:'var(--route)', gps:'var(--accent)'
   };
+  /* anything with a tile at the top of the sheet is not repeated below */
+  var MORE_TILES = ['downloads'];
   function buildMore(){
     var mh = '';
     VIEWS.forEach(function(v){
+      if (MORE_TILES.indexOf(v.k) >= 0) return;
       mh += '<button class="srow" data-go="' + v.k + '">'
           + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
           + svg(v.k) + '</span>' + v.t + '</button>';
     });
-    mh += '<button class="srow" data-go="__set"><span class="sq" style="background:var(--accent)">'
-        + svg('more') + '</span>Settings</button>';
     $('#moreList').innerHTML = mh;
     $('#sver').textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
     wireMore();
@@ -6051,7 +6388,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   $$('#moreList .srow').forEach(function(r){
     r.addEventListener('click', function(){
       var k = r.getAttribute('data-go');
-      if (k === '__set'){ openSet(); return; }
       goTo(k);
     });
   });
