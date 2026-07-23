@@ -16,6 +16,30 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v70 2026-07-23  Fix: the bottom tab bar vanished after tapping
+                       Reorder in Fuel. Reorder was rebuilding the entire
+                       view wrapper - header and all - when only the
+                       cards inside the body change. It now swaps just
+                       the body contents and relabels the button, leaving
+                       the wrapper and header untouched. A missing card
+                       key also no longer emits the string "undefined".
+       v69 2026-07-23  METAR decode filled out to match the layout that
+                       worked before: observation time as both Z and
+                       local, wind, visibility (9999 read as 10 km +,
+                       CAVOK handled), temp/dew and QNH. The desktop's
+                       "nearest airfield + freqs" idea already landed in
+                       v68 as the Weather tab fallback.
+       v68 2026-07-23  Airfield card second row reworked. The tab row was
+                       hidden entirely for any field without published
+                       data - which is 425 of 431 - so most cards showed
+                       no tabs at all. Tabs now stay up and each says
+                       what it has. Weather falls back to the nearest
+                       reporting station, labelled as that field's
+                       weather and not this one's, with distance and
+                       bearing. Procedure now lists this field's actual
+                       plates grouped by category, tapping opens one, and
+                       there is a link into Charts. NOTAM and Runway
+                       explain honestly why they are empty.
        v67 2026-07-23  Card: latitude and longitude were still split in
                        the Position section (v65 only fixed the editable
                        waypoint rows) - now one Coordinates row. Light
@@ -2270,7 +2294,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v67';
+  var VERSION = 'v70';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -4087,8 +4111,35 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return h;
   }
 
+  /* nearest field that actually reports, for a field that does not */
+  function nearestMetar(f){
+    var best = null, bd = 1e9;
+    Object.keys(FIELD_INFO).forEach(function(id){
+      if (id === f.id) return;
+      var p = dbById(id); if (!p || !FIELD_INFO[id].metar) return;
+      var d = nmBetween(f, p);
+      if (d < bd){ bd = d; best = { id:id, p:p, d:d, fi:FIELD_INFO[id] }; }
+    });
+    return best;
+  }
+
   function cardWx(f, fi){
-    if (!fi) return '<div class="cempty">Not in demo data</div>';
+    if (!fi){
+      /* No station here. Show the nearest one that does report, clearly
+         labelled as somewhere else - never as this field's weather. */
+      var nr = nearestMetar(f);
+      if (!nr) return '<div class="cempty">No weather station in demo data</div>';
+      var ncat = wxCat(nr.fi.metar);
+      return '<div class="cnote" style="margin-bottom:12px">' + f.id
+        + ' has no weather station. Nearest report is <b>' + nr.id + '</b>, '
+        + nr.d.toFixed(0) + ' nm ' + String(Math.round(trkBetween(f, nr.p))).padStart(3,'0')
+        + '\u00b0. This is that field\u2019s weather, not this one\u2019s.</div>'
+        + '<div class="metar"><div class="hdr">'
+        + '<span class="dot" style="background:' + ncat[1] + '"></span>'
+        + '<span style="color:' + ncat[1] + '">' + ncat[0] + '</span>'
+        + '<span class="age">' + nr.id + '</span></div>'
+        + '<div class="raw" style="color:' + ncat[1] + '">' + nr.fi.metar + '</div></div>';
+    }
     if (cardSub === 'metar'){
       var cat = wxCat(fi.metar);
       return '<div class="metar"><div class="hdr">'
@@ -4097,11 +4148,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         + '<span class="age">14m ago</span></div>'
         + '<div class="raw" style="color:' + cat[1] + '">' + fi.metar + '</div>'
         + '<div class="csec">Decoded</div>'
+        + metarTimeRow(fi.metar)
         + kvWind(fi.metar)
+        + metarVisRow(fi.metar)
         + '<div class="kv"><span class="k">Temp / dew</span><span class="v">'
-        +   (fi.metar.match(/\s(M?\d{2})\/(M?\d{2})\s/) || [0,'—','—']).slice(1,3).join(' / ') + '</span></div>'
+        +   (fi.metar.match(/\s(M?\d{2})\/(M?\d{2})\s/) || [0,'\u2014','\u2014']).slice(1,3).join(' / ') + '</span></div>'
         + '<div class="kv"><span class="k">QNH</span><span class="v">'
-        +   (fi.metar.match(/Q(\d{4})/) ? fi.metar.match(/Q(\d{4})/)[1] + ' hPa' : '—') + '</span></div>'
+        +   (fi.metar.match(/Q(\d{4})/) ? fi.metar.match(/Q(\d{4})/)[1] + ' hPa' : '\u2014') + '</span></div>'
         + '</div>';
     }
     if (cardSub === 'taf'){
@@ -4116,6 +4169,29 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
     return h + '<div class="cnote">Demo data.</div>';
   }
+  /* METAR day/time group: 210600Z -> "0600Z · 1600 LT" */
+  function metarTimeRow(m){
+    var t = m && m.match(/\b\d{2}(\d{2})(\d{2})Z\b/);
+    if (!t) return '';
+    var hh = parseInt(t[1], 10), mm = parseInt(t[2], 10);
+    var lt = ((hh * 60 + mm) + 600) % 1440;      /* PNG is UTC+10 */
+    return '<div class="kv"><span class="k">Time</span><span class="v">'
+      + t[1] + t[2] + 'Z \u00b7 '
+      + String(Math.floor(lt / 60)).padStart(2, '0') + String(lt % 60).padStart(2, '0')
+      + ' LT</span></div>';
+  }
+  /* visibility group: 9999 means 10 km or more */
+  function metarVisRow(m){
+    if (!m) return '';
+    if (/\bCAVOK\b/.test(m)) return '<div class="kv"><span class="k">Visibility</span>'
+      + '<span class="v">CAVOK</span></div>';
+    var v = m.match(/\s(\d{4})\s/);
+    if (!v) return '';
+    var n = parseInt(v[1], 10);
+    return '<div class="kv"><span class="k">Visibility</span><span class="v">'
+      + (n >= 9999 ? '10 km +' : (n >= 1000 ? (n / 1000) + ' km' : n + ' m')) + '</span></div>';
+  }
+
   function kvWind(m){
     var w = metarWind(m);
     return '<div class="kv"><span class="k">Wind</span><span class="v">'
@@ -4124,7 +4200,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   function cardRwy(f, fi){
-    if (!fi) return '<div class="cempty">Not in demo data</div>';
+    if (!fi){
+      return '<div class="cempty">No runway detail for ' + f.id + '</div>'
+        + '<div class="cnote">Detailed runway data (length, surface, bearings) is published '
+        + 'for the majors. Bush strips are the gap the AIP does not fill \u2014 your own notes '
+        + 'on a strip belong under My notes on the Info tab.</div>';
+    }
     var w = metarWind(fi.metar), h = '';
     fi.rwy.forEach(function(r){
       var m = rwyLenM(r);
@@ -4155,19 +4236,38 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   function cardProc(f){
-    var list = [
-      ['Gov', f.id + ' Aerodrome chart'],
-      ['Gov', f.id + ' RNAV (GNSS) approach'],
-      ['Gov', f.id + ' Departure (RNAV)'],
-      ['Own', 'Circuit notes']
-    ];
-    return list.map(function(r){
-      return '<button class="prow2"><span class="bdg">' + r[0] + '</span>'
-        + '<span class="t2">' + r[1] + '</span><span class="go">Open</span></button>';
-    }).join('') + '<div class="cnote">Demo list. Plate overlay is not wired in this shell.</div>';
+    /* the plates this field actually has, grouped the ForeFlight way */
+    var plates = chartsFor(f.id);
+    if (!plates.length){
+      return '<div class="cempty">No plates for ' + f.id + ' in demo data</div>'
+        + '<div class="cnote">Published procedures come from the AIP. Fields without an '
+        + 'instrument procedure show nothing here.</div>';
+    }
+    var byCat = {};
+    plates.forEach(function(p){ (byCat[catOf(p)] = byCat[catOf(p)] || []).push(p); });
+    var h = '';
+    CHART_CATS.forEach(function(c){
+      var rows = byCat[c[0]]; if (!rows || !rows.length) return;
+      h += '<div class="csec">' + c[1] + '</div>';
+      rows.forEach(function(p){
+        h += '<button class="prow2" data-cplate="' + p + '">'
+          +  '<span class="bdg">AIP</span><span>' + prettyPlate(p) + '</span></button>';
+      });
+    });
+    return h + '<button class="add" data-chgo="' + f.id + '" style="width:100%;'
+      + 'height:var(--mod-a);margin-top:12px;border-radius:var(--radius);background:var(--bg);'
+      + 'border:1px dashed var(--border-strong);font-size:var(--t-sm);font-weight:600;'
+      + 'color:var(--text-muted)">Open in Charts</button>';
   }
 
   function cardNtm(f){
+    if (!FIELD_INFO[f.id]){
+      return '<div class="cempty">No NOTAMs in demo data</div>'
+        + '<div class="cnote">PNG NOTAMs are published as a downloadable bulletin rather than '
+        + 'a live feed, so they cannot be fetched per field the way a METAR can. The realistic '
+        + 'options are a manual import of the current bulletin, or a link out to it. '
+        + 'Nothing here is a substitute for the official briefing.</div>';
+    }
     var n = [
       ['A0142/26', '21 JUL - 30 SEP', 'Runway lighting unserviceable. Night operations not authorised.'],
       ['A0138/26', '18 JUL - 25 JUL', 'Grass cutting adjacent runway edge, personnel and equipment on movement area during daylight hours.'],
@@ -4206,9 +4306,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }).join('');
 
     /* Only aerodromes have weather, runways, procedures and NOTAMs. */
-    if (!fi) cardTab = 'info';
-    $('#cardTabs').classList.toggle('off', !fi);
-    $('#cardTabs').innerHTML = !fi ? '' : CARD_TABS.map(function(t){
+    /* tabs stay up for every point - each one says honestly what it has,
+       which reads better than the whole row vanishing on most fields */
+    var isFld = (f.cat === 'field' || f.cat === 'strip');
+    if (!isFld) cardTab = 'info';
+    $('#cardTabs').classList.toggle('off', !isFld);
+    $('#cardTabs').innerHTML = !isFld ? '' : CARD_TABS.map(function(t){
       return '<button data-ct="' + t[0] + '"' + (cardTab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
     }).join('');
 
@@ -4239,6 +4342,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     wireCopy('#cardBody');
     $$('#cardBody [data-cn]').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); openNote(b.getAttribute('data-cn')); });
+    });
+    $$('#cardBody [data-cplate]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation(); openChart(b.getAttribute('data-cplate'));
+      });
     });
     $$('#cardBody [data-fqgo]').forEach(function(b){
       b.addEventListener('click', function(e){
@@ -6023,7 +6131,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return t;
   }
 
-  function fuelHTML(){
+  function fuelBodyHTML(){
     function fld(lab, attrs){
       return '<div><span class="fsub">' + lab + '</span>'
            + '<input class="fin" type="number" inputmode="decimal" ' + attrs + '></div>';
@@ -6073,28 +6181,40 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           + '</div><div data-f="endOut"></div>' + mover('end') + '</div>'
     };
 
+    return '<div class="fdens"><span class="k">Density &middot; kg/L</span>'
+      +   '<input class="fin" data-f="dens" type="number" step="0.001" value="0.800" inputmode="decimal"></div>'
+      + fuelOrder.map(function(k){ return CARDS[k] || ''; }).join('');
+  }
+
+  /* the full view: header plus body. Only used when the view is created. */
+  function fuelHTML(){
     return '<div class="vhead"><b>Quick Fuel Check</b>'
       + '<button class="fedit' + (fuelEdit ? ' on' : '') + '" data-f="edit">'
       + (fuelEdit ? 'Done' : 'Reorder') + '</button></div>'
-      + '<div class="vbody">'
-      + '<div class="fdens"><span class="k">Density &middot; kg/L</span>'
-      +   '<input class="fin" data-f="dens" type="number" step="0.001" value="0.800" inputmode="decimal"></div>'
-      + fuelOrder.map(function(k){ return CARDS[k]; }).join('')
-      + '</div>';
+      + '<div class="vbody">' + fuelBodyHTML() + '</div>';
   }
 
   /* rebuild the fuel view, keeping whatever the pilot has typed */
+  /* Rebuild only the cards. The view header and the view wrapper stay
+     put - replacing the whole wrapper is what dropped the tab bar. */
   function refreshFuel(root){
+    var body = root.querySelector('.vbody');
+    if (!body) return;
     var keep = {};
-    Array.prototype.forEach.call(root.querySelectorAll('input[data-f],input[data-u]'), function(i){
+    Array.prototype.forEach.call(body.querySelectorAll('input[data-f],input[data-u]'), function(i){
       var k = i.getAttribute('data-f') || ('u:' + i.getAttribute('data-u'));
       keep[k] = i.value;
     });
-    root.innerHTML = fuelHTML();
-    Array.prototype.forEach.call(root.querySelectorAll('input[data-f],input[data-u]'), function(i){
+    body.innerHTML = fuelBodyHTML();
+    Array.prototype.forEach.call(body.querySelectorAll('input[data-f],input[data-u]'), function(i){
       var k = i.getAttribute('data-f') || ('u:' + i.getAttribute('data-u'));
       if (keep[k] !== undefined) i.value = keep[k];
     });
+    var ed = root.querySelector('[data-f="edit"]');
+    if (ed){
+      ed.textContent = fuelEdit ? 'Done' : 'Reorder';
+      ed.classList.toggle('on', fuelEdit);
+    }
     initFuel(root);
   }
 
