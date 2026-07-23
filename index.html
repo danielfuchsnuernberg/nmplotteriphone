@@ -16,6 +16,78 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v67 2026-07-23  Card: latitude and longitude were still split in
+                       the Position section (v65 only fixed the editable
+                       waypoint rows) - now one Coordinates row. Light
+                       times moved to the top of the card as a four-up
+                       strip: first light, sunrise, sunset, last light.
+                       First and last light are civil twilight (96 deg
+                       zenith). Daylight duration dropped. Fuel: trip
+                       placeholders now TAS 120 and burn 220 kg/h, and
+                       the reserve defaults to 30 minutes.
+       v66 2026-07-23  The six FPL header buttons were display-only; all
+                       are live now. Registration, type, altitude and ETD
+                       open a quick editor and write to the same aircraft
+                       profile Settings uses. Procedure jumps to the
+                       plates for the last field in the plan that has
+                       any, on the Approach tab. Routes opens published
+                       ATS routes ranked by distance, with any route that
+                       already links two points of your plan highlighted
+                       - tapping it inserts that airway's intermediate
+                       fixes into the leg rather than replacing the plan.
+                       Route data is real ENR 3.1 lifted from the desktop
+                       build; each route shows its own AIP edition.
+       v65 2026-07-23  Waypoint card: latitude and longitude merged into
+                       one Coordinates field that accepts any format,
+                       matching the Add point box. Fuel: a Use route
+                       button on the trip card fills the distance from
+                       the active route (and TAS/burn from the aircraft
+                       if blank), showing the distance on its face like
+                       the desktop build. Fuel cards can now be reordered
+                       with Reorder, and the order sticks.
+       v64 2026-07-23  The More sheet's Settings tile now uses the same
+                       cog as the toolbar button - they were two
+                       different SVGs. Both open the same Settings.
+       v63 2026-07-23  Downloads built. One place listing everything that
+                       can live on the device: basemap, terrain at two
+                       resolutions, plates, the AIP data pack and cached
+                       weather. Shows total stored with a per-group bar,
+                       each item's size and AIP edition, and download /
+                       cancel / remove. Structured as separate items so a
+                       region can later be added or removed as a set.
+                       Also fixed: the Downloads and Settings tiles in
+                       the More sheet had no click handlers at all.
+       v62 2026-07-23  Fix: the chart viewer showed a stray vertical line
+                       and no content. Its inner container was called
+                       "sheet", which is already the app's slide-in panel
+                       class - fixed position, width 59%, border-left and
+                       transform:translateX(100%). The viewer inherited
+                       all of it and sat off-screen, leaving only its
+                       edge visible. Renamed to .chsheet.
+       v61 2026-07-22  Frequencies tab is now an editor. Field picker with
+                       the same pull-to-reveal search as Airports, then
+                       that field's frequencies: published AIP entries
+                       read-only, your own editable. Add, edit, delete
+                       with arm-then-confirm; stored on the device. Your
+                       entries are merged into the airfield card (tagged
+                       MINE) and into the Radio panel in route order.
+                       Also fixed: a pasted coordinate added to the route
+                       drew a leg but no marker, because markers were
+                       drawn only from the airfield database. Route
+                       points that are not in the database now get their
+                       own amber marker.
+       v60 2026-07-22  Charts built. Field picker, then ForeFlight-style
+                       category tabs (Airport / Departure / Arrival /
+                       Approach / Other) with per-tab counts. The
+                       classifier and category order are lifted VERBATIM
+                       from the desktop autoCat, so a plate files into
+                       the same tab on both - including PNG's
+                       _DEPARTURE_(RNAV) names, which resolve as SIDs
+                       rather than approaches. Move re-files a plate and
+                       the override persists, same idea as the desktop's
+                       nmChartCat. An airfield card with plates links
+                       straight into its charts. The viewer itself is a
+                       placeholder - the demo bundles no PDFs.
        v59 2026-07-22  Coordinate paste now also accepts the Google Maps
                        bracketed form, e.g. (-2.9714214, 150.9412885):
                        surrounding brackets and whitespace are stripped
@@ -639,6 +711,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fld.k-fix b{color:#8de84a;opacity:.85}
 .fld.k-mine i{width:8px;height:8px;border-radius:2px;background:var(--accent)}
 .fld.k-mine b{color:var(--accent);opacity:.9}
+/* a route point that is not in the database - a pasted coordinate.
+   Drawn from ROUTE, not DB, so it appears the moment it is added. */
+.fld.k-wpt i{width:9px;height:9px;border-radius:50%;background:var(--route);
+  border:2px solid var(--bg);box-shadow:0 0 0 1px var(--route)}
+.fld.k-wpt b{font-family:var(--mono);font-size:var(--t-2xs);color:var(--route);opacity:.95}
 .leg{position:absolute;height:2px;background:var(--route);transform-origin:0 50%;opacity:.9;z-index:10}
 
 /* ---- Left rail --------------------------------------------
@@ -1368,6 +1445,163 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .shsave svg{width:18px;height:18px}
 .shsave.done{background:var(--good)}
 
+/* ---- Card: light times strip -------------------------------- */
+.clight{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:14px;
+  background:var(--border);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden}
+.clight > div{background:var(--bg-2);padding:9px 6px;text-align:center}
+.clight .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-muted)}
+.clight .v{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
+  color:var(--text);margin-top:3px}
+.clightn{margin-top:6px;font-size:var(--t-2xs);color:var(--text-fainter);text-align:center}
+
+/* ---- ATS routes -------------------------------------------- */
+.atrow{width:100%;text-align:left;display:block;background:var(--bg-2);
+  border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:var(--gut)}
+.atrow:active{border-color:var(--border-strong)}
+.atrow.match{border-color:var(--accent)}
+.atrow .top{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.atrow .rd{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
+  color:var(--accent)}
+.atrow .lim{flex:1 1 auto;font-size:var(--t-2xs);color:var(--text-fainter)}
+.atrow .near{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-2)}
+.atrow .pts{font-family:var(--mono);font-size:var(--t-sm);color:var(--text-dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atrow .tag{display:inline-block;margin-top:6px;font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.atrow .ed{margin-top:5px;font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-muted)}
+
+/* ---- Fuel: reorder + use route ------------------------------ */
+.fhdr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.fhdr .flab{margin:0}
+.fuse{flex:0 0 auto;height:var(--mod-a);padding:0 12px;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--accent);color:var(--accent);
+  font-size:var(--t-sm);font-weight:700;white-space:nowrap}
+.fuse[disabled]{border-color:var(--border);color:var(--text-fainter)}
+.fmove{display:flex;gap:var(--gut);margin-top:12px}
+.fmove button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border-strong);color:var(--text-2);
+  display:flex;align-items:center;justify-content:center}
+.fmove button svg{width:17px;height:17px}
+.fmove button[disabled]{opacity:.35}
+.fedit{height:var(--mod-a);padding:0 12px;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-2)}
+.fedit.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+
+/* ---- Downloads --------------------------------------------- */
+.dlsum{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:13px 14px;margin-bottom:16px}
+.dlsum .top{display:flex;align-items:baseline;gap:8px}
+.dlsum .top b{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.dlsum .top .v{font-family:var(--mono);font-size:var(--t-lg);font-weight:700;color:var(--text)}
+.dlsum .bar{height:6px;border-radius:3px;background:var(--inset);overflow:hidden;margin-top:9px;
+  display:flex}
+.dlsum .bar i{display:block;height:100%}
+.dlsum .key{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:9px}
+.dlsum .key span{display:flex;align-items:center;gap:5px;font-size:var(--t-2xs);
+  color:var(--text-muted)}
+.dlsum .key i{width:8px;height:8px;border-radius:2px;display:block}
+
+.dlgrp{margin-top:18px;font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text-fainter);margin-bottom:4px}
+.dlitem{padding:13px 0;border-bottom:1px solid var(--border)}
+.dlitem .hd{display:flex;align-items:baseline;gap:10px}
+.dlitem .hd b{flex:1 1 auto;min-width:0;font-size:var(--t-sm);font-weight:700;color:var(--text)}
+.dlitem .hd .sz{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);color:var(--text-2)}
+.dlitem .ds{margin-top:3px;font-size:var(--t-2xs);color:var(--text-fainter);line-height:1.45}
+.dlitem .ed{margin-top:4px;font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-muted)}
+.dlitem .act{display:flex;align-items:center;gap:var(--gut);margin-top:10px}
+.dlitem .act button{flex:0 0 auto;height:var(--mod-a);padding:0 14px;border-radius:var(--radius);
+  font-size:var(--t-sm);font-weight:700}
+.dlitem .act .get{background:var(--accent);color:#0a0e13;border:0}
+.dlitem .act .rm{background:var(--bg-2);border:1px solid var(--border-strong);color:var(--bad)}
+.dlitem .act .rm.arm{border-color:var(--bad);background:rgba(240,80,110,.12)}
+.dlitem .act .st{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--good);text-align:right}
+.dlitem .act .st.none{color:var(--text-fainter)}
+.dlitem .prog{margin-top:10px}
+.dlitem .prog .track{height:6px;border-radius:3px;background:var(--inset);overflow:hidden}
+.dlitem .prog .track i{display:block;height:100%;background:var(--accent);width:0%;
+  transition:width .25s linear}
+.dlitem .prog .lbl{display:flex;justify-content:space-between;margin-top:6px;
+  font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-muted)}
+.dlitem .prog .lbl button{background:none;border:0;color:var(--bad);font-weight:700;
+  font-family:var(--sans);font-size:var(--t-2xs)}
+.dlitem.bundled{opacity:.72}
+
+/* ---- Frequencies editor ------------------------------------ */
+.fqfield{width:100%;text-align:left;display:flex;align-items:center;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--border)}
+.fqfield .id{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
+  color:var(--accent-2);width:52px}
+.fqfield .nm2{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fqfield .n{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);color:var(--text-fainter)}
+.fqfield .n.mine{color:var(--accent)}
+
+.fqrow{width:100%;text-align:left;display:flex;align-items:center;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--border)}
+.fqrow .lb{flex:1 1 auto;min-width:0;font-size:var(--t-sm);font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fqrow .vl{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
+  color:var(--accent-2)}
+.fqrow .src{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--text-fainter);width:44px;text-align:right}
+.fqrow .src.mine{color:var(--accent)}
+.fqadd{width:100%;height:var(--mod-b);margin-top:14px;border-radius:var(--radius);
+  background:var(--accent);color:#0a0e13;font-size:var(--t-sm);font-weight:700}
+
+/* ---- Charts ------------------------------------------------ */
+.chfield{width:100%;text-align:left;display:flex;align-items:center;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--border)}
+.chfield .id{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
+  color:var(--accent-2);width:52px}
+.chfield .nm2{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chfield .n{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);color:var(--text-fainter)}
+
+.chtabs{display:flex;gap:var(--gut);padding-bottom:12px;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chtabs::-webkit-scrollbar{display:none}
+.chtabs button{flex:0 0 auto;height:var(--mod-a);padding:0 13px;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted);white-space:nowrap}
+.chtabs button.on{background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13}
+.chtabs button .c{font-family:var(--mono);font-size:var(--t-2xs);margin-left:6px;opacity:.75}
+
+.chrow{width:100%;text-align:left;display:flex;align-items:center;gap:11px;
+  padding:12px 0;border-bottom:1px solid var(--border)}
+.chrow .ic{flex:0 0 auto;width:20px;height:20px;color:var(--text-muted)}
+.chrow .t2{flex:1 1 auto;min-width:0}
+.chrow .t2 b{display:block;font-size:var(--t-sm);font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chrow .t2 span{display:block;font-family:var(--mono);font-size:var(--t-2xs);
+  color:var(--text-fainter);margin-top:2px}
+.chrow .mv{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--accent-2)}
+.chback{display:flex;align-items:center;gap:8px;height:var(--mod-a);padding:0 12px 0 8px;
+  margin-bottom:12px;border-radius:var(--radius);background:var(--bg-2);
+  border:1px solid var(--border-strong);font-size:var(--t-sm);font-weight:600;color:var(--text-2)}
+.chback svg{width:17px;height:17px}
+
+/* chart viewer placeholder */
+.chview{position:fixed;inset:0;z-index:1200;background:var(--bg);display:none;
+  flex-direction:column;padding-top:calc(var(--sat) + var(--top-pad));padding-bottom:var(--sabp)}
+.chview.on{display:flex}
+.chview .chsheet{position:static;transform:none;width:auto;
+  flex:1 1 auto;min-height:0;margin:12px var(--edge);border-radius:var(--radius);
+  background:var(--inset);border:1px solid var(--border-strong);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  text-align:center;padding:24px}
+.chview .chsheet svg{width:38px;height:38px;color:var(--text-fainter)}
+.chview .chsheet b{font-size:var(--t-md);color:var(--text-2)}
+.chview .chsheet span{font-size:var(--t-sm);color:var(--text-fainter);line-height:1.5;max-width:280px}
+.chview .fn{font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-muted);
+  word-break:break-all;max-width:280px}
+
 /* ---- Flights: saved routes -------------------------------- */
 .flbar{display:flex;align-items:center;gap:var(--gut);padding-bottom:12px}
 .flbar .cnt{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;
@@ -1756,8 +1990,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <!-- More sheet -->
 <div class="sheet" id="sheetMore">
   <div class="top">
-    <button class="stile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
-    <button class="stile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2L5.4 5.4"/></svg><span class="lab">Settings</span></button>
+    <button class="stile" id="stDl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
+    <button class="stile" id="stSet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg><span class="lab">Settings</span></button>
   </div>
   <div class="shead"><span class="k">Views</span><button class="a" id="editTabs">Edit</button></div>
   <div class="slist" id="moreList"></div>
@@ -1839,6 +2073,65 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     </div>
     <div class="tedhint" id="flRoute"></div>
     <div class="tedlist" id="flActs"></div>
+  </div>
+</div>
+
+<!-- ATS routes -->
+<div class="ntv" id="atsView">
+  <div class="vhead">
+    <b>ATS routes</b>
+    <button class="back" id="atsClose" style="height:26px;padding:0 10px;border-radius:var(--radius);display:flex;align-items:center;background:var(--bg-2);border:1px solid var(--border-strong);font-size:var(--t-sm);font-weight:600;color:var(--text-2)">Close</button>
+  </div>
+  <div class="vbody" id="atsBody"></div>
+</div>
+
+<!-- Quick edit: aircraft / altitude / ETD -->
+<div class="ted" id="qkEd">
+  <div class="tedw">
+    <div class="tedh"><b id="qkTtl">Edit</b>
+      <button class="x" id="qkClose" aria-label="Close">&times;</button></div>
+    <div class="tedpage">
+      <div class="ntfld" style="margin:0"><label id="qkLab" for="qkIn">Value</label>
+        <input id="qkIn" type="text"></div>
+    </div>
+    <div class="tedlist"><button class="tedrow" id="qkSave" style="color:var(--accent)">Save</button></div>
+  </div>
+</div>
+
+<!-- Frequency editor -->
+<div class="ntv" id="fqEd">
+  <div class="vhead">
+    <b id="fqEdTtl">Frequency</b>
+    <button class="back" id="fqEdClose" style="height:26px;padding:0 10px;border-radius:var(--radius);display:flex;align-items:center;background:var(--bg-2);border:1px solid var(--border-strong);font-size:var(--t-sm);font-weight:600;color:var(--text-2)">Close</button>
+  </div>
+  <div class="vbody">
+    <div class="ntfld"><label for="fqLb">Label</label>
+      <input id="fqLb" type="text" placeholder="TWR, CTAF, COMPANY&hellip;"
+             autocapitalize="characters" autocorrect="off" spellcheck="false"></div>
+    <div class="ntfld"><label for="fqVl">Frequency</label>
+      <input id="fqVl" type="text" inputmode="decimal" placeholder="118.7">
+      <div class="hint">MHz for VHF, or kHz for an HF band.</div></div>
+    <div class="ntacts">
+      <button class="del" id="fqDel">Delete</button>
+      <button class="save" id="fqSave">Save</button>
+    </div>
+    <div class="cnote">Your own frequencies are stored on this device and shown alongside the
+      published ones on the airfield card and in the Radio panel. Published data is never
+      overwritten. Advisory only &mdash; verify against the AIP or the ERSA.</div>
+  </div>
+</div>
+
+<!-- Chart viewer (placeholder in the demo) -->
+<div class="chview" id="chView">
+  <div class="vhead">
+    <b id="chViewTtl">Chart</b>
+    <button class="back" id="chViewClose" style="height:26px;padding:0 10px;border-radius:var(--radius);display:flex;align-items:center;background:var(--bg-2);border:1px solid var(--border-strong);font-size:var(--t-sm);font-weight:600;color:var(--text-2)">Close</button>
+  </div>
+  <div class="chsheet">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
+    <b>Plate viewer</b>
+    <span>The demo shell has no PDF plates bundled. In the live build this opens the georeferenced plate with the moving-map overlay.</span>
+    <div class="fn" id="chViewFn"></div>
   </div>
 </div>
 
@@ -1977,7 +2270,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v59';
+  var VERSION = 'v67';
   var BUILD   = '2026-07-19';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -2037,6 +2330,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (railEd) railEd.classList.remove('on');
     if (noteEd) noteEd.classList.remove('on');
     if (flEd) flEd.classList.remove('on');
+    if (chView) chView.classList.remove('on');
+    if (fqEd) fqEd.classList.remove('on');
     if (shEd) shEd.classList.remove('on');
     if (actsEd) actsEd.classList.remove('on');
     if (wpt) wpt.classList.remove('on');
@@ -2275,13 +2570,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* ---- render: Route ---- */
   function routeHTML(){
     var h = '<div class="drow">'
-      + '<button class="dbtn">P2-LAW</button>'
-      + '<button class="dbtn">BK117</button>'
-      + '<button class="dbtn">' + AC.alt.toLocaleString() + '\'</button></div>'
+      + '<button class="dbtn" data-hb="reg">' + AC.reg + '</button>'
+      + '<button class="dbtn" data-hb="type">' + AC.type + '</button>'
+      + '<button class="dbtn" data-hb="alt">' + AC.alt.toLocaleString() + '\'</button></div>'
       + '<div class="drow">'
-      + '<button class="dbtn">Procedure</button>'
-      + '<button class="dbtn">Routes (3)</button>'
-      + '<button class="dbtn">ETD ' + clock(0) + '</button></div>';
+      + '<button class="dbtn" data-hb="proc">Procedure</button>'
+      + '<button class="dbtn" data-hb="ats">Routes (' + ATS_ROUTES.length + ')</button>'
+      + '<button class="dbtn" data-hb="etd">ETD ' + clock(0) + '</button></div>';
     if (!ROUTE.length){
       h += '<div class="chipempty">No route. Tap Add to build one.</div>';
     }
@@ -2409,6 +2704,28 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function drawFpl(){
     saveRoute();
+    /* the six header buttons were display-only until now */
+    setTimeout(function(){
+      $$('#fplBody [data-hb]').forEach(function(b){
+        if (b._hb) return; b._hb = true;
+        b.addEventListener('click', function(){
+          var w = b.getAttribute('data-hb');
+          if (w === 'ats')  return openAts();
+          if (w === 'proc'){
+            /* IFR procedures live with the plates for now */
+            var f = null;
+            for (var i = ROUTE.length - 1; i >= 0; i--){
+              if (chartsFor(ROUTE[i].id).length){ f = ROUTE[i].id; break; }
+            }
+            if (!f){ toast('No plates for the fields in this plan'); return; }
+            chField = f; chTab = 'approach';
+            goTo('charts');
+            return;
+          }
+          openQk(w);
+        });
+      });
+    }, 0);
     $('#fplBody').innerHTML = fplTab === 'route'   ? routeHTML()
                             : fplTab === 'navlog'  ? navlogHTML()
                             : profileHTML();
@@ -2814,6 +3131,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       return u.indexOf('CNTR') >= 0 || u.indexOf('RDO') >= 0;
     });
   }
+  /* every frequency for a field as [label, value] pairs, published plus
+     the pilot's own - used by the Radio panel so custom entries appear
+     in route order like the rest. */
+  function fqAllPairs(id){
+    return allFreqFor(id).map(function(r){ return [r.lb, r.vl]; });
+  }
 
   function radHTML(){
     if (ROUTE.length < 1) return '<div class="chipempty">No route. Build one in FPL.</div>';
@@ -2824,8 +3147,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       h += '<div class="fqp' + (i === toWpt ? ' act' : '') + '">'
         +  '<div class="fqh"><span class="ix">' + (i + 1) + '</span>'
         +  '<b>' + label(p) + '</b><span>' + role + '</span></div>';
-      if (fi){
-        fi.freq.slice().sort(function(a, b){ return fqRank(a[0]) - fqRank(b[0]); })
+      if (fi || (p.id && myFreqFor(p.id).length)){
+        fqAllPairs(p.id).sort(function(a, b){ return fqRank(a[0]) - fqRank(b[0]); })
           .forEach(function(r){
             h += '<button class="fqr' + (fqPrimary(r[0]) ? ' pri' : '') + '" data-f="' + r[1] + '">'
                + '<span class="t">' + r[0] + '</span><span class="f">' + r[1] + '</span></button>';
@@ -3632,7 +3955,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var CAT_SHORT = { field:'RWY', fix:'FIX', strip:'STRIP', mine:'WPT' };
 
   /* ---- sun times: real NOAA calculation, PNG is UTC+10 ---- */
-  function sunTimes(lat, lon, date){
+  /* zen 90.833 = sunrise/sunset (refraction + solar disc)
+     zen 96     = civil twilight, i.e. first light and last light */
+  function sunTimes(lat, lon, date, zen){
     var rad = Math.PI / 180;
     var start = Date.UTC(date.getUTCFullYear(), 0, 0);
     var doy = Math.floor((date.getTime() - start) / 86400000);
@@ -3642,7 +3967,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var dec = 0.006918 - 0.399912*Math.cos(g) + 0.070257*Math.sin(g)
             - 0.006758*Math.cos(2*g) + 0.000907*Math.sin(2*g)
             - 0.002697*Math.cos(3*g) + 0.00148*Math.sin(3*g);
-    var c = Math.cos(90.833 * rad) / (Math.cos(lat*rad) * Math.cos(dec)) - Math.tan(lat*rad) * Math.tan(dec);
+    var c = Math.cos((zen === undefined ? 90.833 : zen) * rad) / (Math.cos(lat*rad) * Math.cos(dec)) - Math.tan(lat*rad) * Math.tan(dec);
     if (c < -1 || c > 1) return null;
     var haDeg = Math.acos(c) / rad;
     return [720 - 4*(lon + haDeg) - eq, 720 - 4*(lon - haDeg) - eq];   /* minutes UTC */
@@ -3671,19 +3996,33 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---- tabs ---- */
   function cardInfo(f, fi){
-    var now = new Date(), st = sunTimes(f.lat, f.lon, now);
+    var now = new Date();
+    var st = sunTimes(f.lat, f.lon, now);           /* sunrise / sunset */
+    var tw = sunTimes(f.lat, f.lon, now, 96);       /* first / last light */
     var h = '<div class="cinfo"><div class="cthumb">' + (CAT_SHORT[f.cat] || 'WPT') + '</div>'
       + '<div class="m"><b>' + f.nm + '</b>'
       + '<span>' + (fi ? fi.town : (CAT_LABEL[f.cat] || 'Waypoint')) + '</span>'
       + '<span>' + (fi ? 'Elevation ' + fi.elev.toLocaleString() + '\'' + (fi.iata ? ' &middot; ' + fi.iata : '')
                        : (CAT_LABEL[f.cat] || '')) + '</span></div></div>';
 
+    /* light times sit at the top - they decide whether the job is legal */
+    if (st || tw){
+      h += '<div class="clight">'
+        +  '<div><span class="k">First light</span><span class="v">'
+        +    (tw ? hhmmLocal(tw[0], 600) : '\u2014') + '</span></div>'
+        +  '<div><span class="k">Sunrise</span><span class="v">'
+        +    (st ? hhmmLocal(st[0], 600) : '\u2014') + '</span></div>'
+        +  '<div><span class="k">Sunset</span><span class="v">'
+        +    (st ? hhmmLocal(st[1], 600) : '\u2014') + '</span></div>'
+        +  '<div><span class="k">Last light</span><span class="v">'
+        +    (tw ? hhmmLocal(tw[1], 600) : '\u2014') + '</span></div>'
+        +  '</div><div class="clightn">Local time. Civil twilight for first and last light.</div>';
+    }
+
     var pair = ddm(f.lat, true) + ' ' + ddm(f.lon, false);
     h += '<div class="csec">Position</div>'
-      +  '<button class="kv cp" data-cp="' + pair + '"><span class="k">Latitude</span>'
-      +    '<span class="v amb">' + ddm(f.lat, true) + '</span>' + CPI + '</button>'
-      +  '<button class="kv cp" data-cp="' + pair + '"><span class="k">Longitude</span>'
-      +    '<span class="v amb">' + ddm(f.lon, false) + '</span>' + CPI + '</button>';
+      +  '<button class="kv cp" data-cp="' + pair + '"><span class="k">Coordinates</span>'
+      +    '<span class="v amb">' + pair + '</span>' + CPI + '</button>';
 
     if (ROUTE.length){
       var from = ROUTE[Math.max(0, Math.min(toWpt, ROUTE.length - 1))];
@@ -3693,32 +4032,39 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       }
     }
 
-    h += '<div class="csec">Day</div>';
-    if (st){
-      h += '<div class="kv"><span class="k">Sunrise</span><span class="v">' + hhmmLocal(st[0], 600) + ' LT</span></div>'
-        +  '<div class="kv"><span class="k">Sunset</span><span class="v">'  + hhmmLocal(st[1], 600) + ' LT</span></div>'
-        +  '<div class="kv"><span class="k">Daylight</span><span class="v">' + hhmm((st[1]-st[0])/60) + '</span></div>';
-    } else {
-      h += '<div class="cempty">Not computable</div>';
-    }
-
-    if (fi){
+    if (f.id && (fi || myFreqFor(f.id).length)){
+      var frows = allFreqFor(f.id);
       h += '<div class="csec">Frequencies</div>';
-      fi.freq.forEach(function(r){
-        h += '<div class="kv"><span class="k">' + r[0] + '</span><span class="v acc">' + r[1] + '</span></div>';
+      frows.forEach(function(r){
+        h += '<div class="kv"><span class="k">' + esc(r.lb)
+          +  (r.mine ? ' <span style="color:var(--accent);font-size:var(--t-2xs);'
+          +            'letter-spacing:.08em">MINE</span>' : '')
+          +  '</span><span class="v acc">' + esc(r.vl) + '</span></div>';
       });
+      h += '<button class="add" data-fqgo="' + f.id + '" style="width:100%;height:var(--mod-a);'
+        +  'margin-top:10px;border-radius:var(--radius);background:var(--bg);'
+        +  'border:1px dashed var(--border-strong);font-size:var(--t-sm);font-weight:600;'
+        +  'color:var(--text-muted)">Edit frequencies</button>';
     }
 
     if (f.cat === 'mine'){
       h += '<div class="csec">Waypoint</div>'
         +  '<div class="setrow"><span class="lb">Name</span>'
         +    '<input class="fin wide" data-wp="name" type="text" value="' + f.id + '"></div>'
-        +  '<div class="setrow"><span class="lb">Latitude</span>'
-        +    '<input class="fin" data-wp="lat" type="text" value="' + ddm(f.lat, true) + '"></div>'
-        +  '<div class="setrow"><span class="lb">Longitude</span>'
-        +    '<input class="fin" data-wp="lon" type="text" value="' + ddm(f.lon, false) + '"></div>'
+        +  '<div class="setrow"><span class="lb">Coordinates</span>'
+        +    '<input class="fin wide" data-wp="coord" type="text" value="'
+        +    ddm(f.lat, true) + ' ' + ddm(f.lon, false) + '"></div>'
         +  '<div class="wpbtns"><button data-wp="here">Move to map centre</button>'
         +    '<button class="del" data-wp="del">Delete</button></div>';
+    }
+
+    if (f.id && chartsFor(f.id).length){
+      h += '<div class="csec">Charts</div>'
+        +  '<button class="add" data-chgo="' + f.id + '" style="width:100%;height:var(--mod-a);'
+        +  'margin-top:8px;border-radius:var(--radius);background:var(--bg);'
+        +  'border:1px dashed var(--border-strong);font-size:var(--t-sm);font-weight:600;'
+        +  'color:var(--text-muted)">'
+        +  chartsFor(f.id).length + ' plates for ' + f.id + '</button>';
     }
 
     if (f.id){
@@ -3894,6 +4240,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $$('#cardBody [data-cn]').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); openNote(b.getAttribute('data-cn')); });
     });
+    $$('#cardBody [data-fqgo]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        fqField = b.getAttribute('data-fqgo');
+        goTo('freq');
+      });
+    });
+    $$('#cardBody [data-chgo]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        chField = b.getAttribute('data-chgo'); chTab = 'airport';
+        goTo('charts');
+      });
+    });
     $$('#cardBody [data-cnadd]').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); openNote(null, b.getAttribute('data-cnadd')); });
     });
@@ -3916,16 +4276,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         });
       }
 
-      if (w === 'lat' || w === 'lon'){
+      if (w === 'coord'){
+        /* one field, any format - DDM, decimal, Google brackets, plus code */
         el.addEventListener('change', function(){
-          var isLat = (w === 'lat');
-          var v = parseDDM(el.value, isLat);
-          if (v === null){
-            toast(isLat ? 'Use S06 34.2' : 'Use E146 43.6');
-            el.value = ddm(isLat ? f.lat : f.lon, isLat);
+          var c = parseAnyCoord(el.value);
+          if (!c){
+            toast('Paste a coordinate or a plus code');
+            el.value = ddm(f.lat, true) + ' ' + ddm(f.lon, false);
             return;
           }
-          if (isLat) f.lat = v; else f.lon = v;
+          f.lat = c.lat; f.lon = c.lon;
           ROUTE.forEach(function(p){ if (p.id === f.id){ p.lat = f.lat; p.lon = f.lon; } });
           saveMarks(); drawCard(); renderMap(); drawFpl();
         });
@@ -4148,7 +4508,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { k:'wb',       t:'W&amp;B'  },
     { k:'freq',     t:'Freqs'    },
     { k:'flights',  t:'Flights'  },
-    { k:'notes',    t:'Notes'    }
+    { k:'notes',    t:'Notes'    },
+    { k:'downloads',t:'Downloads' }
   ];
   function isAct(k){
     for (var i=0;i<VIEWS.length;i++) if (VIEWS[i].k===k) return !!VIEWS[i].act;
@@ -4303,6 +4664,717 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   });
   $('#shEdClose').addEventListener('click', function(){ shEd.classList.remove('on'); });
   shEd.addEventListener('click', function(e){ if (e.target === shEd) shEd.classList.remove('on'); });
+
+  /* the two tiles at the top of the More sheet had no handlers */
+  (function wireMoreTiles(){
+    var d = $('#stDl'), s = $('#stSet');
+    if (d) d.addEventListener('click', function(){ goTo('downloads'); });
+    if (s) s.addEventListener('click', function(){ closeAll(); openSet(); });
+  })();
+
+
+  /* ============================================================
+     ATS ROUTES
+     Real ENR 3.1 data lifted from the desktop build (Danny-verified,
+     14 of the 99 routes - those touching the core fields). Structure is
+     the desktop's, so the port swaps the array and nothing else.
+     Every route carries its own AIP edition; they are NOT all the same
+     edition, which is why the date is shown per route.
+     ============================================================ */
+  var ATS_ROUTES = [{"rd":"H401","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"LELID","a":-8.91109,"o":147.11942},{"n":"GUARI","a":-8.125,"o":146.98},{"n":"NZ","a":-6.57,"o":146.70799},{"n":"ALBUP","a":-5.21167,"o":145.77667},{"n":"BOGIA","a":-4.40355,"o":144.73198},{"n":"DOTUB","a":-3.58333,"o":143.67667},{"n":"EMLEN","a":-3.13137,"o":142.48773},{"n":"VNO","a":-2.6789,"o":141.30299}],"segs":[{"t":344,"d":33,"a":"8500"},{"t":344,"d":47,"a":"14000"},{"t":344,"d":94,"a":"14000"},{"t":320,"d":98,"a":"16000"},{"t":303,"d":79,"a":"7800"},{"t":303,"d":80,"a":"7800"},{"t":287,"d":76,"a":"7300"},{"t":287,"d":76,"a":"8400"}]},{"rd":"H404","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"OKTUX","a":-4.30026,"o":147.07103},{"n":"MOE","a":-2.06142,"o":147.42599}],"segs":[{"t":4,"d":138,"a":"16000"},{"t":4,"d":136,"a":"3000"}]},{"rd":"H405","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"DUKIS","a":-8.12226,"o":147.10843},{"n":"LARID","a":-6.73667,"o":146.99833},{"n":"NZ","a":-6.57,"o":146.70799}],"segs":[{"t":350,"d":80,"a":"15300"},{"t":349,"d":83,"a":"15300"},{"t":295,"d":20,"a":"6300"}]},{"rd":"H407","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"KAMUL","a":-8.18626,"o":146.73463},{"n":"SAKTO","a":-8.70286,"o":146.74289}],"segs":[{"t":174,"d":97,"a":"14000"},{"t":173,"d":31,"a":"14400"}]},{"rd":"H408","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"WESFI","a":-6.55044,"o":146.40752},{"n":"BEMGO","a":-6.53246,"o":146.24222}],"segs":[{"t":268,"d":18,"a":"11000"},{"t":268,"d":10,"a":"11000"}]},{"rd":"H409","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"MUKIK","a":-6.37456,"o":146.18645},{"n":"KANTU","a":-6.22239,"o":145.77736},{"n":"MUDIX","a":-6.07833,"o":145.39},{"n":"YABAL","a":-5.94897,"o":144.8071},{"n":"IKERU","a":-5.83833,"o":144.30833},{"n":"PAPTI","a":-5.6148,"o":142.76914},{"n":"OKT","a":-5.4099,"o":141.319}],"segs":[{"t":285,"d":33,"a":"8000"},{"t":285,"d":26,"a":"12500"},{"t":285,"d":25,"a":"14000/12500"},{"t":278,"d":36,"a":"15800"},{"t":278,"d":30,"a":"15800"},{"t":274,"d":93,"a":"15000/16400"},{"t":273,"d":88,"a":"15000"}]},{"rd":"H410","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"AVLIX","a":-6.61498,"o":147.85793},{"n":"ARAWE","a":-6.10479,"o":148.99879},{"n":"VATVO","a":-5.45833,"o":150.415},{"n":"ESNIV","a":-4.34667,"o":152.39833}],"segs":[{"t":87,"d":68,"a":"11000"},{"t":59,"d":75,"a":"3300"},{"t":59,"d":93,"a":"8300"},{"t":54,"d":136,"a":"9300"}]},{"rd":"H413","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"VIDOT","a":-6.84854,"o":146.35397},{"n":"EPKED","a":-7.96258,"o":145.77838}],"segs":[{"t":226,"d":27,"a":"6000"},{"t":201,"d":75,"a":"11000"}]},{"rd":"H414","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"ALBUP","a":-5.21167,"o":145.77667},{"n":"UGTOK","a":-6.12914,"o":146.09984},{"n":"MUKIK","a":-6.37456,"o":146.18645},{"n":"BEMGO","a":-6.53246,"o":146.24222},{"n":"VIDOT","a":-6.84854,"o":146.35397},{"n":"KAIFU","a":-8.22804,"o":146.64296},{"n":"SAKTO","a":-8.70286,"o":146.74289},{"n":"PY","a":-9.46105,"o":147.233}],"segs":[{"t":155,"d":57,"a":"15000"},{"t":154,"d":16,"a":"15000"},{"t":154,"d":10,"a":"14000"},{"t":154,"d":19,"a":"14000"},{"t":163,"d":85,"a":"14000"},{"t":163,"d":29,"a":"14000/13000"},{"t":142,"d":53,"a":"4000"}]},{"rd":"H421","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 31 OCT 2024","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"RUPNO","a":-8.74557,"o":148.25419},{"n":"DAKNU","a":-6.99193,"o":149.91888},{"n":"BINNA","a":-5.92049,"o":150.92685},{"n":"ESNIV","a":-4.34667,"o":152.39833},{"n":"RENEB","a":-3.04482,"o":152.62642}],"segs":[{"t":49,"d":75,"a":"13700"},{"t":37,"d":144,"a":"3600"},{"t":37,"d":88,"a":"9200"},{"t":37,"d":129,"a":"9500"},{"t":4,"d":79,"a":"7900"}]},{"rd":"H526","cls":"Class A/C/F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 2023\u201325","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"ENTOG","a":-9.40594,"o":147.88919},{"n":"RUPNO","a":-8.74557,"o":148.25419}],"segs":[]},{"rd":"H529","cls":"Class A/C/F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 2023\u201325","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"COWRY","a":-7.65474,"o":148.66515},{"n":"VATVO","a":-5.45833,"o":150.415},{"n":"LEMUP","a":-4.27286,"o":151.50365},{"n":"RENEB","a":-3.04482,"o":152.62642}],"segs":[]},{"rd":"H532","cls":"Class A/C/F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 2023\u201325","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"KAPKI","a":-10.24861,"o":148.29556},{"n":"KALKO","a":-10.315,"o":150.36167}],"segs":[]},{"rd":"H539","cls":"Class A/C/F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 2023\u201325","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"STARF","a":-9.12656,"o":146.7253},{"n":"EMPRA","a":-8.70577,"o":146.09686},{"n":"KIBAV","a":-7.42833,"o":144.24833},{"n":"BOSVI","a":-6.77236,"o":142.75922},{"n":"PASDU","a":-6.12167,"o":141.28667}],"segs":[]}];
+
+  /* nearest distance from a point to any fix on a route */
+  function atsNear(r, here){
+    var best = 1e9;
+    r.pts.forEach(function(p){
+      var d = nmBetween(here, { lat:p.a, lon:p.o });
+      if (d < best) best = d;
+    });
+    return best;
+  }
+  /* does this route contain two consecutive points of the current plan? */
+  function atsMatch(r){
+    if (ROUTE.length < 2) return null;
+    var names = r.pts.map(function(p){ return p.n; });
+    for (var i = 0; i < ROUTE.length - 1; i++){
+      var a = shortId(ROUTE[i].id), b = shortId(ROUTE[i+1].id);
+      var ia = names.indexOf(a), ib = names.indexOf(b);
+      if (ia >= 0 && ib >= 0 && ia !== ib) return { leg:i, from:ia, to:ib };
+    }
+    return null;
+  }
+  /* AYNZ -> NZ : ENR 3.1 names fixes by the two-letter navaid ident */
+  function shortId(id){
+    if (!id) return '';
+    return (/^AY[A-Z]{2}$/.test(id)) ? id.slice(2) : id;
+  }
+
+  function atsHTML(){
+    var here = (ship && ship.lat !== undefined)
+             ? { lat:ship.lat, lon:ship.lon }
+             : { lat:(VIEW.n + VIEW.s) / 2, lon:(VIEW.w + VIEW.e) / 2 };
+
+    var rows = ATS_ROUTES.map(function(r){
+      return { r:r, d:atsNear(r, here), m:atsMatch(r) };
+    });
+    /* routes that fit the plan first, then by distance */
+    rows.sort(function(a, b){
+      if (!!a.m !== !!b.m) return a.m ? -1 : 1;
+      return a.d - b.d;
+    });
+
+    var h = '<div class="cnote" style="margin-bottom:12px">Published ATS routes near you. '
+          + 'A route that already links two points in your plan is highlighted and can be '
+          + 'inserted into that leg. Advisory only \u2014 check levels and the AIP edition '
+          + 'before you file or fly one.</div>';
+
+    rows.slice(0, 12).forEach(function(x){
+      var r = x.r;
+      h += '<button class="atrow' + (x.m ? ' match' : '') + '" data-ats="' + r.rd + '">'
+        +  '<span class="top"><span class="rd">' + r.rd + '</span>'
+        +  '<span class="lim">' + r.lo + ' \u2013 ' + r.up + '</span>'
+        +  '<span class="near">' + x.d.toFixed(0) + ' NM</span></span>'
+        +  '<div class="pts">' + r.pts.map(function(p){ return p.n; }).join(' \u203a ') + '</div>'
+        +  (x.m ? '<span class="tag">fits your ' + label(ROUTE[x.m.leg]) + ' \u2192 '
+                + label(ROUTE[x.m.leg + 1]) + ' leg</span>' : '')
+        +  '<div class="ed">' + r.ed + '</div></button>';
+    });
+    return h;
+  }
+
+  var atsView = $('#atsView'), atsArm = null;
+  function openAts(){
+    closeAll();
+    $('#atsBody').innerHTML = atsHTML();
+    wireAts();
+    atsView.classList.add('on');
+  }
+  function wireAts(){
+    $$('#atsBody [data-ats]').forEach(function(b){
+      b.addEventListener('click', function(){ useAts(b.getAttribute('data-ats')); });
+    });
+  }
+  $('#atsClose').addEventListener('click', function(){
+    atsView.classList.remove('on'); clearTimeout(atsArm); atsArm = null;
+  });
+
+  function useAts(rd){
+    var r = null;
+    ATS_ROUTES.forEach(function(x){ if (x.rd === rd) r = x; });
+    if (!r) return;
+    var m = atsMatch(r);
+
+    if (m){
+      /* insert the intermediate fixes into the matching leg - this is the
+         normal case: you already have the endpoints, you want the airway */
+      var lo = Math.min(m.from, m.to), hi = Math.max(m.from, m.to);
+      var mid = r.pts.slice(lo + 1, hi);
+      if (m.from > m.to) mid.reverse();
+      if (!mid.length){ toast(rd + ' adds no fixes to that leg'); return; }
+      var ins = mid.map(function(p){
+        return { id:p.n, nm:p.n + ' \u00b7 ' + rd, cat:'fix', lat:p.a, lon:p.o };
+      });
+      Array.prototype.splice.apply(ROUTE, [m.leg + 1, 0].concat(ins));
+      drawFpl(); renderMap();
+      atsView.classList.remove('on');
+      toast(ins.length + ' fixes from ' + rd + ' added');
+      return;
+    }
+
+    /* no match: loading the whole route replaces the plan, so confirm */
+    if (ROUTE.length > 1 && !atsArm){
+      atsArm = setTimeout(function(){ atsArm = null; }, 4000);
+      toast('Tap ' + rd + ' again to replace your ' + ROUTE.length + '-point plan');
+      return;
+    }
+    clearTimeout(atsArm); atsArm = null;
+    ROUTE.length = 0;
+    r.pts.forEach(function(p){
+      ROUTE.push({ id:p.n, nm:p.n + ' \u00b7 ' + rd, cat:'fix', lat:p.a, lon:p.o });
+    });
+    toWpt = Math.min(1, ROUTE.length - 1);
+    drawFpl(); renderMap();
+    atsView.classList.remove('on');
+    toast(rd + ' loaded');
+  }
+
+  /* ---- quick edit for the FPL header buttons ---- */
+  var qkEd = $('#qkEd'), qkWhat = null;
+  function openQk(what){
+    closeAll();
+    qkWhat = what;
+    var cfg = {
+      reg:  ['Registration', 'Registration', AC.reg],
+      type: ['Aircraft type', 'Type', AC.type],
+      alt:  ['Cruise altitude', 'Feet', String(AC.alt)],
+      etd:  ['ETD', 'UTC, as HHMM', clock(0).replace(':', '')]
+    }[what];
+    $('#qkTtl').textContent = cfg[0];
+    $('#qkLab').textContent = cfg[1];
+    $('#qkIn').value = cfg[2];
+    $('#qkIn').setAttribute('inputmode', (what === 'alt' || what === 'etd') ? 'numeric' : 'text');
+    qkEd.classList.add('on');
+    setTimeout(function(){ try{ $('#qkIn').focus(); }catch(e){} }, 60);
+  }
+  $('#qkClose').addEventListener('click', function(){ qkEd.classList.remove('on'); });
+  qkEd.addEventListener('click', function(e){ if (e.target === qkEd) qkEd.classList.remove('on'); });
+
+  $('#qkSave').addEventListener('click', function(){
+    var v = $('#qkIn').value.trim();
+    if (!v){ toast('Nothing entered'); return; }
+    if (qkWhat === 'reg'){ AC.reg = v.toUpperCase(); }
+    if (qkWhat === 'type'){ AC.type = v.toUpperCase(); }
+    if (qkWhat === 'alt'){
+      var a = parseInt(v.replace(/[^\d]/g, ''), 10);
+      if (isNaN(a) || a < 0 || a > 60000){ toast('Altitude looks wrong'); return; }
+      AC.alt = a;
+    }
+    if (qkWhat === 'etd'){
+      var m = v.replace(/[^\d]/g, '');
+      if (m.length !== 4){ toast('Use HHMM, e.g. 0308'); return; }
+      var hh = parseInt(m.slice(0,2), 10), mm = parseInt(m.slice(2), 10);
+      if (hh > 23 || mm > 59){ toast('Not a valid time'); return; }
+      ETD_MIN = hh * 60 + mm;
+      try{ localStorage.setItem('nmp.iphone.etd', String(ETD_MIN)); }catch(e){}
+    }
+    if (typeof saveSet === 'function') saveSet();
+    qkEd.classList.remove('on');
+    drawFpl(); renderMap();
+    if (typeof drawSet === 'function' && $('#setView') && $('#setView').classList.contains('on')) drawSet();
+    toast('Saved');
+  });
+
+  /* ============================================================
+     DOWNLOADS
+     One place listing everything that can live on the device for
+     offline use, what is already stored, and how much room it takes.
+     This is the shell for the per-region data-pack idea: basemap,
+     terrain, plates and the AIP data pack are separate items so a
+     region can eventually be added or removed as a set.
+     Every data item carries its AIP edition date.
+     Sizes and progress here are SIMULATED - the demo bundles no tiles.
+     ============================================================ */
+  var DL_KEY = 'nmp.iphone.downloads';
+  var DLSTATE = (function(){
+    try{ var o = JSON.parse(localStorage.getItem(DL_KEY)); if (o) return o; }catch(e){}
+    return {};                       /* id -> true when stored */
+  })();
+  function saveDl(){ try{ localStorage.setItem(DL_KEY, JSON.stringify(DLSTATE)); }catch(e){} }
+
+  /* mb is the on-device size; bundled items ship inside the app */
+  var DL_ITEMS = [
+    { g:'Base map', id:'base', t:'PNG vector basemap', mb:44, bundled:true,
+      d:'Coastline, roads, towns and labels for Papua New Guinea. Ships inside the app, so the map works offline from first launch.',
+      ed:'Tiles built 2025-10-30' },
+
+    { g:'Terrain', id:'terr10', t:'Terrain \u00b7 route corridor', mb:38,
+      d:'Elevation tiles to zoom 10 along your saved routes. Enough for the terrain profile and lowest-safe figures.',
+      ed:'Terrarium, SRTM-derived' },
+    { g:'Terrain', id:'terr12', t:'Terrain \u00b7 all PNG, zoom 12', mb:310,
+      d:'Full-country elevation at higher resolution. Large; download on wifi.',
+      ed:'Terrarium, SRTM-derived' },
+
+    { g:'Plates', id:'platesMaj', t:'Approach plates \u00b7 majors', mb:26,
+      d:'AYPY, AYNZ, AYMD, AYMH, AYGA. Aerodrome, SID, STAR and approach charts.',
+      ed:'AIP AIRAC 2025-10-30' },
+    { g:'Plates', id:'platesAll', t:'Approach plates \u00b7 all PNG', mb:118,
+      d:'Every published plate in the PNG AIP.',
+      ed:'AIP AIRAC 2025-10-30' },
+
+    { g:'Data pack', id:'aip', t:'PNG AIP data pack', mb:3,
+      d:'Airfields, runways, frequencies, airspace, danger areas and enroute fixes. This is the dataset the app reads for everything except the map itself.',
+      ed:'AIP effective 2025-10-30' },
+    { g:'Data pack', id:'wx', t:'Weather \u00b7 last known', mb:1,
+      d:'The most recent METAR and TAF for fields on your routes, kept for use with no signal. Refreshes whenever you have a connection.',
+      ed:'Observed data only \u2014 no forecast model' }
+  ];
+
+  var GRP_COLOR = { 'Base map':'var(--accent-2)', 'Terrain':'var(--good)',
+                    'Plates':'var(--accent)', 'Data pack':'var(--navaid)' };
+
+  function dlStored(it){ return it.bundled || !!DLSTATE[it.id]; }
+  function dlTotalMB(){
+    var t = 0;
+    DL_ITEMS.forEach(function(it){ if (dlStored(it)) t += it.mb; });
+    return t;
+  }
+  function fmtMB(mb){ return mb >= 1024 ? (mb/1024).toFixed(1) + ' GB' : mb + ' MB'; }
+
+  var dlBusy = {}, dlArm = {};
+
+  function downloadsHTML(){
+    var total = dlTotalMB();
+    /* proportional bar by group */
+    var byGrp = {};
+    DL_ITEMS.forEach(function(it){
+      if (!dlStored(it)) return;
+      byGrp[it.g] = (byGrp[it.g] || 0) + it.mb;
+    });
+    var bar = Object.keys(byGrp).map(function(g){
+      return '<i style="width:' + (byGrp[g] / total * 100).toFixed(1) + '%;background:'
+           + GRP_COLOR[g] + '"></i>';
+    }).join('');
+
+    var h = '<div class="dlsum">'
+          + '<div class="top"><b>Stored on this device</b><span class="v">' + fmtMB(total) + '</span></div>'
+          + '<div class="bar">' + (bar || '<i style="width:100%;background:var(--inset)"></i>') + '</div>'
+          + '<div class="key">' + Object.keys(byGrp).map(function(g){
+              return '<span><i style="background:' + GRP_COLOR[g] + '"></i>' + g + ' '
+                   + fmtMB(byGrp[g]) + '</span>';
+            }).join('') + '</div></div>';
+
+    var lastG = null;
+    DL_ITEMS.forEach(function(it){
+      if (it.g !== lastG){ h += '<div class="dlgrp">' + it.g + '</div>'; lastG = it.g; }
+      var stored = dlStored(it), busy = dlBusy[it.id];
+
+      h += '<div class="dlitem' + (it.bundled ? ' bundled' : '') + '">'
+        +  '<div class="hd"><b>' + it.t + '</b><span class="sz">' + fmtMB(it.mb) + '</span></div>'
+        +  '<div class="ds">' + it.d + '</div>'
+        +  '<div class="ed">' + it.ed + '</div>';
+
+      if (busy){
+        h += '<div class="prog"><div class="track"><i id="dlb-' + it.id + '" style="width:'
+          +  busy.pct + '%"></i></div><div class="lbl"><span id="dlp-' + it.id + '">'
+          +  busy.pct + '% \u00b7 ' + fmtMB(Math.round(it.mb * busy.pct / 100)) + ' of '
+          +  fmtMB(it.mb) + '</span><button data-dlx="' + it.id + '">Cancel</button>'
+          +  '</div></div>';
+      } else if (it.bundled){
+        h += '<div class="act"><span class="st">Included in the app</span></div>';
+      } else if (stored){
+        h += '<div class="act"><button class="rm' + (dlArm[it.id] ? ' arm' : '') + '" data-dlrm="'
+          +  it.id + '">' + (dlArm[it.id] ? 'Tap again to remove' : 'Remove') + '</button>'
+          +  '<span class="st">Stored</span></div>';
+      } else {
+        h += '<div class="act"><button class="get" data-dlget="' + it.id + '">Download</button>'
+          +  '<span class="st none">Not stored</span></div>';
+      }
+      h += '</div>';
+    });
+
+    return h + '<div class="cnote">Sizes and progress in this demo are simulated \u2014 no tiles are '
+      + 'actually fetched. In the live build these write to the app\u2019s offline caches, and a '
+      + 'download can be cancelled and resumed without losing what is already saved. '
+      + 'Every dataset shows the AIP edition it came from; check it against the current AIRAC '
+      + 'before you rely on it.</div>';
+  }
+
+  function itemById(id){
+    for (var i = 0; i < DL_ITEMS.length; i++) if (DL_ITEMS[i].id === id) return DL_ITEMS[i];
+    return null;
+  }
+
+  function wireDownloads(el){
+    var body = el.querySelector('.vbody');
+    function again(){ body.innerHTML = downloadsHTML(); wireDownloads(el); }
+    el._dlAgain = again;
+
+    Array.prototype.forEach.call(el.querySelectorAll('[data-dlget]'), function(b){
+      b.addEventListener('click', function(){ startDl(b.getAttribute('data-dlget'), el); });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-dlx]'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-dlx');
+        if (dlBusy[id]){ clearInterval(dlBusy[id].t); delete dlBusy[id]; }
+        again(); toast('Cancelled \u2014 what was saved is kept');
+      });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-dlrm]'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-dlrm');
+        if (dlArm[id]){
+          clearTimeout(dlArm[id].t); delete dlArm[id];
+          delete DLSTATE[id]; saveDl(); again();
+          toast('Removed');
+          return;
+        }
+        dlArm[id] = { t: setTimeout(function(){ delete dlArm[id]; again(); }, 3000) };
+        again();
+      });
+    });
+  }
+
+  function startDl(id, el){
+    var it = itemById(id); if (!it || dlBusy[id]) return;
+    dlBusy[id] = { pct:0 };
+    el._dlAgain();
+    /* simulated progress - the live build reports real tile counts */
+    dlBusy[id].t = setInterval(function(){
+      var b = dlBusy[id]; if (!b) return;
+      b.pct += Math.max(2, Math.round(18 - b.pct / 8));
+      if (b.pct >= 100){
+        clearInterval(b.t); delete dlBusy[id];
+        DLSTATE[id] = true; saveDl();
+        if (el._dlAgain) el._dlAgain();
+        toast(it.t + ' stored');
+        return;
+      }
+      var bar = document.getElementById('dlb-' + id), lab = document.getElementById('dlp-' + id);
+      if (bar) bar.style.width = b.pct + '%';
+      if (lab) lab.textContent = b.pct + '% \u00b7 ' + fmtMB(Math.round(it.mb * b.pct / 100))
+                               + ' of ' + fmtMB(it.mb);
+    }, 320);
+  }
+
+  /* ============================================================
+     FREQUENCIES EDITOR
+     Published AIP data is read-only. Anything you add here is yours,
+     stored on the device, and merged into the airfield card and the
+     Radio panel alongside the published entries. This is the gap the
+     AIP cannot fill - bush strips and company frequencies.
+     ============================================================ */
+  var FREQ_KEY = 'nmp.iphone.freqs';
+  var MYFREQ = (function(){
+    try{ var o = JSON.parse(localStorage.getItem(FREQ_KEY)); if (o) return o; }catch(e){}
+    return {};
+  })();
+  function saveMyFreq(){
+    try{ localStorage.setItem(FREQ_KEY, JSON.stringify(MYFREQ)); }catch(e){}
+  }
+  function myFreqFor(id){ return MYFREQ[id] || []; }
+  /* true if a point has any frequency at all, published or the pilot's */
+  function hasAnyFreq(id){ return !!(id && (FIELD_INFO[id] || myFreqFor(id).length)); }
+  /* published + mine, tagged, in the usual radio order */
+  function allFreqFor(id){
+    var fi = FIELD_INFO[id];
+    var out = [];
+    if (fi && fi.freq) fi.freq.forEach(function(r){ out.push({ lb:r[0], vl:r[1], mine:false }); });
+    myFreqFor(id).forEach(function(r){ out.push({ lb:r[0], vl:r[1], mine:true }); });
+    out.sort(function(a, b){ return fqRank(a.lb) - fqRank(b.lb); });
+    return out;
+  }
+
+  var fqField = null, fqShow = false, fqQuery = '', fqEditing = null, fqDelArm = null;
+
+  function freqsHTML(){
+    if (!fqField){
+      /* field picker, with the same pull-to-reveal search as Airports */
+      var q = fqQuery.trim().toUpperCase();
+      var items = DB.filter(function(p){ return p.cat === 'field' || p.cat === 'strip'; });
+      if (q) items = items.filter(function(p){
+        return (p.id && p.id.toUpperCase().indexOf(q) >= 0)
+            || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
+      });
+      /* fields that already have something come first */
+      items.sort(function(a, b){
+        var an = allFreqFor(a.id).length, bn = allFreqFor(b.id).length;
+        if (an !== bn) return bn - an;
+        return a.id < b.id ? -1 : 1;
+      });
+      if (!q) items = items.slice(0, 40);
+
+      var h = '<div class="apsearch' + (fqShow ? ' show' : '') + '" id="fqSearch">'
+            + '<div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            +   'stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/>'
+            +   '<path d="M21 21l-4-4"/></svg>'
+            + '<input id="fqQ" type="text" placeholder="Search all airfields" '
+            +   'autocapitalize="characters" autocorrect="off" spellcheck="false">'
+            + '<button class="x' + (fqQuery ? ' on' : '') + '" id="fqQX" aria-label="Clear">&times;</button>'
+            + '</div></div>'
+            + '<div class="cnote" style="margin-bottom:10px">Pull down to search every field. '
+            + 'Tap one to see and edit its frequencies.</div>';
+
+      if (!items.length) return h + '<div class="cempty">No match</div>';
+      items.forEach(function(p){
+        var n = allFreqFor(p.id).length, mine = myFreqFor(p.id).length;
+        h += '<button class="fqfield" data-fqf="' + p.id + '">'
+          +  '<span class="id">' + p.id + '</span>'
+          +  '<span class="nm2">' + p.nm + '</span>'
+          +  '<span class="n' + (mine ? ' mine' : '') + '">' + (n || '\u2014') + '</span></button>';
+      });
+      return h;
+    }
+
+    /* one field open */
+    var p = dbById(fqField);
+    var rows = allFreqFor(fqField);
+    var h = '<button class="chback" id="fqBack">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+          +   'stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>'
+          + fqField + (p ? ' \u00b7 ' + p.nm : '') + '</button>';
+
+    if (!rows.length){
+      h += '<div class="cempty">No frequencies on file for ' + fqField + '</div>';
+    } else {
+      rows.forEach(function(r, i){
+        h += '<button class="fqrow"' + (r.mine ? ' data-fqe="' + r.lb + '"' : '') + '>'
+          +  '<span class="lb">' + esc(r.lb) + '</span>'
+          +  '<span class="vl">' + esc(r.vl) + '</span>'
+          +  '<span class="src' + (r.mine ? ' mine' : '') + '">'
+          +  (r.mine ? 'Mine' : 'AIP') + '</span></button>';
+      });
+    }
+    h += '<button class="fqadd" data-fqnew="1">Add a frequency</button>'
+      +  '<div class="cnote">AIP entries are read-only. Tap one of your own to edit or delete it. '
+      +  'Advisory only \u2014 verify against the current AIP.</div>';
+    return h;
+  }
+
+  function wireFreqs(el){
+    var body = el.querySelector('.vbody');
+    function again(){ body.innerHTML = freqsHTML(); wireFreqs(el); }
+    el._fqAgain = again;
+
+    Array.prototype.forEach.call(el.querySelectorAll('[data-fqf]'), function(b){
+      b.addEventListener('click', function(){ fqField = b.getAttribute('data-fqf'); again(); });
+    });
+    var back = el.querySelector('#fqBack');
+    if (back) back.addEventListener('click', function(){ fqField = null; again(); });
+
+    Array.prototype.forEach.call(el.querySelectorAll('[data-fqnew]'), function(b){
+      b.addEventListener('click', function(){ openFqEd(null); });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-fqe]'), function(b){
+      b.addEventListener('click', function(){ openFqEd(b.getAttribute('data-fqe')); });
+    });
+
+    /* search field */
+    var q = el.querySelector('#fqQ');
+    if (q){
+      if (fqShow && !fqQuery){ setTimeout(function(){ try{ q.focus(); }catch(e){} }, 60); }
+      q.value = fqQuery;
+      q.addEventListener('input', function(){
+        var pos = null; try{ pos = q.selectionStart; }catch(e){}
+        fqQuery = q.value;
+        again();
+        var q2 = el.querySelector('#fqQ');
+        if (q2){ try{ q2.focus(); if (pos !== null) q2.setSelectionRange(pos, pos); }catch(e){} }
+      });
+    }
+    var qx = el.querySelector('#fqQX');
+    if (qx) qx.addEventListener('click', function(){ fqQuery = ''; again(); });
+
+    /* pull down to reveal the search bar */
+    if (body && !body._fqPull){
+      body._fqPull = true;
+      var startY = 0, pulling = false;
+      body.addEventListener('touchstart', function(e){
+        startY = e.touches[0].clientY; pulling = (body.scrollTop <= 0);
+      }, { passive:true });
+      body.addEventListener('touchmove', function(e){
+        if (fqField) return;                       /* only on the picker */
+        var dy = e.touches[0].clientY - startY;
+        if (!fqShow && pulling && dy > 46){ fqShow = true; again(); pulling = false; }
+        else if (fqShow && !fqQuery && body.scrollTop <= 0 && dy < -30){
+          fqShow = false; again(); pulling = false;
+        }
+      }, { passive:true });
+    }
+  }
+
+  /* ---- the editor sheet ---- */
+  var fqEd = $('#fqEd');
+  function openFqEd(label){
+    closeAll();
+    fqEditing = label;
+    $('#fqEdTtl').textContent = (label ? 'Edit ' : 'New frequency for ') + (label || fqField);
+    var cur = null;
+    myFreqFor(fqField).forEach(function(r){ if (r[0] === label) cur = r; });
+    $('#fqLb').value = cur ? cur[0] : '';
+    $('#fqVl').value = cur ? cur[1] : '';
+    $('#fqDel').style.visibility = label ? 'visible' : 'hidden';
+    $('#fqDel').classList.remove('arm');
+    clearTimeout(fqDelArm); fqDelArm = null;
+    fqEd.classList.add('on');
+  }
+  function closeFqEd(){
+    fqEd.classList.remove('on');
+    var v = viewCache['freq'];
+    if (v && v._fqAgain) v._fqAgain();
+    if (card && card.classList.contains('on')) drawCard();
+  }
+  $('#fqEdClose').addEventListener('click', closeFqEd);
+
+  $('#fqSave').addEventListener('click', function(){
+    var lb = $('#fqLb').value.trim().toUpperCase();
+    var vl = $('#fqVl').value.trim();
+    if (!lb){ toast('Give it a label'); return; }
+    if (!/^\d{2,3}(\.\d{1,3})?$/.test(vl)){ toast('Frequency looks wrong'); return; }
+    var list = MYFREQ[fqField] ? MYFREQ[fqField].slice() : [];
+    if (fqEditing){
+      list = list.map(function(r){ return r[0] === fqEditing ? [lb, vl] : r; });
+    } else {
+      if (list.some(function(r){ return r[0] === lb; })){ toast(lb + ' already on file'); return; }
+      list.push([lb, vl]);
+    }
+    MYFREQ[fqField] = list; saveMyFreq();
+    closeFqEd();
+    toast('Saved');
+  });
+
+  $('#fqDel').addEventListener('click', function(){
+    if (!fqEditing) return;
+    var b = $('#fqDel');
+    if (fqDelArm){
+      clearTimeout(fqDelArm); fqDelArm = null;
+      MYFREQ[fqField] = myFreqFor(fqField).filter(function(r){ return r[0] !== fqEditing; });
+      if (!MYFREQ[fqField].length) delete MYFREQ[fqField];
+      saveMyFreq(); fqEditing = null;
+      closeFqEd(); toast('Deleted');
+      return;
+    }
+    b.classList.add('arm');
+    toast('Tap again to delete');
+    fqDelArm = setTimeout(function(){ fqDelArm = null; b.classList.remove('arm'); }, 3000);
+  });
+
+  /* ============================================================
+     CHARTS
+     The classifier and the category order are lifted VERBATIM from the
+     desktop build (autoCat + CHART_CATS), so a plate lands in the same
+     tab on both. Do not re-derive these. Plate filenames here are demo
+     stand-ins in the real PNG naming style; the live build swaps in the
+     actual file list and the georeferenced viewer.
+     ============================================================ */
+  var CHART_CATS = [['airport','Airport'],['departure','Departure'],
+                    ['arrival','Arrival'],['approach','Approach'],['other','Other']];
+
+  /* verbatim from the desktop build */
+  function autoCat(name){
+    var s = ' ' + String(name || '').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim() + ' ';
+    function tok(w){ return s.indexOf(' ' + w + ' ') >= 0; }
+    function sub(w){ return s.indexOf(w) >= 0; }
+    /* Departure/Arrival decided by SID/STAR intent FIRST - PNG names its
+       plates "..._DEPARTURE_(RNAV)", and "(RNAV)" would otherwise pull
+       them into Approach. */
+    if (tok('SID') || sub('DEPARTURE') || tok('DEP')) return 'departure';
+    if (tok('STAR') || sub('ARRIVAL') || tok('ARR')) return 'arrival';
+    if (sub('ILS') || sub('RNAV') || sub('GNSS') || sub('RNP') || sub('VOR') || sub('NDB')
+        || sub('LOC') || sub('LLZ') || sub('PROC') || sub('APPROACH') || sub('IAC') || tok('APP')) return 'approach';
+    if (sub('AERODROME') || sub('DIAGRAM') || sub('APRON') || sub('TAXI')
+        || sub('PARKING') || tok('AD')) return 'airport';
+    return 'other';
+  }
+
+  /* manual re-filing, same idea as the desktop's nmChartCat */
+  var CHCAT_KEY = 'nmp.iphone.chartCat';
+  function catOverrides(){
+    try{ return JSON.parse(localStorage.getItem(CHCAT_KEY) || '{}'); }catch(e){ return {}; }
+  }
+  function setCatOverride(file, cat){
+    var m = catOverrides(); m[file] = cat;
+    try{ localStorage.setItem(CHCAT_KEY, JSON.stringify(m)); }catch(e){}
+  }
+  function catOf(file){
+    var o = catOverrides();
+    return o[file] || autoCat(file);
+  }
+
+  /* demo plate list, in the real PNG filename style */
+  var CHART_DB = {
+    AYPY: ['AYPY_AERODROME_CHART','AYPY_APRON_PARKING','AYPY_ILS_RWY_32R',
+           'AYPY_RNAV_GNSS_RWY_14L','AYPY_VOR_RWY_32R','AYPY_MADANG_ONE_DEPARTURE_(RNAV)',
+           'AYPY_KIMBE_TWO_ARRIVAL_(RNAV)','AYPY_NOISE_ABATEMENT'],
+    AYNZ: ['AYNZ_AERODROME_CHART','AYNZ_RNAV_GNSS_RWY_09','AYNZ_RNAV_GNSS_RWY_27',
+           'AYNZ_NADZAB_ONE_DEPARTURE_(RNAV)','AYNZ_NADZAB_ONE_ARRIVAL_(RNAV)',
+           'AYNZ_TAXI_DIAGRAM'],
+    AYMH: ['AYMH_AERODROME_CHART','AYMH_RNAV_GNSS_RWY_12','AYMH_HAGEN_ONE_DEPARTURE_(RNAV)',
+           'AYMH_TERRAIN_WARNING_CHART'],
+    AYMD: ['AYMD_AERODROME_CHART','AYMD_RNAV_GNSS_RWY_07','AYMD_MADANG_ONE_ARRIVAL_(RNAV)'],
+    AYGA: ['AYGA_AERODROME_CHART','AYGA_RNAV_GNSS_RWY_17','AYGA_CIRCLING_RESTRICTIONS']
+  };
+
+  function chartsFor(id){ return CHART_DB[id] || []; }
+  function prettyPlate(f){
+    return String(f).replace(/^AY[A-Z]{2}_/, '').replace(/_/g, ' ')
+                    .replace(/\s*\(RNAV\)\s*/,' (RNAV)').trim();
+  }
+
+  var chField = null, chTab = 'airport', chMoving = null;
+
+  function chartsHTML(){
+    /* field picker when no field is selected */
+    if (!chField){
+      var ids = Object.keys(CHART_DB).sort();
+      var h = '<div class="cnote" style="margin-bottom:10px">Fields with plates in this demo. '
+            + 'The live build lists every field that has charts.</div>';
+      ids.forEach(function(id){
+        var p = dbById(id);
+        h += '<button class="chfield" data-chf="' + id + '">'
+          +  '<span class="id">' + id + '</span>'
+          +  '<span class="nm2">' + (p ? p.nm : id) + '</span>'
+          +  '<span class="n">' + chartsFor(id).length + '</span></button>';
+      });
+      return h;
+    }
+
+    /* a field is open: category tabs + plates */
+    var all = chartsFor(chField);
+    var counts = {};
+    CHART_CATS.forEach(function(c){ counts[c[0]] = 0; });
+    all.forEach(function(f){ var c = catOf(f); if (counts[c] !== undefined) counts[c]++; });
+
+    var fld = dbById(chField);
+    var h = '<button class="chback" id="chBack">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+          +   'stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>'
+          + chField + (fld ? ' \u00b7 ' + fld.nm : '') + '</button>';
+
+    h += '<div class="chtabs">' + CHART_CATS.map(function(c){
+      return '<button data-cht="' + c[0] + '"' + (chTab === c[0] ? ' class="on"' : '') + '>'
+           + c[1] + '<span class="c">' + counts[c[0]] + '</span></button>';
+    }).join('') + '</div>';
+
+    var rows = all.filter(function(f){ return catOf(f) === chTab; });
+    if (!rows.length) return h + '<div class="cempty">Nothing filed under ' 
+      + CHART_CATS.filter(function(c){ return c[0] === chTab; })[0][1] + '</div>';
+
+    rows.forEach(function(f){
+      h += '<button class="chrow" data-chp="' + f + '">'
+        +  '<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        +    'stroke-width="1.6" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/>'
+        +    '<path d="M14 3v4h4"/></svg></span>'
+        +  '<span class="t2"><b>' + prettyPlate(f) + '</b><span>' + f + '</span></span>'
+        +  '<span class="mv" data-chmv="' + f + '">Move</span></button>';
+    });
+    return h + '<div class="cnote">Plates are sorted by the same classifier as the desktop '
+      + 'build. Tap Move to re-file one if it lands in the wrong tab.</div>';
+  }
+
+  function wireCharts(el){
+    var body = el.querySelector('.vbody');
+    function again(){ body.innerHTML = chartsHTML(); wireCharts(el); }
+
+    Array.prototype.forEach.call(el.querySelectorAll('[data-chf]'), function(b){
+      b.addEventListener('click', function(){
+        chField = b.getAttribute('data-chf'); chTab = 'airport'; again();
+      });
+    });
+    var back = el.querySelector('#chBack');
+    if (back) back.addEventListener('click', function(){ chField = null; again(); });
+
+    Array.prototype.forEach.call(el.querySelectorAll('[data-cht]'), function(b){
+      b.addEventListener('click', function(){ chTab = b.getAttribute('data-cht'); again(); });
+    });
+
+    Array.prototype.forEach.call(el.querySelectorAll('[data-chmv]'), function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var f = b.getAttribute('data-chmv');
+        /* cycle to the next category - simple and thumb-friendly */
+        var cur = catOf(f);
+        var i = 0;
+        CHART_CATS.forEach(function(c, n){ if (c[0] === cur) i = n; });
+        var next = CHART_CATS[(i + 1) % CHART_CATS.length];
+        setCatOverride(f, next[0]);
+        toast('Moved to ' + next[1]);
+        again();
+      });
+    });
+
+    Array.prototype.forEach.call(el.querySelectorAll('[data-chp]'), function(b){
+      b.addEventListener('click', function(){ openChart(b.getAttribute('data-chp')); });
+    });
+  }
+
+  var chView = $('#chView');
+  function openChart(f){
+    closeAll();
+    $('#chViewTtl').textContent = prettyPlate(f);
+    $('#chViewFn').textContent = f;
+    chView.classList.add('on');
+  }
+  $('#chViewClose').addEventListener('click', function(){ chView.classList.remove('on'); });
 
   /* ============================================================
      FLIGHTS - the saved-route library
@@ -4749,6 +5821,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                  : (k === 'flights')  ? '<div class="vhead"><b>Flights</b>'
                      + '<span class="sub">saved routes</span></div>'
                      + '<div class="vbody">' + flightsHTML() + '</div>'
+                 : (k === 'charts')   ? '<div class="vhead"><b>Charts</b></div>'
+                     + '<div class="vbody">' + chartsHTML() + '</div>'
+                 : (k === 'freq')     ? '<div class="vhead"><b>Frequencies</b>'
+                     + '<span class="sub">yours and published</span></div>'
+                     + '<div class="vbody">' + freqsHTML() + '</div>'
+                 : (k === 'downloads')? '<div class="vhead"><b>Downloads</b>'
+                     + '<span class="sub">offline data</span></div>'
+                     + '<div class="vbody">' + downloadsHTML() + '</div>'
                  : stubHTML(k);
     viewLayer.appendChild(el);
     viewCache[k] = el;
@@ -4756,6 +5836,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (k === 'airports') wireAirports(el);
     if (k === 'notes') wireNotes(el);
     if (k === 'flights') wireFlights(el);
+    if (k === 'charts') wireCharts(el);
+    if (k === 'freq') wireFreqs(el);
+    if (k === 'downloads') wireDownloads(el);
     return el;
   }
 
@@ -4776,6 +5859,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (k === 'flights'){
       el.querySelector('.vbody').innerHTML = flightsHTML();
       wireFlights(el);
+    }
+    if (k === 'charts'){
+      el.querySelector('.vbody').innerHTML = chartsHTML();
+      wireCharts(el);
+    }
+    if (k === 'freq'){
+      el.querySelector('.vbody').innerHTML = freqsHTML();
+      wireFreqs(el);
+    }
+    if (k === 'downloads'){
+      el.querySelector('.vbody').innerHTML = downloadsHTML();
+      wireDownloads(el);
     }
     el.classList.add('on');
     viewLayer.classList.add('on');
@@ -4905,44 +6000,141 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* ============================================================
      QUICK FUEL CHECK  (ported from QuickFuelCheck 2026-06-16)
      ============================================================ */
+  /* card order is the pilot's, and it sticks */
+  var FUEL_KEY = 'nmp.iphone.fuelOrder';
+  var FUEL_DEFAULT = ['conv','trip','end'];
+  var fuelOrder = (function(){
+    try{
+      var a = JSON.parse(localStorage.getItem(FUEL_KEY));
+      if (a && a.length === FUEL_DEFAULT.length
+          && FUEL_DEFAULT.every(function(k){ return a.indexOf(k) >= 0; })) return a;
+    }catch(e){}
+    return FUEL_DEFAULT.slice();
+  })();
+  function saveFuelOrder(){
+    try{ localStorage.setItem(FUEL_KEY, JSON.stringify(fuelOrder)); }catch(e){}
+  }
+  var fuelEdit = false;
+
+  /* total distance of the active route, for the Use route button */
+  function routeNm(){
+    var t = 0;
+    for (var i = 0; i < ROUTE.length - 1; i++) t += nmBetween(ROUTE[i], ROUTE[i+1]);
+    return t;
+  }
+
   function fuelHTML(){
     function fld(lab, attrs){
       return '<div><span class="fsub">' + lab + '</span>'
            + '<input class="fin" type="number" inputmode="decimal" ' + attrs + '></div>';
     }
-    return '<div class="vhead"><b>Quick Fuel Check</b><span class="sub">Jet A-1</span></div>'
+    var UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '
+           + 'stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg>';
+    var DN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '
+           + 'stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13M6 12l6 6 6-6"/></svg>';
+
+    function mover(k){
+      if (!fuelEdit) return '';
+      var i = fuelOrder.indexOf(k);
+      return '<div class="fmove">'
+        + '<button data-fmv="up:' + k + '"' + (i === 0 ? ' disabled' : '') + '>' + UP + '</button>'
+        + '<button data-fmv="dn:' + k + '"' + (i === fuelOrder.length - 1 ? ' disabled' : '') + '>' + DN + '</button>'
+        + '</div>';
+    }
+
+    var nm = routeNm();
+    var CARDS = {
+      conv: '<div class="fcard"><div class="flab">Unit converter</div><div class="fg2">'
+          + fld('Litres',    'data-u="L"')
+          + fld('US Gal',    'data-u="USG"')
+          + fld('Kilograms', 'data-u="kg"')
+          + fld('Pounds',    'data-u="lbs"')
+          + '</div>' + mover('conv') + '</div>',
+
+      trip: '<div class="fcard">'
+          + '<div class="fhdr"><div class="flab">Trip &rarr; required fuel</div>'
+          + '<button class="fuse" data-f="useroute"' + (ROUTE.length > 1 ? '' : ' disabled') + '>'
+          + (ROUTE.length > 1 ? 'Use route \u00b7 ' + nm.toFixed(0) + ' NM' : 'Use route') + '</button>'
+          + '</div><div class="fg3">'
+          + fld('Trip &middot; NM',  'data-f="trip" placeholder="270"')
+          + fld('TAS &middot; kt',   'data-f="tas"  placeholder="120"')
+          + fld('Burn &middot; kg/h','data-f="burn" placeholder="220"')
+          + '</div>'
+          + '<span class="fsub" style="margin-top:10px">Reserve &middot; min</span>'
+          + '<div class="fseg" data-f="res"></div><div data-f="reqOut"></div>'
+          + mover('trip') + '</div>',
+
+      end:  '<div class="fcard"><div class="flab">Endurance</div>'
+          + '<span class="fsub">Fuel on board &middot; unit</span>'
+          + '<div class="fseg" data-f="endU"></div>'
+          + '<div class="fg2" style="margin-top:10px">'
+          + fld('Quantity',          'data-f="endQ" placeholder="800"')
+          + fld('Burn &middot; kg/h','data-f="endB" placeholder="220"')
+          + '</div><div data-f="endOut"></div>' + mover('end') + '</div>'
+    };
+
+    return '<div class="vhead"><b>Quick Fuel Check</b>'
+      + '<button class="fedit' + (fuelEdit ? ' on' : '') + '" data-f="edit">'
+      + (fuelEdit ? 'Done' : 'Reorder') + '</button></div>'
       + '<div class="vbody">'
       + '<div class="fdens"><span class="k">Density &middot; kg/L</span>'
       +   '<input class="fin" data-f="dens" type="number" step="0.001" value="0.800" inputmode="decimal"></div>'
-
-      + '<div class="fcard"><div class="flab">Unit converter</div><div class="fg2">'
-      +   fld('Litres',    'data-u="L"')
-      +   fld('US Gal',    'data-u="USG"')
-      +   fld('Kilograms', 'data-u="kg"')
-      +   fld('Pounds',    'data-u="lbs"')
-      + '</div></div>'
-
-      + '<div class="fcard"><div class="flab">Trip &rarr; required fuel</div><div class="fg3">'
-      +   fld('Trip &middot; NM',  'data-f="trip" placeholder="270"')
-      +   fld('TAS &middot; kt',   'data-f="tas"  placeholder="130"')
-      +   fld('Burn &middot; kg/h','data-f="burn" placeholder="176"')
-      + '</div>'
-      + '<span class="fsub" style="margin-top:10px">Reserve &middot; min</span>'
-      + '<div class="fseg" data-f="res"></div><div data-f="reqOut"></div></div>'
-
-      + '<div class="fcard"><div class="flab">Endurance</div>'
-      + '<span class="fsub">Fuel on board &middot; unit</span>'
-      + '<div class="fseg" data-f="endU"></div>'
-      + '<div class="fg2" style="margin-top:10px">'
-      +   fld('Quantity',          'data-f="endQ" placeholder="800"')
-      +   fld('Burn &middot; kg/h','data-f="endB" placeholder="176"')
-      + '</div><div data-f="endOut"></div></div>'
+      + fuelOrder.map(function(k){ return CARDS[k]; }).join('')
       + '</div>';
+  }
+
+  /* rebuild the fuel view, keeping whatever the pilot has typed */
+  function refreshFuel(root){
+    var keep = {};
+    Array.prototype.forEach.call(root.querySelectorAll('input[data-f],input[data-u]'), function(i){
+      var k = i.getAttribute('data-f') || ('u:' + i.getAttribute('data-u'));
+      keep[k] = i.value;
+    });
+    root.innerHTML = fuelHTML();
+    Array.prototype.forEach.call(root.querySelectorAll('input[data-f],input[data-u]'), function(i){
+      var k = i.getAttribute('data-f') || ('u:' + i.getAttribute('data-u'));
+      if (keep[k] !== undefined) i.value = keep[k];
+    });
+    initFuel(root);
   }
 
   function initFuel(root){
     var L_PER_USG = 3.78541, KG_PER_LB = 0.453592;
-    var st = { density: 0.800, res: 15, endUnit: 'kg' };
+
+    /* -- reorder mode, card movers, and Use route -- */
+    (function(){
+      var ed = root.querySelector('[data-f="edit"]');
+      if (ed) ed.addEventListener('click', function(){
+        fuelEdit = !fuelEdit; refreshFuel(root);
+      });
+      Array.prototype.forEach.call(root.querySelectorAll('[data-fmv]'), function(b){
+        b.addEventListener('click', function(){
+          var parts = b.getAttribute('data-fmv').split(':');
+          var dir = parts[0], k = parts[1];
+          var i = fuelOrder.indexOf(k);
+          var j = dir === 'up' ? i - 1 : i + 1;
+          if (j < 0 || j >= fuelOrder.length) return;
+          fuelOrder[i] = fuelOrder[j]; fuelOrder[j] = k;
+          saveFuelOrder(); refreshFuel(root);
+        });
+      });
+      var ur = root.querySelector('[data-f="useroute"]');
+      if (ur) ur.addEventListener('click', function(){
+        if (ROUTE.length < 2){ toast('Build a route in FPL first'); return; }
+        var t = root.querySelector('input[data-f="trip"]');
+        if (t){
+          t.value = routeNm().toFixed(0);
+          t.dispatchEvent(new Event('input', { bubbles:true }));
+        }
+        /* the aircraft profile fills the other two if they are empty */
+        var tas = root.querySelector('input[data-f="tas"]');
+        if (tas && !tas.value){ tas.value = AC.tas; tas.dispatchEvent(new Event('input', { bubbles:true })); }
+        var bn = root.querySelector('input[data-f="burn"]');
+        if (bn && !bn.value){ bn.value = AC.burn; bn.dispatchEvent(new Event('input', { bubbles:true })); }
+        toast('Trip set to ' + routeNm().toFixed(0) + ' NM');
+      });
+    })();
+    var st = { density: 0.800, res: 30, endUnit: 'kg' };
     var q  = function(sel){ return root.querySelector(sel); };
     var qa = function(sel){ return Array.prototype.slice.call(root.querySelectorAll(sel)); };
     var f  = function(n, d){ return Number(n).toFixed(d === undefined ? 1 : d); };
@@ -5483,6 +6675,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +  lab + '</div>';
     });
 
+    /* Route points that are not in the database - pasted coordinates and
+       any other custom waypoint. These have no DB entry, so without this
+       they drew a leg line but no marker. */
+    if (LAYERS.route){
+      ROUTE.forEach(function(p, i){
+        if (p.id && dbById(p.id)) return;             /* already drawn above */
+        var wx = projX(p.lon), wy = projY(p.lat);
+        if (wx < -2 || wx > 102 || wy < -2 || wy > 102) return;
+        var wlab = (SET.labels === 'off') ? ''
+                 : '<b>' + (p.id || ddm(p.lat, true) + ' ' + ddm(p.lon, false)) + '</b>';
+        h += '<div class="fld k-wpt" data-rwpt="' + i + '" style="left:' + wx.toFixed(2)
+          +  '%;top:' + wy.toFixed(2) + '%"><i></i>' + wlab + '</div>';
+      });
+    }
+
     host.innerHTML = h;
     $$('#mapLayers .fld').forEach(function(el){
       el.addEventListener('click', function(e){
@@ -5648,22 +6855,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var nextField = null;
     var from = (ship && ship._leg !== undefined) ? ship._leg : toWpt;
     for (var i = from + 1; i < ROUTE.length; i++){
-      if (FIELD_INFO[ROUTE[i].id]){ nextField = ROUTE[i]; break; }
+      if (hasAnyFreq(ROUTE[i].id)){ nextField = ROUTE[i]; break; }
     }
-    if (!nextField){ for (var j = ROUTE.length - 1; j >= 0; j--){ if (FIELD_INFO[ROUTE[j].id]){ nextField = ROUTE[j]; break; } } }
+    if (!nextField){ for (var j = ROUTE.length - 1; j >= 0; j--){ if (hasAnyFreq(ROUTE[j].id)){ nextField = ROUTE[j]; break; } } }
 
     var h = '<div class="area"><div class="row1"><span class="k">Area CTAF</span>'
           + '<span class="f">' + area + '</span></div><div class="hf">' + hf + '</div></div>';
 
     if (nextField){
-      var fi = FIELD_INFO[nextField.id];
       var d = ship && ship.lat !== undefined ? nmBetween({lat:ship.lat,lon:ship.lon}, nextField) : 0;
       h += '<div class="nx">Next frequency</div>'
         +  '<div class="fldhdr"><b>' + nextField.id + '</b>'
         +    '<span class="nmm">' + nextField.nm + '</span>'
         +    '<span class="d">' + d.toFixed(0) + ' NM</span></div>'
         +  '<div class="grid">'
-        +  fi.freq.slice().sort(function(a,b){ return fqRank(a[0]) - fqRank(b[0]); })
+        +  fqAllPairs(nextField.id).sort(function(a,b){ return fqRank(a[0]) - fqRank(b[0]); })
              .slice(0, 4).map(function(r){
                return '<div class="row"><span class="t">' + r[0] + '</span>'
                     + '<span class="v">' + r[1] + '</span></div>';
