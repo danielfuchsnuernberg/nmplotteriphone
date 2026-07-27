@@ -4152,6 +4152,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
        tap-to-open overlays driven by the plan-tab icons. */
   }
 
+  /* nmpx bottom bar: hidden everywhere except the iPhone band below */
+  #nmpxTabbar{ display:none; }
+
   /* ===================================================================
      nmpx-iphone-band  -  iPhone-only reskin (<=430px). EXPERIMENT.
      Reskins v262 existing mobile layout into the demo visual language.
@@ -4167,7 +4170,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       height:100dvh !important;
     }
     .header-strip{
-      grid-row:1;
+      grid-row:1; order:0;
       padding:0 14px !important;
       height:var(--nmpx-topbar);
       display:flex; align-items:center; gap:10px;
@@ -4182,7 +4185,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .header-strip > span:nth-child(5){ display:none !important; }
     .header-strip #status{ margin-left:auto !important; font-size:10px; letter-spacing:.12em; color:var(--muted); }
     .header-strip .hdr-gear{ margin-left:8px; }
-    .map-wrap{ grid-row:2 !important; order:0 !important; min-height:0; }
+    .map-wrap{ grid-row:2 !important; order:2 !important; min-height:0; }
     #map{ height:100% !important; width:100% !important; }
     .mobile-tabs{
       grid-row:3 !important;
@@ -4221,7 +4224,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .mobile-tabs{ display:none !important; }
     #nmpxTabbar{
       grid-row:3 !important;
-      display:flex; align-items:stretch;
+      order:3 !important;
+      display:flex !important; align-items:stretch;
       height:var(--nmpx-tabbar);
       background:var(--panel);
       border-top:1px solid var(--border-strong);
