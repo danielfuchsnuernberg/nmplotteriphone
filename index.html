@@ -16,6 +16,38 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v83 2026-07-28  Overlays moved into a Leaflet pane and positioned
+                       in LAYER coordinates instead of percent of the
+                       container. That was the lag: container percent
+                       changes for every marker on every frame of a pan,
+                       so the overlays were recomputed on the main
+                       thread while the tiles moved on the compositor,
+                       and could never keep up. Layer points do not move
+                       during a drag - Leaflet translates the whole pane
+                       - so a pan now recomputes nothing at all.
+                       Rebuild fires on moveend/zoomend/resize/viewreset
+                       only, coalesced in a rAF so no frame paints with
+                       a stale pixel origin. Draw bounds padded 60% so a
+                       normal pan reveals markers already in the DOM.
+                       One delegated click listener replaces up to 274
+                       addEventListener calls per frame. Fixed on the
+                       way past: a marker for a pasted coordinate called
+                       openCard(null); it now opens its route row.
+       v82 2026-07-28  Direct To now goes direct. It used to insert the
+                       target and move the next-waypoint pointer to it,
+                       leaving every point behind you still in the plan
+                       - so the drawn track ran through them and the
+                       distances counted the old way. It changed which
+                       waypoint was active; it never built a leg from
+                       where you are. Now: PPOS frozen at activation as
+                       the origin, everything behind dropped, everything
+                       beyond the target kept, toWpt on the target. It
+                       needs a fix and says so if there isn't one,
+                       rather than quietly doing something else.
+                       Neither Direct-To path called saveRoute(), so the
+                       change was lost on reload - fixed. Because it
+                       discards legs, the toast now carries an Undo for
+                       six seconds.
        v81 2026-07-28  The real airfield pack. 575 aerodromes lifted
                        from v262, replacing 16 invented "fields" and
                        12 placeholder "strips" that carried approximate
@@ -2705,6 +2737,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
 }
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* an action makes the toast tappable and holds it longer - used by
+   Direct To, which discards the legs behind you */
+.toast.act{pointer-events:auto;display:flex;align-items:center;gap:12px}
+.toast .undo{flex:0 0 auto;background:none;border:0;padding:0;
+  font-family:inherit;font-size:var(--t-sm);font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -3193,7 +3231,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v81';
+  var VERSION = 'v83';
   var BUILD   = '2026-07-28';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -3234,11 +3272,26 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     } else legacy();
   }
 
-  function toast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add('on');
+  function toast(msg, actLabel, actFn){
     clearTimeout(toastT);
-    toastT = setTimeout(function(){ toastEl.classList.remove('on'); }, 1400);
+    toastEl.classList.toggle('act', !!actFn);
+    if (actFn){
+      toastEl.innerHTML = '';
+      var sp = document.createElement('span'); sp.textContent = msg;
+      var bt = document.createElement('button');
+      bt.className = 'undo'; bt.type = 'button'; bt.textContent = actLabel || 'Undo';
+      bt.addEventListener('click', function(){
+        toastEl.classList.remove('on', 'act');
+        actFn();
+      });
+      toastEl.appendChild(sp); toastEl.appendChild(bt);
+    } else {
+      toastEl.textContent = msg;
+    }
+    toastEl.classList.add('on');
+    toastT = setTimeout(function(){
+      toastEl.classList.remove('on', 'act');
+    }, actFn ? 6000 : 1400);
   }
 
   /* ---------- overlay manager ---------- */
@@ -4864,7 +4917,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $$('#wptList .wrow').forEach(function(b){
       b.addEventListener('click', function(){
         var a = b.getAttribute('data-a');
-        if (a === 'dct'){ toWpt = i; closeWpt(); drawFpl(); toast('Direct to ' + label(p)); return; }
+        if (a === 'dct'){ if (directTo(p)) closeWpt(); return; }
         if (a === 'ib'){ closeWpt(); openAdd(i); return; }
         if (a === 'ia'){ closeWpt(); openAdd(i + 1); return; }
         if (a === 'up' && i > 0){ ROUTE.splice(i - 1, 0, ROUTE.splice(i, 1)[0]); }
@@ -6078,14 +6131,57 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
   }
 
+  /* ---- Direct To ---------------------------------------------------
+     A real direct-to activates a leg from PRESENT POSITION to the
+     target. It does not merely re-point the "next waypoint" marker at
+     something further down the plan, which is what this used to do -
+     the track still ran through every intervening point, so the map
+     showed the old route and the distances counted the old way.
+
+     Behaviour now:
+       - no fix, no direct-to. There is no origin without one.
+       - PPOS is frozen at activation, the way panel avionics do it.
+         It is the point you turned direct from, not a moving dot.
+       - anything before the target is dropped; anything after it is
+         kept, so a diversion mid-plan still has its arrival legs.
+       - the previous route is stashed so it can be put back. */
+  var dctUndo = null;
+
+  function directTo(f){
+    if (!GPSFIX){
+      toast('Direct To needs a position fix \u2014 turn on tracking');
+      return false;
+    }
+    var ppos = { id:'PPOS', nm:'Present position', cat:'mine',
+                 lat:GPSFIX.lat, lon:GPSFIX.lon };
+    var at = -1;
+    for (var i = 0; i < ROUTE.length; i++){
+      if (f.id && ROUTE[i].id === f.id){ at = i; break; }
+    }
+    dctUndo = { route: ROUTE.slice(), toWpt: toWpt };
+    var tgt = { id:f.id, nm:f.nm, cat:f.cat, lat:f.lat, lon:f.lon };
+    /* keep the legs beyond the target, drop everything behind us */
+    var tail = (at >= 0) ? ROUTE.slice(at + 1) : [];
+    ROUTE = [ppos, tgt].concat(tail);
+    toWpt = 1;
+    saveRoute();
+    drawFpl();
+    renderMap();
+    drawActy();
+    toast('Direct to ' + (f.id || label(tgt)), 'Undo', directToUndo);
+    return true;
+  }
+
+  function directToUndo(){
+    if (!dctUndo) return;
+    ROUTE = dctUndo.route; toWpt = dctUndo.toWpt; dctUndo = null;
+    saveRoute(); drawFpl(); renderMap(); drawActy();
+    toast('Route restored');
+  }
+
   function cardAction(a, f){
     if (a === 'dct'){
-      var at = ROUTE.findIndex(function(p){ return p.id === f.id; });
-      if (at < 0){
-        at = Math.max(1, Math.min(toWpt, ROUTE.length));
-        ROUTE.splice(at, 0, { id:f.id, nm:f.nm, cat:f.cat, lat:f.lat, lon:f.lon });
-      }
-      toWpt = at; drawFpl(); toast('Direct to ' + f.id);
+      if (directTo(f)) card.classList.remove('on');
       return;
     }
     if (a === 'add'){
@@ -8766,6 +8862,34 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'R-AYR921', n:-9.20, s:-9.75, w:146.90, e:147.60 }
   ];
 
+  /* ---- layer coordinates -------------------------------------------
+     projX/projY are SCREEN space (percent of the container) and still
+     serve anything drawn outside the map pane - the centring flash,
+     and the whole no-Leaflet fallback path.
+
+     lpX/lpY are LAYER space in px. Leaflet keeps layer coordinates
+     fixed relative to the map pane and translates that pane when you
+     drag, so anything positioned this way is welded to the ground and
+     costs nothing to pan. Without Leaflet they fall back to container
+     px, which is what #mapLayers sits in when it never got re-parented. */
+  function lpX(lon){
+    if (LMAP) return LMAP.latLngToLayerPoint([0, lon]).x;
+    var el = document.getElementById('map');
+    return projX(lon) / 100 * (el ? el.clientWidth : 0);
+  }
+  function lpY(lat){
+    if (LMAP) return LMAP.latLngToLayerPoint([lat, 0]).y;
+    var el = document.getElementById('map');
+    return projY(lat) / 100 * (el ? el.clientHeight : 0);
+  }
+  /* is this point worth drawing? padded so a drag reveals markers that
+     are already in the DOM rather than waiting for the rebuild */
+  function inDrawBounds(lat, lon){
+    if (LMAP) return LMAP.getBounds().pad(0.6).contains([lat, lon]);
+    var x = projX(lon), y = projY(lat);
+    return !(x < -2 || x > 102 || y < -2 || y > 102);
+  }
+
   function projX(lon){
     if (LMAP) return LMAP.latLngToContainerPoint([0, lon]).x / LMAP.getSize().x * 100;
     return (lon - VIEW.w) / (VIEW.e - VIEW.w) * 100;
@@ -8790,23 +8914,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var h = '';
 
     function box(cls, a){
-      var l = projX(a.w), t = projY(a.n);
-      return '<div class="' + cls + '" style="left:' + l.toFixed(2) + '%;top:' + t.toFixed(2)
-           + '%;width:' + (projX(a.e) - l).toFixed(2) + '%;height:' + (projY(a.s) - t).toFixed(2)
-           + '%"><b>' + a.id + '</b></div>';
+      var l = lpX(a.w), t = lpY(a.n);
+      return '<div class="' + cls + '" style="left:' + l.toFixed(1) + 'px;top:' + t.toFixed(1)
+           + 'px;width:' + (lpX(a.e) - l).toFixed(1) + 'px;height:' + (lpY(a.s) - t).toFixed(1)
+           + 'px"><b>' + a.id + '</b></div>';
     }
     if (LAYERS.airspace) AIRSPACE.forEach(function(a){ h += box('asp', a); });
     if (LAYERS.danger)   DANGER.forEach(function(a){ h += box('dgr', a); });
 
-    /* needed by both the leg geometry and the label collision pass, so
-       it cannot live inside the route conditional */
-    var rect = map.getBoundingClientRect();
-
     if (LAYERS.route && ROUTE.length > 1){
       for (var i = 0; i < ROUTE.length - 1; i++){
         var a = ROUTE[i], b = ROUTE[i+1];
-        var ax = projX(a.lon) / 100 * rect.width, ay = projY(a.lat) / 100 * rect.height;
-        var bx = projX(b.lon) / 100 * rect.width, by = projY(b.lat) / 100 * rect.height;
+        var ax = lpX(a.lon), ay = lpY(a.lat);
+        var bx = lpX(b.lon), by = lpY(b.lat);
         var dx = bx - ax, dy = by - ay;
         h += '<div class="leg" style="left:' + ax.toFixed(1) + 'px;top:' + ay.toFixed(1)
           +  'px;width:' + Math.sqrt(dx*dx + dy*dy).toFixed(1) + 'px;transform:rotate('
@@ -8855,8 +8975,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       if (!show[p.cat]) return;
       var ranked = (p.rk != null);
       if (ranked && p.rk > dotCap) return;
-      var x = projX(p.lon), y = projY(p.lat);
-      if (x < -2 || x > 102 || y < -2 || y > 102) return;
+      if (!inDrawBounds(p.lat, p.lon)) return;
+      var x = lpX(p.lon), y = lpY(p.lat);
       var tint = '';
       if (LAYERS.wxcat && p.cat === 'field'){
         var fi = FIELD_INFO[p.id];
@@ -8867,13 +8987,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       if (SET.labels !== 'off' && (!ranked || SET.labels === 'always' || p.rk <= labCap)){
         var txt = p.lb || p.id;
         var chw = (p.cat === 'strip') ? 5.5 : 6.4;
-        var px = x / 100 * rect.width, py = y / 100 * rect.height;
-        if (fits(px, py + 6, txt.length * chw + 4, 12)){
+        if (fits(x, y + 6, txt.length * chw + 4, 12)){
           lab = '<b' + (SET.labels === 'auto' ? ' style="opacity:.75"' : '') + '>' + txt + '</b>';
         }
       }
-      h += '<div class="fld k-' + p.cat + '" data-fld="' + p.id + '" style="left:' + x.toFixed(2)
-        +  '%;top:' + y.toFixed(2) + '%"><i' + (tint ? ' style="' + tint + '"' : '') + '></i>'
+      h += '<div class="fld k-' + p.cat + '" data-fld="' + p.id + '" style="left:' + x.toFixed(1)
+        +  'px;top:' + y.toFixed(1) + 'px"><i' + (tint ? ' style="' + tint + '"' : '') + '></i>'
         +  lab + '</div>';
     });
 
@@ -8883,22 +9002,34 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (LAYERS.route){
       ROUTE.forEach(function(p, i){
         if (p.id && dbById(p.id)) return;             /* already drawn above */
-        var wx = projX(p.lon), wy = projY(p.lat);
-        if (wx < -2 || wx > 102 || wy < -2 || wy > 102) return;
+        if (!inDrawBounds(p.lat, p.lon)) return;
+        var wx = lpX(p.lon), wy = lpY(p.lat);
         var wlab = (SET.labels === 'off') ? ''
                  : '<b>' + (p.id || ddm(p.lat, true) + ' ' + ddm(p.lon, false)) + '</b>';
-        h += '<div class="fld k-wpt" data-rwpt="' + i + '" style="left:' + wx.toFixed(2)
-          +  '%;top:' + wy.toFixed(2) + '%"><i></i>' + wlab + '</div>';
+        h += '<div class="fld k-wpt" data-rwpt="' + i + '" style="left:' + wx.toFixed(1)
+          +  'px;top:' + wy.toFixed(1) + 'px"><i></i>' + wlab + '</div>';
       });
     }
 
     host.innerHTML = h;
-    $$('#mapLayers .fld').forEach(function(el){
-      el.addEventListener('click', function(e){
+    /* Delegation. The old code re-attached a listener to every marker
+       on every rebuild - 274 addEventListener calls per frame during a
+       pan. One listener on the container survives every rebuild. */
+    if (!host._deleg){
+      host._deleg = 1;
+      host.addEventListener('click', function(e){
+        var el = e.target && e.target.closest ? e.target.closest('.fld') : null;
+        if (!el) return;
         e.stopPropagation();
-        openCard(el.getAttribute('data-fld'));
+        var id = el.getAttribute('data-fld');
+        if (id){ openCard(id); return; }
+        /* a pasted coordinate has no database entry; open its route
+           row instead of handing openCard a null id, which is what
+           used to happen here */
+        var ri = el.getAttribute('data-rwpt');
+        if (ri != null) openChip(parseInt(ri, 10));
       });
-    });
+    }
   }
 
   /* ---------- Layers popover, generated from the model ---------- */
@@ -9005,11 +9136,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var host = $('#mapLayers'); if (!host) return;
     var old = host.querySelector('.nmp-ship'); if (old) old.remove();
     if (!ship || ship.lat === undefined) return;
-    var x = projX(ship.lon), y = projY(ship.lat);
-    if (x < -5 || x > 105 || y < -5 || y > 105) return;
+    if (!inDrawBounds(ship.lat, ship.lon)) return;
     var el = document.createElement('div');
     el.className = 'nmp-ship';
-    el.style.left = x + '%'; el.style.top = y + '%';
+    el.style.left = lpX(ship.lon).toFixed(1) + 'px';
+    el.style.top  = lpY(ship.lat).toFixed(1) + 'px';
     el.innerHTML = '<svg viewBox="0 0 24 24" style="transform:rotate(' + (ship.trk || 0) + 'deg)">'
       + '<path d="M12 2l6 18-6-4-6 4z" fill="#2b8cff" stroke="#dce6f0" stroke-width="1.2" stroke-linejoin="round"/></svg>';
     host.appendChild(el);
@@ -9269,6 +9400,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
     document.getElementById('map').classList.add('live');
 
+    /* Re-parent the overlay layer into a Leaflet pane. Panes are
+       children of the map pane, which Leaflet translates on drag, so
+       everything inside rides along with the tiles for free. The pane
+       is zero-sized with absolutely positioned children, so it cannot
+       swallow drags; only the markers themselves take pointer events. */
+    try {
+      LMAP.createPane('nmpx');
+      var nmxPane = LMAP.getPane('nmpx');
+      nmxPane.style.zIndex = 450;          /* over tiles, under popups */
+      var mlEl = document.getElementById('mapLayers');
+      if (mlEl) nmxPane.appendChild(mlEl);
+    } catch(_){ }
+
     var raster = { updateWhenIdle:true, updateWhenZooming:false, keepBuffer:1,
                    errorTileUrl:NMX_BLANK, maxZoom:19 };
 
@@ -9321,17 +9465,29 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       VIEW.w = b.getWest();  VIEW.e = b.getEast();
     }
 
-    /* One render per frame during a pan. The demo rebuilds #mapLayers
-       wholesale, which is exactly the cost this spike is measuring. */
-    var pending = 0;
-    function onMove(){
-      if (pending) return;
-      pending = requestAnimationFrame(function(){
-        pending = 0; syncVIEW();
-        try { renderMap(); } catch(_){ }
+    /* Rebuild when the map SETTLES, never while it is moving. Layer
+       coordinates do not change during a drag, so there is nothing to
+       recompute until the view actually changes - and the padded draw
+       bounds mean a normal pan reveals markers that are already there.
+
+       zoomend is needed because layer points DO change with zoom; the
+       pane scales with the map during the animation and snaps to the
+       rebuilt positions when it lands. */
+    /* rAF rather than a timeout: viewreset fires the instant Leaflet
+       moves the pixel origin, and everything in the pane is still at
+       the OLD layer coordinates until we rebuild. A rAF lands before
+       the browser paints, so there is no frame showing markers in the
+       wrong place. A timeout would show one. */
+    var settle = 0;
+    function onIdle(){
+      if (settle) return;
+      settle = requestAnimationFrame(function(){
+        settle = 0;
+        syncVIEW();
+        try { renderMap(); paintShip(); } catch(_){ }
       });
     }
-    LMAP.on('move zoom resize', onMove);
+    LMAP.on('moveend zoomend resize viewreset', onIdle);
 
     /* v262 L4751, verbatim in behaviour: the container settles after
        Leaflet has already measured it. */
