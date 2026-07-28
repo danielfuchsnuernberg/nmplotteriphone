@@ -16,6 +16,25 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v81 2026-07-28  The real airfield pack. 575 aerodromes lifted
+                       from v262, replacing 16 invented "fields" and
+                       12 placeholder "strips" that carried approximate
+                       coordinates. 21 majors are the fields layer, 554
+                       the strips layer, so the map opens readable.
+                       Provenance is OurAirports, NOT the AIP: 431 have
+                       a proper AYxx code, 86 only an internal id shown
+                       by name, 58 a three-letter code. 29 frequencies
+                       across the whole set - blank means absent from
+                       this dataset, not unpublished.
+                       Declutter: rank gates what draws per zoom, then
+                       a greedy collision pass drops any label whose box
+                       overlaps one already placed, so dots stay and
+                       text stops piling up. Search was unbounded - it
+                       rendered every row with no query - now ranked,
+                       exact-id-first and capped at 30 with a count.
+                       Fixed: rect was declared inside the route
+                       conditional, so the collision maths would have
+                       thrown on a cleared route.
        v80 2026-07-28  Terrain is real. The sine-wave model that fed
                        the profile and the per-leg highest-terrain
                        figure is DELETED, not kept as a fallback - a
@@ -3174,7 +3193,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v80';
+  var VERSION = 'v81';
   var BUILD   = '2026-07-28';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -3296,28 +3315,603 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     try{ localStorage.setItem(SET_KEY, JSON.stringify({ AC:AC, SET:SET, etd:ETD_MIN })); }catch(e){}
   }
 
-  /* Searchable points. cat drives the section grouping in the picker.
-     Fields are ICAO/IATA real. Fixes, villages and personal waypoints
-     carry DEMO coordinates - placeholders until ENR 4.3 / 4.4 and
-     Danny's own list are transcribed and verified. */
-  var DB = [
-    { id:'AYNZ', ia:'LAE', nm:'Nadzab Tomodachi',       cat:'field', lat:-6.5698, lon:146.7261 },
-    { id:'AYGA', ia:'GKA', nm:'Goroka',                 cat:'field', lat:-6.0817, lon:145.3917 },
-    { id:'AYMH', ia:'HGU', nm:'Mount Hagen Kagamuga',   cat:'field', lat:-5.8267, lon:144.2961 },
-    { id:'AYMD', ia:'MAG', nm:'Madang',                 cat:'field', lat:-5.2072, lon:145.7890 },
-    { id:'AYPY', ia:'POM', nm:'Port Moresby Jacksons',  cat:'field', lat:-9.4433, lon:147.2200 },
-    { id:'AYTK', ia:'RAB', nm:'Tokua',                  cat:'field', lat:-4.3400, lon:152.3800 },
-    { id:'AYWK', ia:'WWK', nm:'Wewak Boram',            cat:'field', lat:-3.5838, lon:143.6692 },
-    { id:'AYMO', ia:'MAS', nm:'Momote',                 cat:'field', lat:-2.0619, lon:147.4242 },
-    { id:'AYVN', ia:'VAI', nm:'Vanimo',                 cat:'field', lat:-2.6927, lon:141.3021 },
-    { id:'AYKI', ia:'UNG', nm:'Kiunga',                 cat:'field', lat:-6.1257, lon:141.2818 },
-    { id:'AYTB', ia:'TBG', nm:'Tabubil',                cat:'field', lat:-5.2786, lon:141.2260 },
-    { id:'AYMN', ia:'MDU', nm:'Mendi',                  cat:'field', lat:-6.1478, lon:143.6572 },
-    { id:'AYWD', ia:'WBM', nm:'Wapenamanda',            cat:'field', lat:-5.6433, lon:143.8950 },
-    { id:'AYKV', ia:'KVG', nm:'Kavieng',                cat:'field', lat:-2.5794, lon:150.8078 },
-    { id:'AYBK', ia:'BUA', nm:'Buka',                   cat:'field', lat:-5.4222, lon:154.6733 },
-    { id:'AYCH', ia:'CMU', nm:'Chimbu Kundiawa',        cat:'field', lat:-6.0242, lon:144.9706 },
+  /* ---- Airfield pack ------------------------------------------------
+     575 aerodromes and airstrips, lifted wholesale from v262's
+     NM_REGION.airfields. Nothing here was retyped.
 
+     PROVENANCE, and it matters: this set is OurAirports-derived, not
+     the PNG AIP. 431 carry a proper AYxx ICAO code; 86 have only an
+     OurAirports internal id (PG-nnnn, shown by name instead) and 58
+     carry a three-letter code only. Treat position and elevation as
+     advisory and cross-check anything you intend to use against the
+     AIP. Only 29 frequencies exist across the whole set, so a blank
+     frequency means "not in this dataset", not "none published".
+
+     rk is the declutter rank: 0 large, 1 medium, 2 ICAO with IATA,
+     3 ICAO without, 4 everything else. cat keeps the existing
+     fields/strips rail toggles working - rank 0-1 are fields (21),
+     the rest are strips (554), so the map opens readable. */
+  var AF = [
+    { id:'AYNZ', ia:'LAE', nm:'Nadzab Tomodachi International', cat:'field', lat:-6.56799, lon:146.72654, el:239, mu:'Lae', rk:0, fq:[['APP','APP','118.6'],['ATIS','ATIS','128.6'],['RDO','LAE RDO','120.7'],['TWR','TWR','121.7']] },
+    { id:'AYPY', ia:'POM', nm:'Port Moresby Jacksons International', cat:'field', lat:-9.44338, lon:147.22, el:146, mu:'Port Moresby', rk:0, fq:[['APP','JACKSONS APP','125.8'],['ATIS','ATIS','128.0'],['GND','JACKSONS GND','121.7'],['TWR','JACKSONS TWR','118.1']] },
+    { id:'AYBA', ia:'VMU', nm:'Baimuru', cat:'field', lat:-7.49695, lon:144.82176, el:27, mu:'Baimuru', rk:1 },
+    { id:'AYBK', ia:'BUA', nm:'Buka', cat:'field', lat:-5.4223, lon:154.6727, el:11, mu:'Buka Island', rk:1, fq:[['RDO','LAE RDO','127.1']] },
+    { id:'AYBM', ia:'OPU', nm:'Balimo', cat:'field', lat:-8.05, lon:142.933, el:51, mu:'Balimo', rk:1 },
+    { id:'AYCH', ia:'CMU', nm:'Chimbu', cat:'field', lat:-6.02429, lon:144.97099, el:4974, mu:'Kundiawa', rk:1 },
+    { id:'AYDU', ia:'DAU', nm:'Daru', cat:'field', lat:-9.08676, lon:143.20799, el:20, mu:'Daru', rk:1, fq:[['FSS','MORESBY CNTR','124.9']] },
+    { id:'AYGA', ia:'GKA', nm:'Goroka', cat:'field', lat:-6.08169, lon:145.392, el:5282, mu:'Goronka', rk:1, fq:[['TWR','TWR','118.7']] },
+    { id:'AYGN', ia:'GUR', nm:'Gurney', cat:'field', lat:-10.3115, lon:150.334, el:88, mu:'Gurney', rk:1, fq:[['FSS','MORESBY CNTR','124.1']] },
+    { id:'AYGR', ia:'PNP', nm:'Girua', cat:'field', lat:-8.80454, lon:148.30901, el:311, mu:'Popondetta', rk:1 },
+    { id:'AYHK', ia:'HKN', nm:'Hoskins', cat:'field', lat:-5.46385, lon:150.40733, el:66, mu:'Kimbe', rk:1, fq:[['FSS','NADZAB CNTR','127.1']] },
+    { id:'AYKM', ia:'KMA', nm:'Kerema', cat:'field', lat:-7.96361, lon:145.771, el:10, mu:'Kerema', rk:1, fq:[['FSS','MORESBY','120.9']] },
+    { id:'AYKV', ia:'KVG', nm:'Kavieng', cat:'field', lat:-2.5794, lon:150.808, el:7, mu:'Kavieng', rk:1, fq:[['FSS','LAE','127.1']] },
+    { id:'AYMD', ia:'MAG', nm:'Madang', cat:'field', lat:-5.20708, lon:145.789, el:20, mu:'Madang', rk:1, fq:[['ATIS','ATIS','127.8'],['FSS','MADANG CNTR','120.1'],['TWR','TWR','118.1']] },
+    { id:'AYMH', ia:'HGU', nm:'Mount Hagen Kagamuga', cat:'field', lat:-5.82821, lon:144.29941, el:5388, mu:'Mount Hagen', rk:1, fq:[['ATIS','ATIS','128.4'],['TWR','HAGEN TWR','120.5']] },
+    { id:'AYMN', ia:'MDU', nm:'Mendi', cat:'field', lat:-6.14774, lon:143.657, el:5680, mu:'Mendi', rk:1 },
+    { id:'AYMO', ia:'MAS', nm:'Momote', cat:'field', lat:-2.06189, lon:147.424, el:12, mu:'Manus Island', rk:1, fq:[['AWOS','AWIS','129.35'],['FSS','MADANG','120.1']] },
+    { id:'AYTK', ia:'RAB', nm:'Tokua', cat:'field', lat:-4.34046, lon:152.38001, el:49, mu:'Kokopo', rk:1, fq:[['FSS','LAE RDO','127.1'],['MISC','MTAF','120.9'],['TWR','TWR','118.2']] },
+    { id:'AYVN', ia:'VAI', nm:'Vanimo', cat:'field', lat:-2.6926, lon:141.3028, el:10, mu:'Vanimo', rk:1, fq:[['FSS','MADANG FIS','126.7']] },
+    { id:'AYWD', ia:'WBM', nm:'Wapenamanda', cat:'field', lat:-5.63529, lon:143.89223, el:5889, mu:'Wapenamanda', rk:1 },
+    { id:'AYWK', ia:'WWK', nm:'Wewak International', cat:'field', lat:-3.58383, lon:143.66901, el:19, mu:'Wewak', rk:1, fq:[['ATIS','ATIS','128.2'],['CTAF','WEWAK TRAFFIC','121.7'],['FSS','MADANG CNTR','126.7']] },
+    { id:'AYAA', ia:'AMF', nm:'Ama', cat:'strip', lat:-4.10111, lon:141.67, el:145, rk:2 },
+    { id:'AYAE', ia:'UAE', nm:'Mount Aue', cat:'strip', lat:-6.22998, lon:144.66418, el:4250, mu:'Aue', rk:2 },
+    { id:'AYAF', ia:'AFR', nm:'Afore', cat:'strip', lat:-9.13867, lon:148.3907, el:2500, mu:'Afore', rk:2 },
+    { id:'AYAG', ia:'AUP', nm:'Agaun', cat:'strip', lat:-9.92771, lon:149.38995, el:3200, mu:'Agaun', rk:2 },
+    { id:'AYAI', ia:'ATP', nm:'Aitape', cat:'strip', lat:-3.14361, lon:142.34681, el:10, mu:'Aitape', rk:2 },
+    { id:'AYAK', ia:'AIH', nm:'Aiambak', cat:'strip', lat:-7.34278, lon:141.2675, el:90, mu:'Aiambak', rk:2 },
+    { id:'AYAM', ia:'AMU', nm:'Amanab', cat:'strip', lat:-3.586, lon:141.21433, el:1307, mu:'Amanab', rk:2 },
+    { id:'AYAN', ia:'ADC', nm:'Andakombe', cat:'strip', lat:-7.13722, lon:145.74472, el:3600, mu:'Andekombe', rk:2 },
+    { id:'AYAO', ia:'AIE', nm:'Aiome', cat:'strip', lat:-5.1457, lon:144.7307, el:350, mu:'Aiome', rk:2 },
+    { id:'AYAQ', ia:'KPM', nm:'Kompiam', cat:'strip', lat:-5.38167, lon:143.92472, el:5100, rk:2 },
+    { id:'AYAT', ia:'AUJ', nm:'Ambunti', cat:'strip', lat:-4.21567, lon:142.82317, el:50, mu:'Ambunti', rk:2 },
+    { id:'AYAW', ia:'AWB', nm:'Awaba', cat:'strip', lat:-8.01341, lon:142.7521, el:32, mu:'Awaba', rk:2 },
+    { id:'AYAX', ia:'AEK', nm:'Aseki', cat:'strip', lat:-7.35081, lon:146.19399, el:4106, mu:'Aseki', rk:2 },
+    { id:'AYAY', ia:'AYU', nm:'Aiyura', cat:'strip', lat:-6.33806, lon:145.90417, el:5355, mu:'Aiyura Valley', rk:2 },
+    { id:'AYBC', ia:'BCP', nm:'Bambu', cat:'strip', lat:-5.86361, lon:146.4925, el:6790, mu:'Bambu', rk:2 },
+    { id:'AYBD', ia:'BNM', nm:'Bodinumu', cat:'strip', lat:-9.10778, lon:147.66672, el:3700, mu:'Bodinumu', rk:2 },
+    { id:'AYBF', ia:'BMZ', nm:'Bamu', cat:'strip', lat:-7.8485, lon:143.2433, el:50, mu:'Bamu', rk:2 },
+    { id:'AYBG', ia:'BDZ', nm:'Baindoung', cat:'strip', lat:-6.34722, lon:146.94222, el:4400, rk:2 },
+    { id:'AYBH', ia:'BSP', nm:'Bensbach', cat:'strip', lat:-8.85806, lon:141.25944, el:30, mu:'Bensbach', rk:2 },
+    { id:'AYBI', ia:'BWP', nm:'Bewani', cat:'strip', lat:-3.02167, lon:141.16528, el:550, mu:'Bewani', rk:2 },
+    { id:'AYBL', ia:'BAA', nm:'Bialla', cat:'strip', lat:-5.33056, lon:151.008, el:51, mu:'Bialla, Matalilu, Ewase', rk:2 },
+    { id:'AYBO', ia:'BMH', nm:'Bomai', cat:'strip', lat:-6.37317, lon:144.637, el:3300, mu:'Bomai', rk:2 },
+    { id:'AYBP', ia:'BPD', nm:'Bapi', cat:'strip', lat:-7.74361, lon:147.02056, el:2930, mu:'Bapi', rk:2 },
+    { id:'AYBQ', ia:'BPK', nm:'Biangabip', cat:'strip', lat:-5.52639, lon:141.74458, el:1069, mu:'Biangabip', rk:2 },
+    { id:'AYBR', ia:'BRP', nm:'Biaru', cat:'strip', lat:-7.6693, lon:146.7594, el:4900, mu:'Biaru', rk:2 },
+    { id:'AYBU', ia:'BUL', nm:'Bulolo', cat:'strip', lat:-7.21629, lon:146.64954, el:2240, mu:'Bulolo', rk:2 },
+    { id:'AYBZ', ia:'XBN', nm:'Biniguni', cat:'strip', lat:-9.6425, lon:149.30389, el:215, mu:'Biniguni', rk:2 },
+    { id:'AYCB', ia:'CVB', nm:'Chungribu', cat:'strip', lat:-4.80662, lon:144.715, el:108, mu:'Chungribu', rk:2 },
+    { id:'AYCG', ia:'CGC', nm:'Cape Gloucester', cat:'strip', lat:-5.45523, lon:148.42229, el:78, mu:'Cape Gloucester', rk:2 },
+    { id:'AYCS', ia:'SQT', nm:'China Strait', cat:'strip', lat:-10.56278, lon:150.69069, el:10, mu:'Samarai Island', rk:2 },
+    { id:'AYDB', ia:'DBP', nm:'Debepare', cat:'strip', lat:-6.30861, lon:141.90556, el:360, mu:'Debepare', rk:2 },
+    { id:'AYDE', ia:'DER', nm:'Derim', cat:'strip', lat:-6.14472, lon:147.10722, el:4850, mu:'Derim', rk:2 },
+    { id:'AYDI', ia:'BNT', nm:'Bundi', cat:'strip', lat:-5.74222, lon:145.2275, el:4400, mu:'Bundi', rk:2 },
+    { id:'AYDK', ia:'MDM', nm:'Munduku', cat:'strip', lat:-4.6204, lon:143.4516, el:100, mu:'Munduku', rk:2 },
+    { id:'AYDL', ia:'KPF', nm:'Kondobol', cat:'strip', lat:-8.5336, lon:142.5049, el:132, mu:'Kondobol', rk:2 },
+    { id:'AYDN', ia:'DNU', nm:'Dinangat', cat:'strip', lat:-6.1546, lon:146.6772, el:5309, mu:'Dinangat', rk:2 },
+    { id:'AYDO', ia:'DOI', nm:'Doini', cat:'strip', lat:-10.7009, lon:150.7218, el:31, mu:'Castori Islets', rk:2 },
+    { id:'AYDR', ia:'DOO', nm:'Dorobisoro', cat:'strip', lat:-9.46185, lon:147.92091, el:1767, mu:'Dorobisoro', rk:2 },
+    { id:'AYEA', ia:'KRU', nm:'Kerau', cat:'strip', lat:-8.27161, lon:147.0719, el:7360, mu:'Gunim', rk:2 },
+    { id:'AYEB', ia:'EMS', nm:'Embessa', cat:'strip', lat:-9.447, lon:148.7628, el:131, mu:'Embessa', rk:2 },
+    { id:'AYED', ia:'XYR', nm:'Edwaki', cat:'strip', lat:-3.88399, lon:141.79223, el:190, mu:'Yellow River Mission', rk:2 },
+    { id:'AYEE', ia:'EMI', nm:'Emirau', cat:'strip', lat:-1.65395, lon:149.97577, el:172, mu:'Emirau Island', rk:2 },
+    { id:'AYEF', ia:'EFG', nm:'Efogi', cat:'strip', lat:-9.15381, lon:147.65981, el:3900, mu:'Efogi', rk:2 },
+    { id:'AYEH', ia:'MHY', nm:'Morehead', cat:'strip', lat:-8.71411, lon:141.64444, el:100, mu:'Morehead', rk:2 },
+    { id:'AYEL', ia:'EPT', nm:'Eliptamin', cat:'strip', lat:-5.0412, lon:141.6779, el:4825, mu:'Eliptamin', rk:2 },
+    { id:'AYEN', ia:'EGA', nm:'Engati', cat:'strip', lat:-6.9179, lon:146.1053, el:3715, mu:'Engati', rk:2 },
+    { id:'AYEO', ia:'EMO', nm:'Emo River', cat:'strip', lat:-9.1234, lon:148.0415, el:2240, mu:'Emo Mission', rk:2 },
+    { id:'AYER', ia:'ERU', nm:'Erume', cat:'strip', lat:-8.2538, lon:146.9747, el:6690, mu:'Erume', rk:2 },
+    { id:'AYES', ia:'MFZ', nm:'Meselia', cat:'strip', lat:-6.1364, lon:149.1183, el:180, mu:'Demgulu', rk:2 },
+    { id:'AYET', ia:'BOT', nm:'Bosset', cat:'strip', lat:-7.23726, lon:141.10632, el:80, mu:'Bosset', rk:2 },
+    { id:'AYEV', ia:'ERE', nm:'Erave', cat:'strip', lat:-6.60646, lon:143.90021, el:3650, mu:'Erave', rk:2 },
+    { id:'AYEW', ia:'SWE', nm:'Siwea', cat:'strip', lat:-6.28418, lon:147.58237, el:5960, mu:'Siwea', rk:2 },
+    { id:'AYFA', ia:'FNE', nm:'Fane', cat:'strip', lat:-8.54928, lon:147.08583, el:4500, mu:'Fane Mission', rk:2 },
+    { id:'AYFE', ia:'FRQ', nm:'Feramin', cat:'strip', lat:-5.208, lon:141.6988, el:4655, mu:'Feramin', rk:2 },
+    { id:'AYFI', ia:'FIN', nm:'Finschhafen', cat:'strip', lat:-6.62175, lon:147.85405, el:60, mu:'Buki', rk:2 },
+    { id:'AYFR', ia:'FAQ', nm:'Frieda River', cat:'strip', lat:-4.61047, lon:141.96014, el:217, mu:'Frieda River', rk:2 },
+    { id:'AYFU', ia:'FUM', nm:'Fuma', cat:'strip', lat:-6.3933, lon:142.4408, el:466, mu:'Fuma', rk:2 },
+    { id:'AYGC', ia:'GEW', nm:'Gewoia', cat:'strip', lat:-9.2263, lon:148.4949, el:340, mu:'Gewoia', rk:2 },
+    { id:'AYGF', ia:'GUG', nm:'Guari', cat:'strip', lat:-8.1286, lon:146.8722, el:6450, mu:'Guari', rk:2 },
+    { id:'AYGG', ia:'GRL', nm:'Garasa', cat:'strip', lat:-7.98071, lon:147.21346, el:2539, mu:'Au', rk:2 },
+    { id:'AYGI', ia:'GAR', nm:'Garaina', cat:'strip', lat:-7.87563, lon:147.14127, el:2497, mu:'Garaina', rk:2 },
+    { id:'AYGJ', ia:'GAZ', nm:'Guasopa', cat:'strip', lat:-9.22592, lon:152.94435, el:10, mu:'Woodlark (Muyua) Island', rk:2 },
+    { id:'AYGL', ia:'GOE', nm:'Gonaili', cat:'strip', lat:-5.52772, lon:151.57333, el:40, mu:'Gonaili', rk:2 },
+    { id:'AYGP', ia:'GAP', nm:'Gusap', cat:'strip', lat:-6.0532, lon:145.95905, el:1504, mu:'Gusap', rk:2 },
+    { id:'AYGS', ia:'GBC', nm:'Gasuke', cat:'strip', lat:-6.1028, lon:141.7393, el:157, mu:'Gasuke', rk:2 },
+    { id:'AYGT', ia:'GMI', nm:'Gasmata Island', cat:'strip', lat:-6.27111, lon:150.33099, el:23, mu:'Gasmata Island', rk:2 },
+    { id:'AYGU', ia:'AKG', nm:'Anguganak', cat:'strip', lat:-3.5605, lon:142.21731, el:937, mu:'Anguganak', rk:2 },
+    { id:'AYGV', ia:'GVI', nm:'Green River', cat:'strip', lat:-3.90224, lon:141.17052, el:281, mu:'Green River', rk:2 },
+    { id:'AYGX', ia:'GOC', nm:'Gora', cat:'strip', lat:-9.0021, lon:148.2364, el:2497, mu:'Gora', rk:2 },
+    { id:'AYHB', ia:'HBD', nm:'Habi', cat:'strip', lat:-6.32, lon:142.4893, el:993, mu:'Habi', rk:2 },
+    { id:'AYHE', ia:'HNI', nm:'Heiweni', cat:'strip', lat:-7.4223, lon:146.4276, el:3480, mu:'Heiweni', rk:2 },
+    { id:'AYHF', ia:'HYF', nm:'Hayfields', cat:'strip', lat:-3.69838, lon:143.0579, el:466, mu:'Bainyik', rk:2 },
+    { id:'AYHH', ia:'HNN', nm:'Honinabi', cat:'strip', lat:-6.2457, lon:142.1771, el:452, mu:'Honinabi', rk:2 },
+    { id:'AYHO', ia:'HIT', nm:'Haivaro', cat:'strip', lat:-6.9406, lon:143.059, el:180, mu:'Haivaro', rk:2 },
+    { id:'AYHU', ia:'HWA', nm:'Hawabango', cat:'strip', lat:-7.39299, lon:146.00349, el:4563, mu:'Hawabango', rk:2 },
+    { id:'AYIA', ia:'IIS', nm:'Nissan Island', cat:'strip', lat:-4.49972, lon:154.226, el:52, mu:'Nissan Island', rk:2 },
+    { id:'AYID', ia:'IDN', nm:'Indagen', cat:'strip', lat:-6.22663, lon:147.244, el:5788, mu:'Indagen', rk:2 },
+    { id:'AYII', ia:'IMN', nm:'Imane', cat:'strip', lat:-6.7524, lon:146.1072, el:3860, mu:'Imane', rk:2 },
+    { id:'AYIM', ia:'KGM', nm:'Kungim', cat:'strip', lat:-5.671, lon:141.03, el:349, mu:'Kungim', rk:2 },
+    { id:'AYIO', ia:'IMD', nm:'Imonda', cat:'strip', lat:-3.328, lon:141.1573, el:990, mu:'Imonda', rk:2 },
+    { id:'AYIQ', ia:'KIE', nm:'Aropa', cat:'strip', lat:-6.30573, lon:155.72825, el:20, mu:'Kieta', rk:2 },
+    { id:'AYIU', ia:'IAL', nm:'Ialibu', cat:'strip', lat:-6.2782, lon:143.9944, el:6736, mu:'Ialibu', rk:2 },
+    { id:'AYIW', ia:'WSA', nm:'Wasua', cat:'strip', lat:-8.2836, lon:142.8697, el:45, mu:'Wasua', rk:2 },
+    { id:'AYIX', ia:'WIU', nm:'Witu', cat:'strip', lat:-4.68952, lon:149.44011, el:25, mu:'Garove Island', rk:2 },
+    { id:'AYIY', ia:'MPX', nm:'Miyanmin', cat:'strip', lat:-4.90306, lon:141.62083, el:2500, mu:'Miyanmin', rk:2 },
+    { id:'AYJO', ia:'KGH', nm:'Yongai', cat:'strip', lat:-8.5289, lon:147.4603, el:6500, mu:'Yongai', rk:2 },
+    { id:'AYJS', ia:'JOP', nm:'Josephstaal', cat:'strip', lat:-4.74708, lon:145.00708, el:250, mu:'Josephstaal', rk:2 },
+    { id:'AYKA', ia:'LSA', nm:'Losuia', cat:'strip', lat:-8.50582, lon:151.08099, el:27, mu:'Losuia', rk:2 },
+    { id:'AYKB', ia:'KBM', nm:'Kabwum', cat:'strip', lat:-6.15547, lon:147.19147, el:4450, rk:2 },
+    { id:'AYKC', ia:'KDR', nm:'Kandrian', cat:'strip', lat:-6.19217, lon:149.54783, el:280, mu:'Kandrian', rk:2 },
+    { id:'AYKD', ia:'KMF', nm:'Kamina', cat:'strip', lat:-7.64925, lon:145.95694, el:2157, mu:'Hoieti', rk:2 },
+    { id:'AYKG', ia:'KPA', nm:'Kopiago', cat:'strip', lat:-5.3883, lon:142.4977, el:4445, mu:'Kopiago', rk:2 },
+    { id:'AYKH', ia:'KAQ', nm:'Kamulai', cat:'strip', lat:-8.15069, lon:146.834, el:5800, mu:'Kamulai Mission', rk:2 },
+    { id:'AYKI', ia:'UNG', nm:'Kiunga', cat:'strip', lat:-6.12571, lon:141.282, el:88, mu:'Kiunga', rk:2 },
+    { id:'AYKJ', ia:'KNE', nm:'Kanainj', cat:'strip', lat:-5.2903, lon:144.7072, el:4064, mu:'Kanainj', rk:2 },
+    { id:'AYKK', ia:'KRI', nm:'Kikori', cat:'strip', lat:-7.42438, lon:144.25008, el:50, mu:'Kikori', rk:2 },
+    { id:'AYKO', ia:'KKD', nm:'Kokoda', cat:'strip', lat:-8.88468, lon:147.73096, el:1240, mu:'Kokoda', rk:2 },
+    { id:'AYKQ', ia:'KGW', nm:'Kagi', cat:'strip', lat:-9.13592, lon:147.66944, el:4200, mu:'Kagi', rk:2 },
+    { id:'AYKR', ia:'KRX', nm:'Kar Kar', cat:'strip', lat:-4.557, lon:145.9404, el:130, mu:'Kar Kar Island', rk:2 },
+    { id:'AYKT', ia:'KZF', nm:'Kaintiba', cat:'strip', lat:-7.50025, lon:146.03383, el:2050, mu:'Kaintiba', rk:2 },
+    { id:'AYKU', ia:'KUQ', nm:'Kuri', cat:'strip', lat:-7.13508, lon:143.27611, el:35, mu:'Kuri', rk:2 },
+    { id:'AYKW', ia:'KWO', nm:'Kawito', cat:'strip', lat:-7.97701, lon:142.82358, el:72, mu:'Kawito', rk:2 },
+    { id:'AYKY', ia:'LNV', nm:'Londolovit', cat:'strip', lat:-3.04361, lon:152.629, el:167, mu:'Londolovit', rk:2 },
+    { id:'AYLB', ia:'LAB', nm:'Lab Lab', cat:'strip', lat:-5.7204, lon:148.0566, el:160, mu:'Lab Lab Mission', rk:2 },
+    { id:'AYLG', ia:'KEG', nm:'Keglsugl', cat:'strip', lat:-5.83278, lon:145.09722, el:8400, mu:'Denglagu Mission', rk:2 },
+    { id:'AYLI', ia:'KII', nm:'Kibuli', cat:'strip', lat:-9.00653, lon:142.69806, el:54, mu:'Kibuli', rk:2 },
+    { id:'AYLL', ia:'LGN', nm:'Linga Linga', cat:'strip', lat:-5.53194, lon:149.73417, el:17, mu:'Linga Linga', rk:2 },
+    { id:'AYLN', ia:'LNM', nm:'Langimar', cat:'strip', lat:-7.22314, lon:146.22708, el:5127, rk:2 },
+    { id:'AYLO', ia:'LWI', nm:'Lowai', cat:'strip', lat:-6.3344, lon:146.6458, el:2900, mu:'Lowai', rk:2 },
+    { id:'AYLP', ia:'LPN', nm:'Leron Plains', cat:'strip', lat:-6.3917, lon:146.3434, el:680, mu:'Leron Plains', rk:2 },
+    { id:'AYLS', ia:'LNG', nm:'Lese', cat:'strip', lat:-8.2799, lon:146.2765, el:40, mu:'Lese', rk:2 },
+    { id:'AYLT', ia:'LNC', nm:'Lengbati', cat:'strip', lat:-6.38461, lon:147.36864, el:5750, rk:2 },
+    { id:'AYLU', ia:'LMI', nm:'Lumi', cat:'strip', lat:-3.47684, lon:142.04129, el:1750, mu:'Lumi', rk:2 },
+    { id:'AYLX', ia:'LSJ', nm:'Long Island', cat:'strip', lat:-5.3604, lon:147.0177, el:116, mu:'Long Island', rk:2 },
+    { id:'AYMA', ia:'MRM', nm:'Manari', cat:'strip', lat:-9.1908, lon:147.6219, el:2630, mu:'Manari', rk:2 },
+    { id:'AYMB', ia:'OBM', nm:'Morobe', cat:'strip', lat:-7.74, lon:147.59, el:8, mu:'Morobe', rk:2 },
+    { id:'AYMC', ia:'MYX', nm:'Menyamya', cat:'strip', lat:-7.21167, lon:146.01936, el:3880, mu:'Menyamya', rk:2 },
+    { id:'AYMI', ia:'MXK', nm:'Mindik', cat:'strip', lat:-6.47167, lon:147.44114, el:4200, mu:'Mindik', rk:2 },
+    { id:'AYMJ', ia:'MPG', nm:'Makini', cat:'strip', lat:-6.53222, lon:147.65117, el:2530, mu:'Makini', rk:2 },
+    { id:'AYML', ia:'GUV', nm:'Mougulu', cat:'strip', lat:-6.28086, lon:142.42077, el:825, mu:'Mougulu', rk:2 },
+    { id:'AYMP', ia:'MLQ', nm:'Malalaua', cat:'strip', lat:-8.07139, lon:146.15547, el:20, mu:'Malalaua', rk:2 },
+    { id:'AYMQ', ia:'MQO', nm:'Malam', cat:'strip', lat:-8.70917, lon:142.64972, el:126, mu:'Malam', rk:2 },
+    { id:'AYMR', ia:'MXH', nm:'Moro', cat:'strip', lat:-6.36333, lon:143.23801, el:2740, mu:'Moro', rk:2 },
+    { id:'AYMS', ia:'MIS', nm:'Misima Island', cat:'strip', lat:-10.6892, lon:152.838, el:26, mu:'Misima Island', rk:2 },
+    { id:'AYMV', ia:'MKN', nm:'Malekolon', cat:'strip', lat:-4.02343, lon:153.65728, el:5, mu:'Babase Island', rk:2 },
+    { id:'AYMW', ia:'MWG', nm:'Marawaka', cat:'strip', lat:-6.9736, lon:145.8849, el:6050, mu:'Marawaka', rk:2 },
+    { id:'AYMZ', ia:'MPU', nm:'Mapua(Mabua)', cat:'strip', lat:-2.81139, lon:151.99111, el:40, mu:'Tatau Island', rk:2 },
+    { id:'AYNA', ia:'NKN', nm:'Nankina', cat:'strip', lat:-5.837, lon:146.4533, el:5800, mu:'Gwarawon', rk:2 },
+    { id:'AYNB', ia:'KEX', nm:'Kanabea', cat:'strip', lat:-7.53889, lon:145.905, el:4288, mu:'Kanabea', rk:2 },
+    { id:'AYNC', ia:'NDN', nm:'Nadunumu', cat:'strip', lat:-9.14356, lon:147.68425, el:5100, mu:'Nadunumu', rk:2 },
+    { id:'AYND', ia:'AUI', nm:'Aua Island', cat:'strip', lat:-1.46056, lon:143.06472, el:4, mu:'Aua Island', rk:2 },
+    { id:'AYNE', ia:'GBF', nm:'Negarbo(Negabo)', cat:'strip', lat:-6.56778, lon:144.70306, el:4500, mu:'Negarbo', rk:2 },
+    { id:'AYNG', ia:'MFO', nm:'Manguna', cat:'strip', lat:-5.57778, lon:151.79233, el:187, mu:'Manguna', rk:2 },
+    { id:'AYNI', ia:'NUG', nm:'Nuguria', cat:'strip', lat:-3.4075, lon:154.7383, el:30, mu:'Nuguria Island', rk:2 },
+    { id:'AYNJ', ia:'NDI', nm:'Namudi', cat:'strip', lat:-9.47375, lon:148.32942, el:1044, mu:'Namudi', rk:2 },
+    { id:'AYNM', ia:'KSB', nm:'Kasonombe', cat:'strip', lat:-6.3819, lon:146.9859, el:5800, mu:'Kasonombe', rk:2 },
+    { id:'AYNN', ia:'KDP', nm:'Kandep', cat:'strip', lat:-5.84061, lon:143.50722, el:7710, mu:'Kandep', rk:2 },
+    { id:'AYNO', ia:'NMN', nm:'Nomane', cat:'strip', lat:-6.32183, lon:145.07067, el:6032, mu:'Namane', rk:2 },
+    { id:'AYNS', ia:'BXZ', nm:'Bunsil', cat:'strip', lat:-5.7243, lon:147.8667, el:201, mu:'Bunsil - Umboi Island', rk:2 },
+    { id:'AYNU', ia:'UKU', nm:'Nuku', cat:'strip', lat:-3.67677, lon:142.48492, el:870, mu:'Nuku', rk:2 },
+    { id:'AYNX', ia:'ATN', nm:'Namatanai', cat:'strip', lat:-3.6695, lon:152.438, el:150, mu:'Namatanai', rk:2 },
+    { id:'AYNY', ia:'NBA', nm:'Nambaiyufa', cat:'strip', lat:-6.2412, lon:145.2424, el:5550, mu:'Nambaiyufa', rk:2 },
+    { id:'AYOB', ia:'OBX', nm:'Obo', cat:'strip', lat:-7.59062, lon:141.32426, el:29, mu:'Obo', rk:2 },
+    { id:'AYOE', ia:'KGB', nm:'Konge', cat:'strip', lat:-6.2239, lon:147.2152, el:5900, mu:'Konge', rk:2 },
+    { id:'AYOF', ia:'OKV', nm:'Okao', cat:'strip', lat:-5.55667, lon:141.03278, el:450, mu:'Okao', rk:2 },
+    { id:'AYOG', ia:'OGE', nm:'Ogeranang', cat:'strip', lat:-6.46675, lon:147.36417, el:5850, rk:2 },
+    { id:'AYOJ', ia:'OKP', nm:'Oksapmin', cat:'strip', lat:-5.2261, lon:142.2259, el:5140, mu:'Oksapmin', rk:2 },
+    { id:'AYOK', ia:'HOC', nm:'Komako', cat:'strip', lat:-7.3984, lon:145.8827, el:3960, mu:'Komako', rk:2 },
+    { id:'AYOL', ia:'KQL', nm:'Kol', cat:'strip', lat:-5.73117, lon:144.846, el:5350, mu:'Kol', rk:2 },
+    { id:'AYOM', ia:'OSE', nm:'Omora', cat:'strip', lat:-7.82778, lon:147.08064, el:2540, mu:'Omora', rk:2 },
+    { id:'AYOO', ia:'KOM', nm:'Komo-Manda', cat:'strip', lat:-6.0682, lon:142.8598, el:5057, mu:'Komo', rk:2 },
+    { id:'AYOP', ia:'KSP', nm:'Kosipe', cat:'strip', lat:-8.45072, lon:147.20919, el:6350, mu:'Kosipe Mission', rk:2 },
+    { id:'AYOQ', ia:'KCJ', nm:'Komaio', cat:'strip', lat:-7.2714, lon:143.5952, el:28, mu:'Komaio', rk:2 },
+    { id:'AYOV', ia:'OLQ', nm:'Olsobip', cat:'strip', lat:-5.38972, lon:141.51528, el:1500, mu:'Olsobip', rk:2 },
+    { id:'AYOW', ia:'KDE', nm:'Koroba', cat:'strip', lat:-5.6952, lon:142.7441, el:5638, mu:'Koroba', rk:2 },
+    { id:'AYOY', ia:'OPB', nm:'Open Bay', cat:'strip', lat:-4.79473, lon:151.69619, el:33, mu:'Maitanakunai', rk:2 },
+    { id:'AYPB', ia:'PLE', nm:'Paiela', cat:'strip', lat:-5.37241, lon:142.97577, el:6100, mu:'Paiela', rk:2 },
+    { id:'AYPC', ia:'PGB', nm:'Pangoa', cat:'strip', lat:-7.0226, lon:141.5605, el:60, mu:'Pangoa', rk:2 },
+    { id:'AYPD', ia:'PDI', nm:'Pindiu', cat:'strip', lat:-6.44514, lon:147.51583, el:2995, mu:'Pindiu', rk:2 },
+    { id:'AYPE', ia:'APR', nm:'April River', cat:'strip', lat:-4.67667, lon:142.54014, el:220, mu:'April River', rk:2 },
+    { id:'AYPG', ia:'PGN', nm:'Pangia', cat:'strip', lat:-6.386, lon:144.1084, el:5340, mu:'Pangia', rk:2 },
+    { id:'AYPJ', ia:'PMP', nm:'Pimaga', cat:'strip', lat:-6.49917, lon:143.51028, el:2745, mu:'Pimaga', rk:2 },
+    { id:'AYPO', ia:'MPF', nm:'Mapoda', cat:'strip', lat:-7.979, lon:143.1694, el:45, mu:'Mapoda', rk:2 },
+    { id:'AYPQ', ia:'PMN', nm:'Pumani', cat:'strip', lat:-9.7469, lon:149.4766, el:427, mu:'Pumani', rk:2 },
+    { id:'AYPU', ia:'WLU', nm:'Walluanda', cat:'strip', lat:-6.47516, lon:143.98722, el:6050, mu:'Puri', rk:2 },
+    { id:'AYQA', ia:'KRJ', nm:'Karawari', cat:'strip', lat:-4.59667, lon:143.5225, el:70, mu:'Amboin', rk:2 },
+    { id:'AYQL', ia:'TLP', nm:'Tumolbil', cat:'strip', lat:-4.7748, lon:141.0133, el:3590, mu:'Tumolbil', rk:2 },
+    { id:'AYQO', ia:'SPH', nm:'Sopu', cat:'strip', lat:-8.3038, lon:147.1659, el:6580, mu:'Sopu', rk:2 },
+    { id:'AYQQ', ia:'ONB', nm:'Ononge', cat:'strip', lat:-8.67436, lon:147.26242, el:5800, mu:'Onange Mission', rk:2 },
+    { id:'AYQS', ia:'SXA', nm:'Sialum', cat:'strip', lat:-6.0908, lon:147.5955, el:170, mu:'Sialum', rk:2 },
+    { id:'AYRA', ia:'KIQ', nm:'Kira', cat:'strip', lat:-8.06511, lon:147.33203, el:1700, mu:'Kira', rk:2 },
+    { id:'AYRE', ia:'RBP', nm:'Raba Raba', cat:'strip', lat:-9.97111, lon:149.83222, el:170, mu:'Rabaraba', rk:2 },
+    { id:'AYRG', ia:'RMN', nm:'Rumginae', cat:'strip', lat:-5.89722, lon:141.27167, el:160, rk:2 },
+    { id:'AYRI', ia:'KMR', nm:'Karimui', cat:'strip', lat:-6.4921, lon:144.823, el:3640, mu:'Karimui', rk:2 },
+    { id:'AYRK', ia:'RKU', nm:'Kairuku', cat:'strip', lat:-8.817, lon:146.52438, el:45, mu:'Yule Island', rk:2 },
+    { id:'AYRM', ia:'MWI', nm:'Maramuni', cat:'strip', lat:-5.13, lon:143.4829, el:5160, mu:'Maramuni', rk:2 },
+    { id:'AYRO', ia:'KOR', nm:'Kakoro(Koroko)', cat:'strip', lat:-7.83467, lon:146.5335, el:230, mu:'Kakoro', rk:2 },
+    { id:'AYRV', ia:'MRH', nm:'May River', cat:'strip', lat:-4.3615, lon:141.785, el:107, mu:'May River', rk:2 },
+    { id:'AYSA', ia:'SBE', nm:'Suabi', cat:'strip', lat:-6.10444, lon:142.27833, el:465, rk:2 },
+    { id:'AYSD', ia:'SDI', nm:'Saidor', cat:'strip', lat:-5.62714, lon:146.46278, el:83, mu:'Saidor', rk:2 },
+    { id:'AYSE', ia:'NIS', nm:'Simberi', cat:'strip', lat:-2.66222, lon:151.99778, el:10, mu:'Simberi Island', rk:2 },
+    { id:'AYSF', ia:'SFU', nm:'Safia', cat:'strip', lat:-9.59447, lon:148.63931, el:430, mu:'Safia', rk:2 },
+    { id:'AYSG', ia:'SIL', nm:'Sila', cat:'strip', lat:-9.07356, lon:148.38925, el:2230, mu:'Sila Mission', rk:2 },
+    { id:'AYSH', ia:'SBV', nm:'Sabah', cat:'strip', lat:-5.5765, lon:155.0489, el:10, mu:'Sabah', rk:2 },
+    { id:'AYSJ', ia:'SIM', nm:'Simbai', cat:'strip', lat:-5.27861, lon:144.54472, el:5804, mu:'Simbai', rk:2 },
+    { id:'AYSK', ia:'SGK', nm:'Sengapi', cat:'strip', lat:-5.12583, lon:144.32361, el:6242, mu:'Sengapi', rk:2 },
+    { id:'AYSL', ia:'SXH', nm:'Sehulea', cat:'strip', lat:-9.96453, lon:151.16186, el:30, mu:'Sehulea', rk:2 },
+    { id:'AYSO', ia:'SBC', nm:'Selbang', cat:'strip', lat:-5.315, lon:141.752, el:5130, mu:'Selbang', rk:2 },
+    { id:'AYSP', ia:'SMH', nm:'Sapmanga', cat:'strip', lat:-6.07528, lon:146.81111, el:2912, mu:'Sapmanga', rk:2 },
+    { id:'AYSQ', ia:'SPV', nm:'Sepik Plains', cat:'strip', lat:-3.8821, lon:143.6734, el:230, mu:'Sepik Plains', rk:2 },
+    { id:'AYSS', ia:'TDS', nm:'Sasereme', cat:'strip', lat:-7.6217, lon:142.868, el:121, mu:'Sasereme', rk:2 },
+    { id:'AYSU', ia:'SKC', nm:'Suki', cat:'strip', lat:-8.0466, lon:141.7222, el:24, mu:'Suki', rk:2 },
+    { id:'AYSV', ia:'SXW', nm:'Sauren', cat:'strip', lat:-5.9701, lon:148.8543, el:46, mu:'Sauren', rk:2 },
+    { id:'AYSW', ia:'SWG', nm:'Satwag', cat:'strip', lat:-6.13956, lon:147.27917, el:4185, mu:'Satwag', rk:2 },
+    { id:'AYSX', ia:'MBV', nm:'Masa', cat:'strip', lat:-6.345, lon:147.591, el:5900, mu:'Masa', rk:2 },
+    { id:'AYTA', ia:'TIZ', nm:'Tari', cat:'strip', lat:-5.845, lon:142.948, el:5500, mu:'Tari', rk:2 },
+    { id:'AYTB', ia:'TBG', nm:'Tabubil', cat:'strip', lat:-5.28047, lon:141.22758, el:1570, mu:'Tabubil', rk:2 },
+    { id:'AYTE', ia:'TFM', nm:'Telefomin', cat:'strip', lat:-5.12608, lon:141.64192, el:4950, mu:'Telefomin', rk:2 },
+    { id:'AYTF', ia:'TDB', nm:'Tetebedi', cat:'strip', lat:-9.1586, lon:148.0686, el:3365, mu:'Tetebedi', rk:2 },
+    { id:'AYTG', ia:'TGL', nm:'Tagula', cat:'strip', lat:-11.33111, lon:153.20292, el:59, mu:'Sudest Island', rk:2 },
+    { id:'AYTH', ia:'TFB', nm:'Tifalmin', cat:'strip', lat:-5.11725, lon:141.41808, el:4735, mu:'Tifalmin', rk:2 },
+    { id:'AYTI', ia:'TPI', nm:'Tapini', cat:'strip', lat:-8.35667, lon:146.98917, el:3100, mu:'Tapini', rk:2 },
+    { id:'AYTN', ia:'TKW', nm:'Tekin', cat:'strip', lat:-5.24367, lon:142.16519, el:5785, mu:'Tekin', rk:2 },
+    { id:'AYTO', ia:'KDQ', nm:'Kamberatoro', cat:'strip', lat:-3.60056, lon:141.05167, el:1350, mu:'Kamberatoro Mission', rk:2 },
+    { id:'AYTP', ia:'TEP', nm:'Tep Tep', cat:'strip', lat:-5.9553, lon:146.5595, el:7011, mu:'Teptep', rk:2 },
+    { id:'AYTR', ia:'TBQ', nm:'Tarabo', cat:'strip', lat:-6.46667, lon:145.53222, el:6100, mu:'Tarabo', rk:2 },
+    { id:'AYTS', ia:'TSW', nm:'Tsewi', cat:'strip', lat:-7.0695, lon:146.1272, el:4185, mu:'Tsewi', rk:2 },
+    { id:'AYTT', ia:'TRJ', nm:'Tarakbits', cat:'strip', lat:-5.614, lon:141.0421, el:281, mu:'Tarakbits', rk:2 },
+    { id:'AYTU', ia:'TFI', nm:'Tufi', cat:'strip', lat:-9.07595, lon:149.31984, el:85, mu:'Tufi', rk:2 },
+    { id:'AYTV', ia:'TBE', nm:'Timbunke', cat:'strip', lat:-4.19663, lon:143.51922, el:24, mu:'Timbunke', rk:2 },
+    { id:'AYTW', ia:'TWY', nm:'Tawa', cat:'strip', lat:-7.4463, lon:146.1067, el:5020, mu:'Tawa', rk:2 },
+    { id:'AYTY', ia:'TEO', nm:'Terapo', cat:'strip', lat:-8.16972, lon:146.19444, el:15, mu:'Terapo Mission', rk:2 },
+    { id:'AYTZ', ia:'TKB', nm:'Tekadu', cat:'strip', lat:-7.6808, lon:146.5503, el:1310, mu:'Tekadu', rk:2 },
+    { id:'AYUC', ia:'UMC', nm:'Umba', cat:'strip', lat:-7.0214, lon:145.966, el:5950, mu:'Umba', rk:2 },
+    { id:'AYUE', ia:'URU', nm:'Uroubi', cat:'strip', lat:-9.5162, lon:148.5591, el:481, mu:'Uroubi', rk:2 },
+    { id:'AYUI', ia:'UBI', nm:'Buin', cat:'strip', lat:-6.72917, lon:155.68333, el:230, mu:'Buin', rk:2 },
+    { id:'AYUM', ia:'AUV', nm:'Aumo', cat:'strip', lat:-5.73111, lon:148.44528, el:450, mu:'Aumo', rk:2 },
+    { id:'AYUP', ia:'GLP', nm:'Gulgubip', cat:'strip', lat:-5.2808, lon:141.5411, el:4900, mu:'Gulgubip', rk:2 },
+    { id:'AYUR', ia:'UPR', nm:'Upiara', cat:'strip', lat:-8.5411, lon:142.6503, el:52, mu:'Upiara', rk:2 },
+    { id:'AYUY', ia:'KUX', nm:'Kuyol', cat:'strip', lat:-5.37236, lon:141.62389, el:3290, rk:2 },
+    { id:'AYUZ', ia:'UVO', nm:'Uvol', cat:'strip', lat:-6.0178, lon:150.9557, el:15, mu:'Uvol', rk:2 },
+    { id:'AYVL', ia:'TLW', nm:'Talasea', cat:'strip', lat:-5.2726, lon:150.0089, el:44, mu:'Talasea', rk:2 },
+    { id:'AYVM', ia:'TCJ', nm:'Torembi', cat:'strip', lat:-4.0165, lon:143.1329, el:90, mu:'Torembi', rk:2 },
+    { id:'AYVO', ia:'TON', nm:'Tonu', cat:'strip', lat:-6.6552, lon:155.4326, el:300, mu:'Tonu', rk:2 },
+    { id:'AYVW', ia:'WUV', nm:'Wuvulu Island', cat:'strip', lat:-1.73611, lon:142.83667, el:16, mu:'Wuvulu Island', rk:2 },
+    { id:'AYWB', ia:'WAO', nm:'Wabo', cat:'strip', lat:-6.98944, lon:145.07511, el:132, mu:'Wabo', rk:2 },
+    { id:'AYWC', ia:'WTT', nm:'Wantoat', cat:'strip', lat:-6.1325, lon:146.46778, el:3900, mu:'Wantoat', rk:2 },
+    { id:'AYWF', ia:'WAJ', nm:'Wawoi Falls', cat:'strip', lat:-6.9523, lon:142.6557, el:370, mu:'Wavoi Falls', rk:2 },
+    { id:'AYWG', ia:'AGL', nm:'Wanigela', cat:'strip', lat:-9.3375, lon:149.15556, el:53, mu:'Wanigela', rk:2 },
+    { id:'AYWH', ia:'WNU', nm:'Wanuma', cat:'strip', lat:-4.8961, lon:145.3213, el:2260, mu:'Wanuma', rk:2 },
+    { id:'AYWJ', ia:'WBC', nm:'Wapolu', cat:'strip', lat:-9.3376, lon:150.5093, el:45, mu:'Wapolu', rk:2 },
+    { id:'AYWO', ia:'WOA', nm:'Wonenara', cat:'strip', lat:-6.79686, lon:145.89194, el:5028, mu:'Wonenara', rk:2 },
+    { id:'AYWQ', ia:'WKN', nm:'Wakunai', cat:'strip', lat:-5.8603, lon:155.2223, el:20, mu:'Wakunai', rk:2 },
+    { id:'AYWS', ia:'WSU', nm:'Wasu', cat:'strip', lat:-5.96171, lon:147.19823, el:34, mu:'Wasu', rk:2 },
+    { id:'AYWT', ia:'WTP', nm:'Woitape', cat:'strip', lat:-8.54583, lon:147.2525, el:5200, mu:'Fatima Mission', rk:2 },
+    { id:'AYWU', ia:'WUG', nm:'Wau', cat:'strip', lat:-7.34556, lon:146.71861, el:3600, mu:'Wau', rk:2 },
+    { id:'AYXE', ia:'YVD', nm:'Yeva', cat:'strip', lat:-7.548, lon:146.188, el:4510, mu:'Yeva', rk:2 },
+    { id:'AYXI', ia:'SMJ', nm:'Sim', cat:'strip', lat:-7.75, lon:146.9273, el:5460, mu:'Sim', rk:2 },
+    { id:'AYXO', ia:'TLO', nm:'Tol', cat:'strip', lat:-4.98083, lon:152.00999, el:49, mu:'Tol', rk:2 },
+    { id:'AYXP', ia:'WPM', nm:'Wipim', cat:'strip', lat:-8.78822, lon:142.882, el:173, mu:'Wipim', rk:2 },
+    { id:'AYXW', ia:'WEP', nm:'Weam', cat:'strip', lat:-8.6184, lon:141.1381, el:50, mu:'Weam', rk:2 },
+    { id:'AYYE', ia:'KYX', nm:'Yalumet', cat:'strip', lat:-6.09, lon:147.0117, el:2600, mu:'Yalumet', rk:2 },
+    { id:'AYYK', ia:'YEQ', nm:'Yenkis(Yankisa)', cat:'strip', lat:-5.10972, lon:143.91767, el:3692, rk:2 },
+    { id:'AYYL', ia:'TCK', nm:'Tinboli', cat:'strip', lat:-4.0949, lon:143.3838, el:59, mu:'Tinboli', rk:2 },
+    { id:'AYYM', ia:'LNF', nm:'Munbil', cat:'strip', lat:-4.85594, lon:141.22017, el:3126, rk:2 },
+    { id:'AYYO', ia:'RAX', nm:'Oram', cat:'strip', lat:-9.63292, lon:148.04806, el:3500, rk:2 },
+    { id:'AYYP', ia:'KPE', nm:'Yapsiei', cat:'strip', lat:-4.62806, lon:141.09417, el:600, rk:2 },
+    { id:'AYYR', ia:'KSX', nm:'Yasuru', cat:'strip', lat:-6.6015, lon:146.1813, el:1520, mu:'Yasuru', rk:2 },
+    { id:'AYZA', ia:'ZEN', nm:'Zenag', cat:'strip', lat:-6.95222, lon:146.61625, el:3200, mu:'Zenag', rk:2 },
+    { id:'AYZI', ia:'SWR', nm:'Silur', cat:'strip', lat:-4.52989, lon:153.05444, el:217, mu:'Silur Mission', rk:2 },
+    { id:'AYZM', ia:'WUM', nm:'Wasum', cat:'strip', lat:-6.0491, lon:149.337, el:175, mu:'Wasum', rk:2 },
+    { id:'AYZN', ia:'SIZ', nm:'Sissano', cat:'strip', lat:-2.99944, lon:142.0445, el:27, mu:'Sissano', rk:2 },
+    { id:'AYZS', ia:'OSG', nm:'Ossima', cat:'strip', lat:-2.91556, lon:141.29731, el:205, mu:'Ossima', rk:2 },
+    { id:'AYAU', nm:'Arou', cat:'strip', lat:-5.4951, lon:142.5137, el:4830, mu:'Arou', rk:3 },
+    { id:'AYBB', nm:'Bak', cat:'strip', lat:-5.2685, lon:142.097, el:5440, mu:'Bak', rk:3 },
+    { id:'AYBS', nm:'Begesin', cat:'strip', lat:-5.38825, lon:145.44739, el:980, mu:'Begesin', rk:3 },
+    { id:'AYBT', nm:'Batri', cat:'strip', lat:-6.55186, lon:143.94391, el:4510, mu:'Batri', rk:3 },
+    { id:'AYBW', nm:'Blackwara', cat:'strip', lat:-2.61821, lon:141.09197, el:58, rk:3 },
+    { id:'AYBX', nm:'Wowobo', cat:'strip', lat:-7.3405, lon:144.5477, el:74, mu:'Wowobo', rk:3 },
+    { id:'AYBY', nm:'Wuyabo', cat:'strip', lat:-6.83847, lon:145.87321, el:6400, mu:'Wuyabo', rk:3 },
+    { id:'AYCN', nm:'Changriwa', cat:'strip', lat:-4.32865, lon:143.74058, el:100, mu:'Changriwa', rk:3 },
+    { id:'AYDD', nm:'Dobu', cat:'strip', lat:-6.6305, lon:144.6383, el:3115, mu:'Dobu', rk:3 },
+    { id:'AYDP', nm:'Tsendiap', cat:'strip', lat:-5.3599, lon:144.4462, el:1565, mu:'Tsendiap', rk:3 },
+    { id:'AYDQ', nm:'Dimisisi', cat:'strip', lat:-8.6298, lon:142.2162, el:166, mu:'Dimisisi', rk:3 },
+    { id:'AYDS', nm:'Dusin', cat:'strip', lat:-5.18386, lon:144.41217, el:6300, mu:'Dusin', rk:3 },
+    { id:'AYDW', nm:'Dewara', cat:'strip', lat:-8.3802, lon:142.4475, el:25, mu:'Dewara', rk:3 },
+    { id:'AYDY', nm:'Sindeni', cat:'strip', lat:-7.0077, lon:145.7965, el:5710, mu:'Sindeni', rk:3 },
+    { id:'AYEG', nm:'Mengina', cat:'strip', lat:-6.4836, lon:144.986, el:4224, mu:'Mengina', rk:3 },
+    { id:'AYEI', nm:'Milei', cat:'strip', lat:-9.0794, lon:147.602, el:2160, mu:'Milei', rk:3 },
+    { id:'AYEK', nm:'Membok', cat:'strip', lat:-6.4744, lon:141.019, el:54, mu:'Membok', rk:3 },
+    { id:'AYEM', nm:'Eleme', cat:'strip', lat:-4.81403, lon:143.91064, el:233, mu:'Eleme', rk:3 },
+    { id:'AYEU', nm:'Eloaua', cat:'strip', lat:-1.56026, lon:149.63036, el:25, mu:'Eloaua Island', rk:3 },
+    { id:'AYEY', nm:'Mirsey', cat:'strip', lat:-4.0621, lon:142.6609, el:107, mu:'Mirsey', rk:3 },
+    { id:'AYEZ', nm:'Moropote', cat:'strip', lat:-4.58706, lon:142.33569, el:149, mu:'Moropote', rk:3 },
+    { id:'AYFF', nm:'Faia', cat:'strip', lat:-7.16035, lon:143.53132, el:80, rk:3 },
+    { id:'AYFK', nm:'Foroko', cat:'strip', lat:-5.3283, lon:144.8944, el:412, mu:'Foroko', rk:3 },
+    { id:'AYFO', nm:'Fogomaiu', cat:'strip', lat:-6.5096, lon:143.0794, el:737, mu:'Fogomaiu', rk:3 },
+    { id:'AYFS', nm:'Fas', cat:'strip', lat:-3.1983, lon:141.472, el:1219, mu:'Fugari', rk:3 },
+    { id:'AYFW', nm:'Kwieftim', cat:'strip', lat:-3.6005, lon:141.7674, el:515, mu:'Kwieftim', rk:3 },
+    { id:'AYGD', nm:'Gimi', cat:'strip', lat:-6.6482, lon:145.4003, el:5096, mu:'Amusa', rk:3 },
+    { id:'AYGE', nm:'Geigorobi', cat:'strip', lat:-4.1055, lon:143.3056, el:74, mu:'Geigorobi', rk:3 },
+    { id:'AYGH', nm:'Guhu', cat:'strip', lat:-5.6957, lon:146.1116, el:3, mu:'Guhu', rk:3 },
+    { id:'AYGM', nm:'Gema', cat:'strip', lat:-6.80309, lon:145.77587, el:5370, mu:'Gema', rk:3 },
+    { id:'AYGO', nm:'Gokto', cat:'strip', lat:-4.9136, lon:144.49, el:259, mu:'Gokto', rk:3 },
+    { id:'AYGQ', nm:'Gawa', cat:'strip', lat:-5.259, lon:142.233, el:6500, mu:'Gawa', rk:3 },
+    { id:'AYGW', nm:'Guwasa', cat:'strip', lat:-6.46584, lon:145.08397, el:4800, mu:'Guwasa', rk:3 },
+    { id:'AYGY', nm:'Guavi', cat:'strip', lat:-6.87, lon:142.7537, el:303, mu:'Guavi', rk:3 },
+    { id:'AYHA', nm:'Haia', cat:'strip', lat:-6.70742, lon:144.9974, el:2434, rk:3 },
+    { id:'AYHJ', nm:'Hewa', cat:'strip', lat:-5.1914, lon:142.9595, el:5000, mu:'Hewa', rk:3 },
+    { id:'AYHL', nm:'Hesalibi', cat:'strip', lat:-6.6, lon:142.3502, el:305, mu:'Hesalibi', rk:3 },
+    { id:'AYHN', nm:'Habina', cat:'strip', lat:-6.6671, lon:146.0, el:6200, mu:'Habina', rk:3 },
+    { id:'AYHQ', nm:'Hauna', cat:'strip', lat:-4.2994, lon:142.2305, el:73, mu:'Hauna', rk:3 },
+    { id:'AYHT', nm:'Hotmin', cat:'strip', lat:-4.5845, lon:141.5742, el:196, mu:'Hotmin Mission', rk:3 },
+    { id:'AYHW', nm:'Haewenai', cat:'strip', lat:-5.7219, lon:141.3205, el:220, mu:'Haewenai', rk:3 },
+    { id:'AYHX', nm:'Herowena', cat:'strip', lat:-6.6229, lon:145.1972, el:4695, mu:'Herowana', rk:3 },
+    { id:'AYHY', nm:'Huya', cat:'strip', lat:-6.2734, lon:142.7061, el:2611, mu:'Huya', rk:3 },
+    { id:'AYIB', nm:'Ibil', cat:'strip', lat:-4.6828, lon:141.0316, el:870, mu:'Ibil', rk:3 },
+    { id:'AYIN', nm:'Busilmin', cat:'strip', lat:-4.9166, lon:141.1548, el:5450, mu:'Busilmin', rk:3 },
+    { id:'AYIP', nm:'Iropena', cat:'strip', lat:-5.03264, lon:143.87112, el:5190, mu:'Iropena', rk:3 },
+    { id:'AYIR', nm:'Inaru', cat:'strip', lat:-4.6316, lon:142.8913, el:178, mu:'Inaru', rk:3 },
+    { id:'AYIS', nm:'Isan', cat:'strip', lat:-5.9781, lon:146.61975, el:6955, mu:'Isan', rk:3 },
+    { id:'AYIT', nm:'Iteri', cat:'strip', lat:-4.2418, lon:141.5234, el:242, mu:'Iteri', rk:3 },
+    { id:'AYJE', nm:'Yomneri', cat:'strip', lat:-5.237, lon:144.6007, el:6100, mu:'Yomneri', rk:3 },
+    { id:'AYJW', nm:'Wauru', cat:'strip', lat:-4.18203, lon:141.19829, el:200, rk:3 },
+    { id:'AYKL', nm:'Kafle', cat:'strip', lat:-3.75, lon:142.59, el:850, mu:'Kafle', rk:3 },
+    { id:'AYKN', nm:'Kubuna', cat:'strip', lat:-8.6917, lon:146.7566, el:200, mu:'Kubuna Mission', rk:3 },
+    { id:'AYKZ', nm:'Kairiru', cat:'strip', lat:-3.36874, lon:143.55423, el:60, mu:'Kairiru Island', rk:3 },
+    { id:'AYLC', nm:'Lake Campbell', cat:'strip', lat:-6.7486, lon:142.6037, el:585, mu:'Lake Campbell', rk:3 },
+    { id:'AYLE', nm:'Lele', cat:'strip', lat:-5.2192, lon:151.3938, el:1600, mu:'Leli', rk:3 },
+    { id:'AYLH', nm:'Klauhau', cat:'strip', lat:-4.1305, lon:142.2495, el:130, mu:'Klauhau', rk:3 },
+    { id:'AYLJ', nm:'Lamogai', cat:'strip', lat:-5.81904, lon:149.30531, el:493, mu:'Maravo', rk:3 },
+    { id:'AYLQ', nm:'Lagoon', cat:'strip', lat:-8.8186, lon:143.1317, el:100, mu:'Lagoon', rk:3 },
+    { id:'AYLY', nm:'Myola', cat:'strip', lat:-9.15157, lon:147.76232, el:6735, mu:'Myola', rk:3 },
+    { id:'AYLZ', nm:'Slai', cat:'strip', lat:-4.0322, lon:143.1831, el:77, mu:'Slai', rk:3 },
+    { id:'AYMF', nm:'Maimafu', cat:'strip', lat:-6.50322, lon:145.03266, el:5213, mu:'Runakuma', rk:3 },
+    { id:'AYMG', nm:'Magleri', cat:'strip', lat:-4.05206, lon:141.98628, el:100, mu:'Magleri', rk:3 },
+    { id:'AYMK', nm:'Mok', cat:'strip', lat:-5.73024, lon:149.05658, el:1050, mu:'Mok', rk:3 },
+    { id:'AYMU', nm:'Muluma', cat:'strip', lat:-6.42648, lon:142.76748, el:2000, rk:3 },
+    { id:'AYMX', nm:'Mamusi', cat:'strip', lat:-5.19695, lon:144.19183, el:1020, mu:'Mamusi', rk:3 },
+    { id:'AYMY', nm:'Smok', cat:'strip', lat:-3.3158, lon:141.2461, el:729, mu:'Smok', rk:3 },
+    { id:'AYNF', nm:'Nagri', cat:'strip', lat:-4.09159, lon:142.59294, el:150, mu:'Nagri', rk:3 },
+    { id:'AYNH', nm:'Nahu', cat:'strip', lat:-5.84273, lon:146.1126, el:6520, mu:'Gumbarami', rk:3 },
+    { id:'AYNP', nm:'Momonup', cat:'strip', lat:-4.50431, lon:144.23147, el:72, mu:'Momonup', rk:3 },
+    { id:'AYNT', nm:'Kantobo', cat:'strip', lat:-6.7227, lon:143.5636, el:1385, mu:'Kantobo', rk:3 },
+    { id:'AYOA', nm:'Kwomtari', cat:'strip', lat:-3.598, lon:141.3614, el:366, mu:'Kwomtari', rk:3 },
+    { id:'AYOD', nm:'Obura', cat:'strip', lat:-6.5507, lon:145.9728, el:5600, mu:'Obura', rk:3 },
+    { id:'AYOH', nm:'Okisai', cat:'strip', lat:-4.7065, lon:141.9006, el:310, mu:'Okisai', rk:3 },
+    { id:'AYOS', nm:'Kosimbi', cat:'strip', lat:-3.9522, lon:143.1767, el:149, mu:'Kosimbi Mission', rk:3 },
+    { id:'AYOU', nm:'Kombaku', cat:'strip', lat:-5.3817, lon:144.6355, el:5400, mu:'Kombaku', rk:3 },
+    { id:'AYOX', nm:'Moi', cat:'strip', lat:-4.1615, lon:141.2478, el:240, mu:'Moi', rk:3 },
+    { id:'AYOZ', nm:'Kora', cat:'strip', lat:-6.4304, lon:145.0931, el:5745, mu:'Kora', rk:3 },
+    { id:'AYPA', nm:'Somokopa', cat:'strip', lat:-7.0838, lon:142.514, el:489, mu:'Somokopa', rk:3 },
+    { id:'AYPI', nm:'Kapi', cat:'strip', lat:-6.371, lon:144.6839, el:3408, mu:'Kapi', rk:3 },
+    { id:'AYPS', nm:'Maposi', cat:'strip', lat:-4.54597, lon:142.22107, el:104, mu:'Maposi', rk:3 },
+    { id:'AYPW', nm:'Panakawa', cat:'strip', lat:-7.67206, lon:143.12472, el:42, rk:3 },
+    { id:'AYQB', nm:'Simbari', cat:'strip', lat:-6.9623, lon:145.6448, el:3560, mu:'Simbari', rk:3 },
+    { id:'AYQM', nm:'Simogu', cat:'strip', lat:-6.8008, lon:145.7134, el:4990, mu:'Simogu', rk:3 },
+    { id:'AYQR', nm:'Sorimi', cat:'strip', lat:-4.32391, lon:141.37563, el:450, mu:'Sorimi', rk:3 },
+    { id:'AYQU', nm:'Tsumba', cat:'strip', lat:-4.6581, lon:144.6082, el:89, mu:'Tsumba Mission', rk:3 },
+    { id:'AYQV', nm:'Sinow', cat:'strip', lat:-3.9925, lon:141.5537, el:183, mu:'Sinow', rk:3 },
+    { id:'AYQW', nm:'Sumwari', cat:'strip', lat:-4.7508, lon:142.3686, el:465, mu:'Sumwari', rk:3 },
+    { id:'AYRD', nm:'Rano', cat:'strip', lat:-5.95944, lon:151.1717, el:28, mu:'Maingi', rk:3 },
+    { id:'AYRJ', nm:'Mariama', cat:'strip', lat:-4.61239, lon:143.24703, el:0, mu:'Mariama', rk:3 },
+    { id:'AYRL', nm:'Maralina', cat:'strip', lat:-6.9015, lon:146.3698, el:431, mu:'Maralina', rk:3 },
+    { id:'AYRN', nm:'Norambi Airstrip.', cat:'strip', lat:-6.9125, lon:145.6731, el:5100, mu:'Norambi', rk:3 },
+    { id:'AYRR', nm:'Tiri', cat:'strip', lat:-6.6815, lon:144.1842, el:4545, mu:'Tiri', rk:3 },
+    { id:'AYRT', nm:'Kirinbit', cat:'strip', lat:-4.2839, lon:143.1512, el:60, mu:'Kirinbit', rk:3 },
+    { id:'AYSB', nm:'Sirebi', cat:'strip', lat:-7.2196, lon:144.2352, el:115, mu:'Sirebi', rk:3 },
+    { id:'AYSI', nm:'Seltamin', cat:'strip', lat:-5.4122, lon:141.8252, el:4285, mu:'Seltamin', rk:3 },
+    { id:'AYSM', nm:'Samberigi', cat:'strip', lat:-6.7193, lon:143.9338, el:3830, mu:'Samberigi Mission', rk:3 },
+    { id:'AYSR', nm:'Sangera', cat:'strip', lat:-3.9678, lon:143.2763, el:127, mu:'Sangera', rk:3 },
+    { id:'AYST', nm:'Sturt Island', cat:'strip', lat:-8.1525, lon:142.26844, el:40, rk:3 },
+    { id:'AYSY', nm:'Serra', cat:'strip', lat:-2.9739, lon:141.9297, el:37, mu:'Serai', rk:3 },
+    { id:'AYSZ', nm:'Samanzing', cat:'strip', lat:-6.4513, lon:147.0673, el:6042, mu:'Samanzing', rk:3 },
+    { id:'AYTC', nm:'Tapila', cat:'strip', lat:-8.4188, lon:142.9043, el:48, mu:'Mutam', rk:3 },
+    { id:'AYTD', nm:'Teredau', cat:'strip', lat:-7.3205, lon:144.6384, el:100, mu:'Tetehui', rk:3 },
+    { id:'AYTL', nm:'Talbakul', cat:'strip', lat:-6.3708, lon:144.7167, el:3500, mu:'Talbakul', rk:3 },
+    { id:'AYTM', nm:'Tamo', cat:'strip', lat:-4.7246, lon:144.1529, el:140, mu:'Tamo', rk:3 },
+    { id:'AYTQ', nm:'Tapen', cat:'strip', lat:-5.85591, lon:146.63841, el:5066, mu:'Tapen', rk:3 },
+    { id:'AYTX', nm:'Matak', cat:'strip', lat:-6.17454, lon:146.39234, el:4164, mu:'Matak', rk:3 },
+    { id:'AYUA', nm:'Utai', cat:'strip', lat:-3.386, lon:141.5868, el:707, mu:'Utai', rk:3 },
+    { id:'AYUG', nm:'Brugam', cat:'strip', lat:-3.6381, lon:142.8379, el:595, mu:'Wa\'ahun', rk:3 },
+    { id:'AYUJ', nm:'Mukvi', cat:'strip', lat:-8.25664, lon:141.76513, el:30, mu:'Mukvi', rk:3 },
+    { id:'AYUK', nm:'Mukili', cat:'strip', lat:-3.6856, lon:142.36453, el:1200, mu:'Mukili', rk:3 },
+    { id:'AYUL', nm:'Musula', cat:'strip', lat:-6.8385, lon:142.8983, el:740, mu:'Musula', rk:3 },
+    { id:'AYUN', nm:'Bunam', cat:'strip', lat:-4.6564, lon:144.2517, el:48, mu:'Bunam', rk:3 },
+    { id:'AYUO', nm:'Omaura', cat:'strip', lat:-6.3679, lon:145.9902, el:4860, mu:'Omaura', rk:3 },
+    { id:'AYUQ', nm:'Kumbwareta', cat:'strip', lat:-5.5078, lon:144.1171, el:4067, mu:'Kumbwareta', rk:3 },
+    { id:'AYUS', nm:'Suame', cat:'strip', lat:-8.3684, lon:142.5862, el:71, mu:'Suame', rk:3 },
+    { id:'AYUT', nm:'Bunguwat', cat:'strip', lat:-6.005, lon:146.7205, el:5740, mu:'Bunguwat', rk:3 },
+    { id:'AYUV', nm:'Tuvau', cat:'strip', lat:-6.6025, lon:145.8372, el:5300, mu:'Tuvau', rk:3 },
+    { id:'AYUX', nm:'Usarumpia', cat:'strip', lat:-6.9858, lon:145.8102, el:5820, mu:'Usarumpia', rk:3 },
+    { id:'AYVA', nm:'Vailala', cat:'strip', lat:-7.7677, lon:145.4857, el:85, mu:'Hepa', rk:3 },
+    { id:'AYVB', nm:'Tobou', cat:'strip', lat:-6.4026, lon:147.4223, el:4732, mu:'Tobou', rk:3 },
+    { id:'AYVK', nm:'Wokien', cat:'strip', lat:-3.77296, lon:141.97906, el:500, mu:'Abrau', rk:3 },
+    { id:'AYVP', nm:'Woposali', cat:'strip', lat:-6.6577, lon:144.2974, el:2009, mu:'Woposali', rk:3 },
+    { id:'AYVY', nm:'Yembi Yembi', cat:'strip', lat:-4.46982, lon:143.14852, el:80, mu:'Yembiyembi', rk:3 },
+    { id:'AYWE', nm:'Wangeto', cat:'strip', lat:-5.74322, lon:146.14841, el:4255, mu:'Wangeto', rk:3 },
+    { id:'AYWL', nm:'Walagu', cat:'strip', lat:-6.34325, lon:142.8254, el:2000, rk:3 },
+    { id:'AYWM', nm:'Wasengla', cat:'strip', lat:-3.29551, lon:141.07267, el:1280, rk:3 },
+    { id:'AYWN', nm:'Nugwaia', cat:'strip', lat:-3.8183, lon:142.835, el:279, mu:'Nugwaia', rk:3 },
+    { id:'AYWV', nm:'Warasai', cat:'strip', lat:-4.012, lon:142.51, el:150, mu:'Warasai', rk:3 },
+    { id:'AYWX', nm:'Wario', cat:'strip', lat:-4.40871, lon:142.22699, el:85, rk:3 },
+    { id:'AYWY', nm:'Waro', cat:'strip', lat:-6.53685, lon:143.19787, el:1458, mu:'Iorogobayu', rk:3 },
+    { id:'AYXA', nm:'Wiawia', cat:'strip', lat:-7.16375, lon:145.63369, el:2000, mu:'Wiawia', rk:3 },
+    { id:'AYXB', nm:'Buluwo', cat:'strip', lat:-3.6753, lon:142.0151, el:600, mu:'Buluwo', rk:3 },
+    { id:'AYXG', nm:'Sugu', cat:'strip', lat:-6.3907, lon:143.5565, el:4105, mu:'Sugu', rk:3 },
+    { id:'AYXS', nm:'Sisamin', cat:'strip', lat:-5.1363, lon:142.284, el:1675, mu:'Sisamin', rk:3 },
+    { id:'AYXY', nm:'Yebil', cat:'strip', lat:-3.4625, lon:141.9559, el:1400, mu:'Yebil', rk:3 },
+    { id:'AYYA', nm:'Yabru', cat:'strip', lat:-3.96734, lon:141.19173, el:95, rk:3 },
+    { id:'AYYC', nm:'Yagiap', cat:'strip', lat:-4.01767, lon:143.2174, el:110, rk:3 },
+    { id:'AYYD', nm:'Yatoam', cat:'strip', lat:-5.0949, lon:142.3846, el:2060, mu:'Yatoam', rk:3 },
+    { id:'AYYG', nm:'Yemin', cat:'strip', lat:-3.967, lon:142.2912, el:230, mu:'Yemin', rk:3 },
+    { id:'AYYI', nm:'Yili', cat:'strip', lat:-3.5322, lon:142.1645, el:1500, mu:'Yili', rk:3 },
+    { id:'AYYJ', nm:'Yanungen', cat:'strip', lat:-3.4574, lon:142.54, el:1880, mu:'Yanungen', rk:3 },
+    { id:'AYYN', nm:'Yimnalem', cat:'strip', lat:-5.1441, lon:144.5956, el:4800, mu:'Yimnalem', rk:3 },
+    { id:'AYYQ', nm:'Yagrombok', cat:'strip', lat:-3.585, lon:142.6285, el:1509, mu:'Yagrombok', rk:3 },
+    { id:'AYYT', nm:'Mount Tauwa', cat:'strip', lat:-6.7293, lon:144.303, el:3700, mu:'Mount Tauwa', rk:3 },
+    { id:'AYYU', nm:'Mui', cat:'strip', lat:-4.7912, lon:144.3113, el:132, mu:'Mui', rk:3 },
+    { id:'AYYV', nm:'Yawa', cat:'strip', lat:-4.1003, lon:142.1351, el:120, mu:'Yawa', rk:3 },
+    { id:'AYYW', nm:'Yawan', cat:'strip', lat:-6.1339, lon:146.8438, el:4870, mu:'Yawan', rk:3 },
+    { id:'AYYZ', nm:'Yambaitok', cat:'strip', lat:-4.99535, lon:143.96143, el:637, mu:'Yambaitok', rk:3 },
+    { id:'AYZB', nm:'Sibilanga', cat:'strip', lat:-3.4458, lon:142.501, el:2330, mu:'Sibilanga Mission', rk:3 },
+    { id:'AYZQ', nm:'Sopise', cat:'strip', lat:-6.7887, lon:144.1593, el:3450, mu:'Sopise', rk:3 },
+    { id:'AYZU', nm:'Oum', cat:'strip', lat:-4.2684, lon:142.1273, el:80, mu:'Oum', rk:3 },
+    { id:'AYZW', nm:'Siawi', cat:'strip', lat:-4.061, lon:141.4197, el:230, mu:'Siawi', rk:3 },
+    { id:'AYZY', nm:'Yilui', cat:'strip', lat:-3.9292, lon:142.2045, el:265, mu:'Yilui', rk:3 },
+    { id:'AYZZ', nm:'Zuebak', cat:'strip', lat:-6.3088, lon:146.5568, el:3560, mu:'Zuebak', rk:3 },
+    { id:'ABP', ia:'ABP', nm:'Atkamba', cat:'strip', lat:-6.06462, lon:141.09517, el:150, mu:'Atkamba Mission', rk:4 },
+    { id:'AGG', ia:'AGG', nm:'Angoram', cat:'strip', lat:-4.05708, lon:144.07384, el:75, mu:'Angoram', rk:4 },
+    { id:'AGK', ia:'AGK', nm:'Kagua', cat:'strip', lat:-6.39639, lon:143.85361, el:5350, mu:'Kagua', rk:4 },
+    { id:'AOB', ia:'AOB', nm:'Annanberg', cat:'strip', lat:-4.90417, lon:144.63583, el:130, rk:4 },
+    { id:'APP', ia:'APP', nm:'Asapa', cat:'strip', lat:-8.97917, lon:148.10361, el:1930, rk:4 },
+    { id:'ARP', ia:'ARP', nm:'Aragip', cat:'strip', lat:-9.88333, lon:149.48333, el:1750, rk:4 },
+    { id:'ASZ', ia:'ASZ', nm:'Asirim', cat:'strip', lat:-6.00972, lon:150.36861, el:1050, rk:4 },
+    { id:'ATUA', nm:'(Duplicate) Utai', cat:'strip', lat:-3.386, lon:141.5868, el:707, mu:'Utai', rk:4 },
+    { id:'AWR', ia:'AWR', nm:'Awar Airport (unusable)', cat:'strip', lat:-4.12228, lon:144.85329, el:35, mu:'Awar', rk:4 },
+    { id:'AYRX', nm:'Mount Boregoro Helicopter Landing  Site', cat:'strip', lat:-9.8944, lon:148.1069, el:898, mu:'Mount Boregoro', rk:4 },
+    { id:'AYUD', nm:'Kais-Udave Helicopter landing site', cat:'strip', lat:-8.7819, lon:147.2785, el:3300, rk:4 },
+    { id:'AZB', ia:'AZB', nm:'Amazon Bay', cat:'strip', lat:-10.29917, lon:149.33833, el:12, rk:4 },
+    { id:'BAJ', ia:'BAJ', nm:'Bali', cat:'strip', lat:-4.88333, lon:149.13333, el:90, mu:'Unea Island', rk:4 },
+    { id:'BNV', ia:'BNV', nm:'Boana', cat:'strip', lat:-6.42663, lon:146.8267, el:2950, mu:'Boana', rk:4 },
+    { id:'BOV', ia:'BOV', nm:'Boang', cat:'strip', lat:-3.3834, lon:153.2812, el:85, mu:'Boang Island', rk:4 },
+    { id:'BWJ', ia:'BWJ', nm:'Bawan', cat:'strip', lat:-6.39694, lon:146.88167, el:4700, rk:4 },
+    { id:'CPI', ia:'CPI', nm:'Cape Orford', cat:'strip', lat:-5.44833, lon:152.08194, el:20, rk:4 },
+    { id:'CVL', ia:'CVL', nm:'Cape Vogel', cat:'strip', lat:-9.67, lon:150.01972, el:20, rk:4 },
+    { id:'DAF', ia:'DAF', nm:'Daup', cat:'strip', lat:-4.7403, lon:145.9515, el:280, rk:4 },
+    { id:'DAO', ia:'DAO', nm:'Dabo', cat:'strip', lat:-8.43194, lon:147.84306, el:118, rk:4 },
+    { id:'DDM', ia:'DDM', nm:'Dodoima', cat:'strip', lat:-8.17736, lon:147.80944, el:75, rk:4 },
+    { id:'FUB', ia:'FUB', nm:'Fulleborn', cat:'strip', lat:-6.1518, lon:150.6264, el:36, mu:'Fulleborn', rk:4 },
+    { id:'GUE', ia:'GUE', nm:'Guriaso (Keraso)', cat:'strip', lat:-3.58317, lon:141.5895, el:400, mu:'Guriaso', rk:4 },
+    { id:'HAZ', ia:'HAZ', nm:'Hatzfeldhaven', cat:'strip', lat:-4.4033, lon:145.2056, el:26, mu:'Hatzfeldhaven', rk:4 },
+    { id:'HEO', ia:'HEO', nm:'Haelogo', cat:'strip', lat:-9.13658, lon:147.59843, el:3217, mu:'Haelogo', rk:4 },
+    { id:'IBI', ia:'IBI', nm:'Iboki', cat:'strip', lat:-5.5536, lon:149.19, el:13, mu:'Iboki', rk:4 },
+    { id:'IMA', ia:'IMA', nm:'Iamalele', cat:'strip', lat:-9.5107, lon:150.5246, el:40, mu:'Iamalele, Fergusson Island', rk:4 },
+    { id:'IOK', ia:'IOK', nm:'Iokea', cat:'strip', lat:-8.401, lon:146.277, el:39, mu:'Iokea', rk:4 },
+    { id:'IOP', ia:'IOP', nm:'Ioma', cat:'strip', lat:-8.3614, lon:147.84, el:95, mu:'Ioma', rk:4 },
+    { id:'ITK', ia:'ITK', nm:'Itokama', cat:'strip', lat:-9.20153, lon:148.26426, el:2563, mu:'Itokama', rk:4 },
+    { id:'KAF', ia:'KAF', nm:'Karato', cat:'strip', lat:-6.2655, lon:155.3052, el:109, mu:'Karato', rk:4 },
+    { id:'KAK', ia:'KAK', nm:'Kar', cat:'strip', lat:-6.2452, lon:143.5516, el:4965, mu:'Kar', rk:4 },
+    { id:'KMB', ia:'KMB', nm:'Koinambe', cat:'strip', lat:-5.4875, lon:144.60694, el:3000, mu:'Konambe', rk:4 },
+    { id:'KPL', ia:'KPL', nm:'Kapal', cat:'strip', lat:-8.63018, lon:142.82376, el:170, mu:'Kapal', rk:4 },
+    { id:'KUP', ia:'KUP', nm:'Kupiano', cat:'strip', lat:-10.0736, lon:148.218, el:90, mu:'Kupiano', rk:4 },
+    { id:'KVE', ia:'KVE', nm:'Kitava', cat:'strip', lat:-8.6285, lon:151.327, el:194, mu:'Kitava Island', rk:4 },
+    { id:'LTF', ia:'LTF', nm:'Leitre', cat:'strip', lat:-2.8337, lon:141.6257, el:32, mu:'Leitre', rk:4 },
+    { id:'MAP', ia:'MAP', nm:'Mamai', cat:'strip', lat:-10.29083, lon:149.51917, el:90, mu:'Mamai', rk:4 },
+    { id:'MGP', ia:'MGP', nm:'Manga', cat:'strip', lat:-4.147, lon:153.0186, el:60, mu:'Manga Mission', rk:4 },
+    { id:'MJJ', ia:'MJJ', nm:'Moki', cat:'strip', lat:-5.7181, lon:145.2404, el:3030, mu:'Moki', rk:4 },
+    { id:'MMV', ia:'MMV', nm:'Mal', cat:'strip', lat:-1.39139, lon:144.17131, el:6, mu:'Mal Island', rk:4 },
+    { id:'MNP', ia:'MNP', nm:'Maron Island', cat:'strip', lat:-1.5504, lon:145.0175, el:4, mu:'Hermit Islands', rk:4 },
+    { id:'MWU', ia:'MWU', nm:'Mussau', cat:'strip', lat:-1.45, lon:149.7, el:141, mu:'Mussau Island', rk:4 },
+    { id:'NOM', ia:'NOM', nm:'Nomad River', cat:'strip', lat:-6.294, lon:142.23417, el:305, mu:'Nomad River', rk:4 },
+    { id:'NOO', ia:'NOO', nm:'Naoro', cat:'strip', lat:-9.25446, lon:147.62135, el:2372, mu:'Naoro Vilage', rk:4 },
+    { id:'NPG', ia:'NPG', nm:'Nipa', cat:'strip', lat:-6.1454, lon:143.4531, el:5765, mu:'Nipa', rk:4 },
+    { id:'NWT', ia:'NWT', nm:'Nowata', cat:'strip', lat:-9.98417, lon:149.72917, el:2040, mu:'Nowata', rk:4 },
+    { id:'PG-0001', nm:'Agali', cat:'strip', lat:-5.34438, lon:142.21424, el:2750, rk:4, lb:'AGALI' },
+    { id:'PG-0002', nm:'Agotu', cat:'strip', lat:-6.5, lon:145.24139, el:5675, mu:'Agotu', rk:4, lb:'AGOTU' },
+    { id:'PG-0003', nm:'Akwom', cat:'strip', lat:-3.94, lon:141.83278, el:160, mu:'Akwom', rk:4, lb:'AKWOM' },
+    { id:'PG-0004', nm:'Ali', cat:'strip', lat:-7.92584, lon:142.34346, el:80, mu:'Ali', rk:4, lb:'ALI' },
+    { id:'PG-0005', ia:'CPN', nm:'Cape Rodney', cat:'strip', lat:-10.17982, lon:148.37903, el:22, mu:'Cape Rodney', rk:4, lb:'CAPE RODNEY' },
+    { id:'PG-0008', ia:'ESA', nm:'Esa\'ala', cat:'strip', lat:-9.87433, lon:150.95421, el:10, mu:'Esa\'ala', rk:4, lb:'ESA\'ALA' },
+    { id:'PG-0010', nm:'Gobe', cat:'strip', lat:-6.87777, lon:143.72184, el:194, mu:'Gobe', rk:4, lb:'GOBE' },
+    { id:'PG-0012', nm:'Ambua', cat:'strip', lat:-5.96149, lon:143.0604, el:6600, mu:'Ambua Lodge - Tari', rk:4, lb:'AMBUA' },
+    { id:'PG-0013', nm:'Ambaluwa', cat:'strip', lat:-5.72028, lon:144.92111, el:6568, mu:'Ambulua', rk:4, lb:'AMBALUWA' },
+    { id:'PG-0014', nm:'Anangalo', cat:'strip', lat:-4.6, lon:143.84347, el:70, rk:4, lb:'ANANGALO' },
+    { id:'PG-0015', nm:'Ande', cat:'strip', lat:-7.02083, lon:145.82222, el:5400, mu:'Sindeni', rk:4, lb:'ANDE' },
+    { id:'PG-0016', nm:'Arufi', cat:'strip', lat:-8.75389, lon:141.91139, el:80, mu:'Arufi', rk:4, lb:'ARUFI' },
+    { id:'PG-0017', nm:'Asama', cat:'strip', lat:-8.02333, lon:147.27167, el:1800, rk:4, lb:'ASAMA' },
+    { id:'PG-0018', nm:'Asimba', cat:'strip', lat:-8.60531, lon:147.59274, el:1170, mu:'Asimba', rk:4, lb:'ASIMBA' },
+    { id:'PG-0019', nm:'Assengseng', cat:'strip', lat:-6.02361, lon:149.78583, el:1550, mu:'Assengseng', rk:4, lb:'ASSENGSENG' },
+    { id:'PG-0021', nm:'Benaria', cat:'strip', lat:-6.05889, lon:143.03389, el:4960, mu:'Tamide Mission', rk:4, lb:'BENARIA' },
+    { id:'PG-0023', nm:'Bili', cat:'strip', lat:-5.66722, lon:151.09944, el:2600, mu:'Bili', rk:4, lb:'BILI' },
+    { id:'PG-0024', nm:'Wobagen', cat:'strip', lat:-5.27472, lon:142.03417, el:6050, rk:4, lb:'WOBAGEN' },
+    { id:'PG-0025', nm:'Bisorio', cat:'strip', lat:-4.72167, lon:142.97722, el:160, rk:4, lb:'BISORIO' },
+    { id:'PG-0026', nm:'Boikoa', cat:'strip', lat:-7.03861, lon:145.73417, el:4816, mu:'Boikoa', rk:4, lb:'BOIKOA' },
+    { id:'PG-0027', nm:'Bosavi', cat:'strip', lat:-6.46167, lon:142.84111, el:2350, mu:'Ludesa Mission', rk:4, lb:'BOSAVI' },
+    { id:'PG-0028', nm:'Boure', cat:'strip', lat:-9.6185, lon:148.74632, el:530, mu:'Boure', rk:4, lb:'BOURE' },
+    { id:'PG-0029', nm:'Jangit', cat:'strip', lat:-4.33667, lon:144.48069, el:30, rk:4, lb:'JANGIT' },
+    { id:'PG-0030', nm:'Junkaral', cat:'strip', lat:-5.42317, lon:145.01003, el:485, mu:'Junkaral', rk:4, lb:'JUNKARAL' },
+    { id:'PG-0031', nm:'Kabori', cat:'strip', lat:-3.32161, lon:141.85842, el:2090, mu:'Kabori', rk:4, lb:'KABORI' },
+    { id:'PG-0032', nm:'Dahamo', cat:'strip', lat:-5.75319, lon:141.99361, el:460, mu:'Dahamo Village', rk:4, lb:'DAHAMO' },
+    { id:'PG-0033', nm:'Lumusa', cat:'strip', lat:-5.52778, lon:144.06556, el:4943, mu:'Lumusa', rk:4, lb:'LUMUSA' },
+    { id:'PG-0034', nm:'Malamaunda', cat:'strip', lat:-4.91907, lon:143.16085, el:2350, rk:4, lb:'MALAMAUNDA' },
+    { id:'PG-0035', ia:'MZN', nm:'Minj', cat:'strip', lat:-5.90296, lon:144.68659, el:5269, mu:'Minj', rk:4, lb:'MINJ' },
+    { id:'PG-0036', nm:'Pasinkap', cat:'strip', lat:-5.01363, lon:144.84243, el:255, mu:'Pasinkap', rk:4, lb:'PASINKAP' },
+    { id:'PG-0037', nm:'Purari', cat:'strip', lat:-7.39111, lon:145.16652, el:90, rk:4, lb:'PURARI' },
+    { id:'PG-0039', nm:'Kafa', cat:'strip', lat:-6.58689, lon:143.515, el:1850, mu:'Kafa', rk:4, lb:'KAFA' },
+    { id:'PG-0040', nm:'Kaibo', cat:'strip', lat:-6.37111, lon:143.1725, el:2880, rk:4, lb:'KAIBO' },
+    { id:'PG-0041', nm:'Kairik', cat:'strip', lat:-5.44581, lon:143.17018, el:7340, mu:'Porgera', rk:4, lb:'KAIRIK' },
+    { id:'PG-0042', nm:'Gubil', cat:'strip', lat:-4.88331, lon:141.52538, el:2200, mu:'Bufripmin/Usareimin', rk:4, lb:'GUBIL' },
+    { id:'PG-0043', nm:'Gubam', cat:'strip', lat:-8.60877, lon:141.91964, el:120, mu:'Gubam', rk:4, lb:'GUBAM' },
+    { id:'PG-0044', nm:'Duranmin', cat:'strip', lat:-4.97308, lon:141.90888, el:3890, mu:'Duranmin', rk:4, lb:'DURANMIN' },
+    { id:'PG-0045', nm:'Bank', cat:'strip', lat:-5.36472, lon:144.69047, el:3953, mu:'Bank', rk:4, lb:'BANK' },
+    { id:'PG-0046', nm:'Appa', cat:'strip', lat:-6.51676, lon:144.70681, el:3800, rk:4, lb:'APPA' },
+    { id:'PG-0047', nm:'Arkosame', cat:'strip', lat:-3.77718, lon:142.62267, el:622, rk:4, lb:'ARKOSAME' },
+    { id:'PG-0049', nm:'Kiriwo', cat:'strip', lat:-8.437, lon:141.5142, el:69, mu:'Kiriwa', rk:4, lb:'KIRIWO' },
+    { id:'PG-0050', nm:'Owena', cat:'strip', lat:-6.6962, lon:145.8094, el:5500, mu:'Owenia', rk:4, lb:'OWENA' },
+    { id:'PG-0051', nm:'Kibeni', cat:'strip', lat:-7.4846, lon:143.8224, el:99, mu:'Kibeni', rk:4, lb:'KIBENI' },
+    { id:'PG-0052', nm:'Kilifas', cat:'strip', lat:-3.2148, lon:141.3642, el:1095, mu:'Kilifas', rk:4, lb:'KILIFAS' },
+    { id:'PG-0053', nm:'Oriomo', cat:'strip', lat:-8.86, lon:143.18, el:66, mu:'Oriomo', rk:4, lb:'ORIOMO' },
+    { id:'PG-0054', nm:'Pukapuki', cat:'strip', lat:-4.5362, lon:142.5176, el:124, mu:'Pukapuki Vilage', rk:4, lb:'PUKAPUKI' },
+    { id:'PG-0055', nm:'Samban', cat:'strip', lat:-4.3655, lon:144.0612, el:42, mu:'Samban School', rk:4, lb:'SAMBAN' },
+    { id:'PG-0056', nm:'Asinuwa', cat:'strip', lat:-7.0287, lon:145.7678, el:5900, mu:'Amjenuwa', rk:4, lb:'ASINUWA' },
+    { id:'PG-0057', nm:'Auwi', cat:'strip', lat:-5.51, lon:142.6392, el:5155, mu:'Auwi', rk:4, lb:'AUWI' },
+    { id:'PG-0058', nm:'Aziana', cat:'strip', lat:-6.7495, lon:145.8535, el:4250, mu:'Aziana Mission', rk:4, lb:'AZIANA' },
+    { id:'PG-0059', nm:'Baina', cat:'strip', lat:-6.89124, lon:143.68308, el:215, mu:'Baina', rk:4, lb:'BAINA' },
+    { id:'PG-0060', nm:'Bu\'u', cat:'strip', lat:-7.4011, lon:145.8149, el:3950, mu:'Bu\'u', rk:4, lb:'BU\'U' },
+    { id:'PG-0064', nm:'Dodomona', cat:'strip', lat:-6.2437, lon:142.6158, el:1910, mu:'Dodomona', rk:4, lb:'DODOMONA' },
+    { id:'PG-0065', nm:'Fiyak', cat:'strip', lat:-4.6771, lon:141.5666, el:347, mu:'Fiyak', rk:4, lb:'FIYAK' },
+    { id:'PG-0066', nm:'Fugwa', cat:'strip', lat:-5.7169, lon:142.6968, el:6100, mu:'Koroba', rk:4, lb:'FUGWA' },
+    { id:'PG-0067', nm:'Giramben', cat:'strip', lat:-5.7835, lon:144.5568, el:5128, mu:'Giramben', rk:4, lb:'GIRAMBEN' },
+    { id:'PG-0068', nm:'Idam', cat:'strip', lat:-4.1432, lon:141.2592, el:211, mu:'Idam', rk:4, lb:'IDAM' },
+    { id:'PG-0069', nm:'Kelabo', cat:'strip', lat:-5.5659, lon:142.5666, el:5562, mu:'Kelabo', rk:4, lb:'KELABO' },
+    { id:'PG-0070', nm:'Panasesa', cat:'strip', lat:-10.739, lon:151.7255, el:13, mu:'Panasesa Island', rk:4, lb:'PANASESA' },
+    { id:'PG-0071', nm:'Pori', cat:'strip', lat:-5.5782, lon:142.7065, el:5235, mu:'Pori', rk:4, lb:'PORI' },
+    { id:'PG-0072', nm:'Yehebi', cat:'strip', lat:-6.3928, lon:142.2661, el:335, mu:'Yehebi', rk:4, lb:'YEHEBI' },
+    { id:'PG-0073', nm:'Basikuna', cat:'strip', lat:-6.4445, lon:155.6832, el:1870, mu:'Basikuna', rk:4, lb:'BASIKUNA' },
+    { id:'PG-0074', nm:'Angai', cat:'strip', lat:-7.4021, lon:145.7899, el:2575, mu:'Angai', rk:4, lb:'ANGAI' },
+    { id:'PG-0079', nm:'Aro', cat:'strip', lat:-7.991, lon:147.24, el:2200, mu:'Aro', rk:4, lb:'ARO' },
+    { id:'PG-0083', nm:'Matkomnae', cat:'strip', lat:-5.817, lon:141.1614, el:170, mu:'Matkomrae', rk:4, lb:'MATKOMNAE' },
+    { id:'PG-0091', nm:'Kapaimeri', cat:'strip', lat:-4.2028, lon:143.2767, el:30, mu:'Kapaimeri Mission', rk:4, lb:'KAPAIMERI' },
+    { id:'PG-0093', nm:'Sipump', cat:'strip', lat:-5.50244, lon:144.4581, el:1876, mu:'Menjim', rk:4, lb:'SIPUMP' },
+    { id:'PG-0094', nm:'Komo', cat:'strip', lat:-6.06251, lon:142.87658, el:5223, mu:'Komo', rk:4, lb:'KOMO' },
+    { id:'PG-0096', nm:'Aibai', cat:'strip', lat:-6.26509, lon:144.98735, el:6721, mu:'Ainabane', rk:4, lb:'AIBAI' },
+    { id:'PG-0100', ia:'SMP', nm:'Stockholm Landing Strip', cat:'strip', lat:-4.35, lon:151.55, el:10, mu:'Stockholm', rk:4, lb:'STOCKHOLM L' },
+    { id:'PG-0102', nm:'Lae Heliport', cat:'strip', lat:-6.73397, lon:146.99973, el:0, mu:'Lae', rk:4, lb:'LAE HELIPOR' },
+    { id:'PG-0103', nm:'Tambul', cat:'strip', lat:-5.88558, lon:143.95683, el:7569, mu:'Tambul', rk:4, lb:'TAMBUL' },
+    { id:'PG-0107', ia:'BRH', nm:'Brahman', cat:'strip', lat:-5.74103, lon:145.37852, el:440, mu:'Brahman Mission', rk:4, lb:'BRAHMAN' },
+    { id:'PG-0108', ia:'BIJ', nm:'Biliau', cat:'strip', lat:-5.57746, lon:146.33401, el:981, rk:4, lb:'BILIAU' },
+    { id:'PG-0110', nm:'Yifki', cat:'strip', lat:-5.12594, lon:142.82596, el:3250, rk:4, lb:'YIFKI' },
+    { id:'PG-0111', nm:'Mibu', cat:'strip', lat:-5.8107, lon:146.37307, el:0, mu:'Mibu', rk:4, lb:'MIBU' },
+    { id:'PG-0112', nm:'Wanikipa', cat:'strip', lat:-5.2548, lon:142.5219, el:2200, rk:4, lb:'WANIKIPA' },
+    { id:'PG-0115', ia:'BIZ', nm:'Bimin', cat:'strip', lat:-5.28938, lon:142.01404, el:6543, mu:'Bimin', rk:4, lb:'BIMIN' },
+    { id:'PG-0135', ia:'KSG', nm:'Kisengam Airport [CLOSED]', cat:'strip', lat:-6.362, lon:146.71, el:3700, mu:'Kisenden', rk:4, lb:'KISENGAM AI' },
+    { id:'PG-0161', ia:'PAW', nm:'Pambwa', cat:'strip', lat:-11.40297, lon:154.0117, el:18, mu:'Pambwa Station', rk:4, lb:'PAMBWA' },
+    { id:'PG-ATP', ia:'TAJ', nm:'Tadji', cat:'strip', lat:-3.19819, lon:142.43096, el:33, mu:'Aitape', rk:4 },
+    { id:'PG-IHU', ia:'IHU', nm:'Ihu', cat:'strip', lat:-7.89756, lon:145.396, el:70, mu:'Ihu', rk:4 },
+    { id:'PG-JAQ', ia:'JAQ', nm:'Jacquinot Bay', cat:'strip', lat:-5.6525, lon:151.507, el:136, mu:'Jacquinot Bay', rk:4 },
+    { id:'PG-KUY', ia:'KUY', nm:'Kamusi', cat:'strip', lat:-7.42035, lon:143.12181, el:97, mu:'Kamusi', rk:4 },
+    { id:'PG-LMY', ia:'LMY', nm:'Lake Murray', cat:'strip', lat:-7.00992, lon:141.494, el:52, mu:'Lake Murray', rk:4 },
+    { id:'PG-ULE', ia:'ULE', nm:'Sule', cat:'strip', lat:-4.97472, lon:151.297, el:100, mu:'Sule', rk:4 },
+    { id:'PGE', ia:'PGE', nm:'Yegepa', cat:'strip', lat:-7.13444, lon:146.15639, el:4179, rk:4 },
+    { id:'PPX', ia:'PPX', nm:'Param', cat:'strip', lat:-9.99, lon:149.477, el:4490, mu:'Nepesi', rk:4 },
+    { id:'PUA', ia:'PUA', nm:'Puas', cat:'strip', lat:-2.395, lon:150.2361, el:45, mu:'Puas Mission', rk:4 },
+    { id:'RAA', ia:'RAA', nm:'Rakanda', cat:'strip', lat:-4.2096, lon:152.4385, el:38, mu:'Rakanda', rk:4 },
+    { id:'RAW', ia:'RAW', nm:'Arawa', cat:'strip', lat:-6.22056, lon:155.57139, el:20, mu:'Arawa', rk:4 },
+    { id:'RUU', ia:'RUU', nm:'Ruti', cat:'strip', lat:-5.33444, lon:144.25667, el:1710, mu:'Kawbenaberi', rk:4 },
+    { id:'SAM', ia:'SAM', nm:'Salamo', cat:'strip', lat:-9.6701, lon:150.7903, el:30, mu:'Salamo', rk:4 },
+    { id:'SSS', ia:'SSS', nm:'Siassi', cat:'strip', lat:-5.5965, lon:147.8106, el:1250, mu:'Siassi', rk:4 },
+    { id:'TOK', ia:'TOK', nm:'Torokina', cat:'strip', lat:-6.2015, lon:155.063, el:130, mu:'Torokina', rk:4 },
+    { id:'TSI', ia:'TSI', nm:'Tsile Tsile', cat:'strip', lat:-6.8498, lon:146.3554, el:500, mu:'Tsile Tsile', rk:4 },
+    { id:'UUU', ia:'UUU', nm:'Manumu', cat:'strip', lat:-9.0746, lon:147.5735, el:1800, mu:'Manumu', rk:4 },
+    { id:'VIV', ia:'VIV', nm:'Vivigani', cat:'strip', lat:-9.30333, lon:150.31889, el:117, mu:'Vivigani', rk:4 },
+    { id:'WED', ia:'WED', nm:'Wedau', cat:'strip', lat:-10.0954, lon:150.0826, el:90, mu:'Wedau', rk:4 }
+  ];
+
+  /* Enroute fixes and personal waypoints remain DEMO coordinates,
+     pending ENR 4.3 / 4.4 transcription and Danny's own list. */
+  var DB_EXTRA = [
     { id:'TESEM', nm:'Enroute fix',   cat:'fix', lat:-6.3400, lon:146.1200 },
     { id:'IKERU', nm:'Enroute fix',   cat:'fix', lat:-5.9500, lon:144.8000 },
     { id:'BULOM', nm:'Enroute fix',   cat:'fix', lat:-6.7100, lon:146.9800 },
@@ -3325,23 +3919,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'KAGUL', nm:'Enroute fix',   cat:'fix', lat:-5.5200, lon:145.1000 },
     { id:'WAPEN', nm:'Enroute fix',   cat:'fix', lat:-5.6800, lon:143.9500 },
 
-    { id:'BULO', nm:'Bulolo',          cat:'strip', lat:-7.2200, lon:146.6500 },
-    { id:'WAU',  nm:'Wau',             cat:'strip', lat:-7.3400, lon:146.7200 },
-    { id:'MENY', nm:'Menyamya',        cat:'strip', lat:-7.2100, lon:146.0200 },
-    { id:'ASEK', nm:'Aseki',           cat:'strip', lat:-7.3400, lon:146.1900 },
-    { id:'KAIN', nm:'Kaintiba',        cat:'strip', lat:-7.5000, lon:145.8700 },
-    { id:'GARA', nm:'Garaina',         cat:'strip', lat:-7.8800, lon:147.1400 },
-    { id:'KABW', nm:'Kabwum',          cat:'strip', lat:-6.1000, lon:147.1800 },
-    { id:'DERI', nm:'Derim',           cat:'strip', lat:-6.1800, lon:147.1000 },
-    { id:'SIAL', nm:'Sialum',          cat:'strip', lat:-6.0800, lon:147.5900 },
-    { id:'WASU', nm:'Wasu',            cat:'strip', lat:-5.9600, lon:147.1900 },
-    { id:'FINS', nm:'Finschhafen',     cat:'strip', lat:-6.6200, lon:147.8500 },
-    { id:'PIND', nm:'Pindiu',          cat:'strip', lat:-6.4600, lon:147.5000 },
-
     { id:'LAE BASE',    nm:'Company base',      cat:'mine', lat:-6.7338, lon:146.9998 },
     { id:'ANGAU PAD',   nm:'Angau hospital',    cat:'mine', lat:-6.7280, lon:146.9910 },
     { id:'RIDGE GATE',  nm:'Markham valley',    cat:'mine', lat:-6.4500, lon:146.5000 }
   ];
+
+  /* One searchable list. Personal waypoints first so a typed match on
+     your own name wins over a similarly-named strip. */
+  var DB = DB_EXTRA.filter(function(p){ return p.cat === 'mine'; })
+            .concat(AF, DB_EXTRA.filter(function(p){ return p.cat !== 'mine'; }));
   var CAT_NM = { field:'Fields', fix:'Fixes', strip:'Strips &amp; villages', mine:'My waypoints' };
   /* Storage owns the whole personal-waypoint set once it exists, so a
      rename or a delete cannot leave a seeded copy behind. */
@@ -4325,7 +4911,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
             || (p.ia && p.ia.toUpperCase().indexOf(q) === 0)
             || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
       });
+      /* Most important first, and an exact id match always on top. */
+      hits.sort(function(a, b){
+        var ax = (q && a.id.toUpperCase() === q) ? -1 : 0;
+        var bx = (q && b.id.toUpperCase() === q) ? -1 : 0;
+        if (ax !== bx) return ax - bx;
+        return (a.rk == null ? 2 : a.rk) - (b.rk == null ? 2 : b.rk);
+      });
+      var HIT_CAP = 30, hitTotal = hits.length;
+      if (hits.length > HIT_CAP) hits = hits.slice(0, HIT_CAP);
 
+      if (hitTotal > HIT_CAP){
+        h += '<div class="wsec">Showing ' + HIT_CAP + ' of ' + hitTotal
+          +  ' \u2014 keep typing to narrow</div>';
+      }
       CAT_ORDER.forEach(function(c){
         var inCat = hits.filter(function(p){ return p.cat === c; });
         if (!inCat.length) return;
@@ -6300,7 +6899,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (!fqField){
       /* field picker, with the same pull-to-reveal search as Airports */
       var q = fqQuery.trim().toUpperCase();
-      var items = DB.filter(function(p){ return p.cat === 'field' || p.cat === 'strip'; });
+      var items = DB.filter(function(p){ return p.cat === 'field' || p.cat === 'strip'; })
+                    .sort(function(a, b){
+                      var d = (a.rk == null ? 2 : a.rk) - (b.rk == null ? 2 : b.rk);
+                      return d || (a.id < b.id ? -1 : 1);
+                    });
       if (q) items = items.filter(function(p){
         return (p.id && p.id.toUpperCase().indexOf(q) >= 0)
             || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
@@ -8195,8 +8798,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (LAYERS.airspace) AIRSPACE.forEach(function(a){ h += box('asp', a); });
     if (LAYERS.danger)   DANGER.forEach(function(a){ h += box('dgr', a); });
 
+    /* needed by both the leg geometry and the label collision pass, so
+       it cannot live inside the route conditional */
+    var rect = map.getBoundingClientRect();
+
     if (LAYERS.route && ROUTE.length > 1){
-      var rect = map.getBoundingClientRect();
       for (var i = 0; i < ROUTE.length - 1; i++){
         var a = ROUTE[i], b = ROUTE[i+1];
         var ax = projX(a.lon) / 100 * rect.width, ay = projY(a.lat) / 100 * rect.height;
@@ -8208,9 +8814,47 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       }
     }
 
+    /* ---- declutter ------------------------------------------------
+       575 markers at country zoom is noise, so two gates run in
+       series. First rank: only what matters at this zoom draws at
+       all. Then collision: labels are placed in rank order and any
+       whose box overlaps one already down is dropped, so the dot
+       stays but the text does not pile up. Personal waypoints, fixes
+       and route points are never rank-gated - you put them there. */
+    var zNow = LMAP ? LMAP.getZoom() : 8;
+    function dotMaxRank(z){
+      /* strips are off by default, so this only bites once they are on.
+         Tuned so turning them on at country zoom does not drop ~430
+         markers into a per-frame innerHTML rebuild. */
+      if (z < 7)    return 1;   /* 21  majors only */
+      if (z < 9)    return 2;   /* 274 ICAO with IATA */
+      if (z < 10.5) return 3;   /* 429 all ICAO */
+      return 4;                 /* 575 everything */
+    }
+    function labMaxRank(z){
+      if (z < 6.5)  return 0;
+      if (z < 7.5)  return 1;
+      if (z < 9)    return 2;
+      if (z < 10.5) return 3;
+      return 4;
+    }
+    var dotCap = dotMaxRank(zNow), labCap = labMaxRank(zNow);
+    var placed = [];
+    function fits(cx, cy, w, hgt){
+      var x1 = cx - w / 2, x2 = cx + w / 2, y1 = cy, y2 = cy + hgt;
+      for (var i = 0; i < placed.length; i++){
+        var b = placed[i];
+        if (x1 < b[2] && x2 > b[0] && y1 < b[3] && y2 > b[1]) return false;
+      }
+      placed.push([x1, y1, x2, y2]);
+      return true;
+    }
+
     var show = { field:LAYERS.fields, strip:LAYERS.strips, fix:LAYERS.fixes, mine:LAYERS.mine };
     DB.forEach(function(p){
       if (!show[p.cat]) return;
+      var ranked = (p.rk != null);
+      if (ranked && p.rk > dotCap) return;
       var x = projX(p.lon), y = projY(p.lat);
       if (x < -2 || x > 102 || y < -2 || y > 102) return;
       var tint = '';
@@ -8218,8 +8862,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         var fi = FIELD_INFO[p.id];
         if (fi) tint = 'background:' + wxCat(fi.metar)[1] + ';';
       }
-      var lab = (SET.labels === 'off') ? ''
-              : '<b' + (SET.labels === 'auto' ? ' style="opacity:.75"' : '') + '>' + p.id + '</b>';
+
+      var lab = '';
+      if (SET.labels !== 'off' && (!ranked || SET.labels === 'always' || p.rk <= labCap)){
+        var txt = p.lb || p.id;
+        var chw = (p.cat === 'strip') ? 5.5 : 6.4;
+        var px = x / 100 * rect.width, py = y / 100 * rect.height;
+        if (fits(px, py + 6, txt.length * chw + 4, 12)){
+          lab = '<b' + (SET.labels === 'auto' ? ' style="opacity:.75"' : '') + '>' + txt + '</b>';
+        }
+      }
       h += '<div class="fld k-' + p.cat + '" data-fld="' + p.id + '" style="left:' + x.toFixed(2)
         +  '%;top:' + y.toFixed(2) + '%"><i' + (tint ? ' style="' + tint + '"' : '') + '></i>'
         +  lab + '</div>';
