@@ -16,6 +16,26 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v80 2026-07-28  Terrain is real. The sine-wave model that fed
+                       the profile and the per-leg highest-terrain
+                       figure is DELETED, not kept as a fallback - a
+                       fabricated max-terrain number is the worst
+                       thing this app could print. Elevation now comes
+                       from Terrarium tiles decoded per pixel
+                       (R*256+G+B/256-32768), and terrainAt() returns
+                       null when the covering tile is not resident, so
+                       the profile shows "Loading terrain" rather than
+                       a guess, and unknown terrain no longer paints as
+                       a clearance warning. Shading layer ported from
+                       v262: red at or above planned altitude, amber
+                       within 1000 ft below. Downloads under More now
+                       really fetches - z5 to 10 (2,570 tiles, ~100 MB)
+                       or z5 to 11 (9,738 tiles, ~380 MB) over the whole
+                       PNG box, eight at a time, true byte counts,
+                       cancellable and resumable because cached tiles
+                       are skipped. The old 38 MB / 310 MB / zoom-12
+                       figures were invented; z12 would be 38,059 tiles
+                       and ~1.5 GB, which iOS will not hold.
        v79 2026-07-28  Real GPS, and an activity bar that stops lying.
                        watchPosition with accuracy-gated derivation of
                        GS/TRK for when iOS reports neither, track held
@@ -3154,7 +3174,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v79';
+  var VERSION = 'v80';
   var BUILD   = '2026-07-28';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -3405,13 +3425,97 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return { lat: a.lat + (b.lat - a.lat) * f, lon: a.lon + (b.lon - a.lon) * f };
   }
 
-  /* ---- deterministic terrain model (illustrative only) ---- */
+  /* ---- Terrain: real elevation from Terrarium tiles ---------------
+     Terrarium encodes height in the RGB channels of an ordinary PNG:
+     elevation_m = R*256 + G + B/256 - 32768. We fetch the tile, draw
+     it to a canvas and decode every pixel once, then keep the
+     Float32Array. The service worker routes these to the terrain
+     cache, so once downloaded this works with no signal.
+
+     terrainAt() returns null when the covering tile is not resident
+     yet. Callers must treat null as "not known" and show nothing -
+     never a guess. The sine-wave model that used to live here fed the
+     terrain profile and the per-leg highest-terrain figure, which is
+     the worst possible place for an invented number. */
+  var TERR_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+  var TERR_MAXNATIVE = 14, TERR_SAMPLE_Z = 11, M2FT = 3.28084;
+  var TERR_CACHE_NAME = 'nmplotter-iphone-terrain';
+  var terrTiles = {};                 /* key -> Float32Array | 'load' | 'fail' */
+  var terrPending = 0, terrOnReady = null;
+
+  function terrUrl(z, x, y){
+    return TERR_URL.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+  }
+  function lon2tx(lon, z){ return (lon + 180) / 360 * Math.pow(2, z); }
+  function lat2ty(lat, z){
+    var r = lat * D2R;
+    return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
+  }
+
+  function terrLoadTile(z, x, y){
+    var k = z + ':' + x + ':' + y;
+    if (terrTiles[k]) return;
+    terrTiles[k] = 'load';
+    terrPending++;
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){
+      try {
+        var c = document.createElement('canvas'); c.width = 256; c.height = 256;
+        var cx = c.getContext('2d', { willReadFrequently:true });
+        cx.drawImage(img, 0, 0, 256, 256);
+        var src = cx.getImageData(0, 0, 256, 256).data;
+        var el = new Float32Array(65536);
+        for (var i = 0; i < 65536; i++){
+          var o = i * 4;
+          el[i] = (src[o] * 256 + src[o+1] + src[o+2] / 256) - 32768;
+        }
+        terrTiles[k] = el;
+      } catch(_){ terrTiles[k] = 'fail'; }
+      terrDone();
+    };
+    img.onerror = function(){ terrTiles[k] = 'fail'; terrDone(); };
+    img.src = terrUrl(z, x, y);
+  }
+  function terrDone(){
+    if (--terrPending <= 0){
+      terrPending = 0;
+      if (terrOnReady){ var f = terrOnReady; terrOnReady = null; f(); }
+    }
+  }
+
+  /* Ground elevation in feet, or null if the tile is not resident. */
   function terrainAt(lat, lon){
-    var v = Math.sin(lat * 7.3 + lon * 4.1) * 0.50
-          + Math.sin(lat * 13.7 - lon * 9.4) * 0.30
-          + Math.sin(lon * 21.3 + 2.1) * 0.20;
-    var r = Math.max(0, v);
-    return Math.round(180 + r * r * 11800);
+    var z = TERR_SAMPLE_Z;
+    var xf = lon2tx(lon, z), yf = lat2ty(lat, z);
+    var tx = Math.floor(xf), ty = Math.floor(yf);
+    var k = z + ':' + tx + ':' + ty, t = terrTiles[k];
+    if (t === undefined){ terrLoadTile(z, tx, ty); return null; }
+    if (t === 'load' || t === 'fail') return null;
+    var px = Math.max(0, Math.min(255, Math.floor((xf - tx) * 256)));
+    var py = Math.max(0, Math.min(255, Math.floor((yf - ty) * 256)));
+    return Math.round(t[py * 256 + px] * M2FT);
+  }
+
+  /* True when every tile covering the route is decoded. Otherwise it
+     starts the loads and calls back once they land. */
+  function terrRouteReady(cb){
+    if (ROUTE.length < 2) return true;
+    var z = TERR_SAMPLE_Z, need = {}, miss = 0;
+    for (var i = 0; i < ROUTE.length - 1; i++){
+      for (var s2 = 0; s2 <= 40; s2++){
+        var p = interp(ROUTE[i], ROUTE[i+1], s2 / 40);
+        var tx = Math.floor(lon2tx(p.lon, z)), ty = Math.floor(lat2ty(p.lat, z));
+        need[tx + ':' + ty] = [tx, ty];
+      }
+    }
+    for (var k in need){
+      var kk = z + ':' + need[k][0] + ':' + need[k][1], t = terrTiles[kk];
+      if (t === undefined){ terrLoadTile(z, need[k][0], need[k][1]); miss++; }
+      else if (t === 'load') miss++;
+    }
+    if (miss && cb) terrOnReady = cb;
+    return miss === 0;
   }
 
   /* ---- derived plan ---- */
@@ -3420,11 +3524,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     for (var i = 0; i < ROUTE.length - 1; i++){
       var a = ROUTE[i], b = ROUTE[i+1];
       var d = nmBetween(a, b), hr = d / AC.tas;
-      var hi = 0;
+      var hi = 0, known = true;
       for (var s = 0; s <= 40; s++){
         var p = interp(a, b, s/40), e = terrainAt(p.lat, p.lon);
+        if (e == null){ known = false; break; }
         if (e > hi) hi = e;
       }
+      if (!known) hi = null;
       t += hr;
       out.push({ a:a, b:b, nm:d, hr:hr, cum:t, fuel:hr * AC.burn, hi:hi });
     }
@@ -3482,7 +3588,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var T = totals();
     if (!T.legs.length) return '<div class="chipempty">Add at least two points.</div>';
     return T.legs.map(function(l, i){
-      var clr = AC.alt - l.hi, now = (i === toWpt - 1);
+      var clr = (l.hi == null) ? null : AC.alt - l.hi, now = (i === toWpt - 1);
       return '<button class="lgc' + (now ? ' act' : '') + '" data-li="' + i + '">'
         + '<div class="lgh"><b>' + label(l.a) + ' \u2192 ' + label(l.b) + '</b>'
         + (now ? '<span class="now">Flying</span>' : '<span>Leg ' + (i + 1) + '</span>') + '</div>'
@@ -3492,30 +3598,42 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +   '<div><span class="k">ETE</span><span class="v">' + hhmm(l.hr) + '</span></div>'
         +   '<div><span class="k">ETA</span><span class="v">' + clock(l.cum) + '</span></div>'
         +   '<div><span class="k">Fuel</span><span class="v">' + Math.round(l.fuel) + '</span></div>'
-        +   '<div><span class="k">Max terr</span><span class="v' + (clr < SET.clr ? ' warn' : '') + '">'
-        +     l.hi.toLocaleString() + '</span></div>'
+        +   '<div><span class="k">Max terr</span><span class="v' + (clr != null && clr < SET.clr ? ' warn' : '') + '">'
+        +     (l.hi == null ? '- - -' : l.hi.toLocaleString()) + '</span></div>'
         + '</div></button>';
     }).join('');
   }
 
   /* ---- render: Profile ---- */
-  var PROF_N = 180, profSamples = [], profScrub = 0;
+  var PROF_N = 180, profSamples = [], profScrub = 0, profLoading = false;
   function buildProfile(){
     var T = totals();
-    profSamples = [];
+    profSamples = []; profLoading = false;
     if (!T.legs.length) return T;
+    /* one pass to pull in the covering tiles, repaint when they land */
+    if (!terrRouteReady(function(){ refreshProfile(); })){ profLoading = true; return T; }
     var step = T.nm / PROF_N, acc = 0, li = 0, within = 0;
     for (var s = 0; s <= PROF_N; s++){
       var target = s * step;
       while (li < T.legs.length - 1 && target > acc + T.legs[li].nm){ acc += T.legs[li].nm; li++; }
       within = (target - acc) / T.legs[li].nm;
       var p = interp(T.legs[li].a, T.legs[li].b, Math.max(0, Math.min(1, within)));
-      profSamples.push({ d: target, e: terrainAt(p.lat, p.lon) });
+      var pe = terrainAt(p.lat, p.lon);
+      if (pe == null){ profSamples = []; profLoading = true; break; }
+      profSamples.push({ d: target, e: pe });
     }
     return T;
   }
+  /* repaint whatever is currently showing the profile */
+  function refreshProfile(){
+    try { if ($('#fplBody')) drawFpl(); } catch(_){ }
+    if (hudOn()){ try { drawHudPanel(); } catch(_){ } }
+    try { renderMap(); } catch(_){ }
+  }
+
   function profileHTML(){
     buildProfile();
+    if (profLoading) return '<div class="chipempty">Loading terrain\u2026</div>';
     if (!profSamples.length) return '<div class="chipempty">Add at least two points.</div>';
     return '<div class="prof" id="profBox"></div><div class="profstats" id="profStats"></div>';
   }
@@ -3823,6 +3941,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function terrHTML(){
     buildProfile();
+    if (profLoading) return '<div class="chipempty">Loading terrain\u2026</div>';
     if (!profSamples.length) return '<div class="chipempty">Add at least two route points in FPL.</div>';
     return '<div class="trbar"><span class="lb">Cruise altitude</span>'
       +    '<span class="trstep"><button data-alt="-500">\u2212</button>'
@@ -5938,11 +6057,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       d:'Coastline, roads, towns and labels for Papua New Guinea. Ships inside the app, so the map works offline from first launch.',
       ed:'Tiles built 2025-10-30' },
 
-    { g:'Terrain', id:'terr10', t:'Terrain \u00b7 route corridor', mb:38,
-      d:'Elevation tiles to zoom 10 along your saved routes. Enough for the terrain profile and lowest-safe figures.',
+    { g:'Terrain', id:'terr10', t:'Terrain \u00b7 all PNG, coarse', mb:100, real:true, z:10,
+      d:'Elevation for the whole country and the islands to zoom 10. Enough for the profile, per-leg highest terrain and the shading layer. Download this one first.',
       ed:'Terrarium, SRTM-derived' },
-    { g:'Terrain', id:'terr12', t:'Terrain \u00b7 all PNG, zoom 12', mb:310,
-      d:'Full-country elevation at higher resolution. Large; download on wifi.',
+    { g:'Terrain', id:'terr11', t:'Terrain \u00b7 all PNG, standard', mb:380, real:true, z:11,
+      d:'The same coverage at zoom 11 \u2014 four times the detail, four times the size. Wifi only, and it includes everything the coarse level holds.',
       ed:'Terrarium, SRTM-derived' },
 
     { g:'Plates', id:'platesMaj', t:'Approach plates \u00b7 majors', mb:26,
@@ -5963,10 +6082,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var GRP_COLOR = { 'Base map':'var(--accent-2)', 'Terrain':'var(--good)',
                     'Plates':'var(--accent)', 'Data pack':'var(--navaid)' };
 
-  function dlStored(it){ return it.bundled || !!DLSTATE[it.id]; }
+  function dlStored(it){
+    if (it.bundled) return true;
+    if (it.real){ var oc = terrOffCfg(); return !!(oc && oc.zoom >= it.z); }
+    return !!DLSTATE[it.id];
+  }
+  /* real rows report what is actually on the device */
+  function dlRealSize(it){
+    var oc = terrOffCfg();
+    return (oc && oc.zoom >= it.z && oc.bytes) ? Math.round(oc.bytes / 1048576) : it.mb;
+  }
   function dlTotalMB(){
     var t = 0;
-    DL_ITEMS.forEach(function(it){ if (dlStored(it)) t += it.mb; });
+    DL_ITEMS.forEach(function(it){ if (dlStored(it)) t += (it.real ? dlRealSize(it) : it.mb); });
     return t;
   }
   function fmtMB(mb){ return mb >= 1024 ? (mb/1024).toFixed(1) + ' GB' : mb + ' MB'; }
@@ -5979,7 +6107,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var byGrp = {};
     DL_ITEMS.forEach(function(it){
       if (!dlStored(it)) return;
-      byGrp[it.g] = (byGrp[it.g] || 0) + it.mb;
+      byGrp[it.g] = (byGrp[it.g] || 0) + (it.real ? dlRealSize(it) : it.mb);
     });
     var bar = Object.keys(byGrp).map(function(g){
       return '<i style="width:' + (byGrp[g] / total * 100).toFixed(1) + '%;background:'
@@ -5998,6 +6126,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     DL_ITEMS.forEach(function(it){
       if (it.g !== lastG){ h += '<div class="dlgrp">' + it.g + '</div>'; lastG = it.g; }
       var stored = dlStored(it), busy = dlBusy[it.id];
+      if (it.real && stored){
+        var occ = terrOffCfg();
+        if (occ && occ.zoom > it.z) stored = 'inc';   /* covered by a deeper level */
+      }
 
       h += '<div class="dlitem' + (it.bundled ? ' bundled' : '') + '">'
         +  '<div class="hd"><b>' + it.t + '</b><span class="sz">' + fmtMB(it.mb) + '</span></div>'
@@ -6012,6 +6144,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           +  '</div></div>';
       } else if (it.bundled){
         h += '<div class="act"><span class="st">Included in the app</span></div>';
+      } else if (stored === 'inc'){
+        h += '<div class="act"><span class="st">Included in the deeper level</span></div>';
       } else if (stored){
         h += '<div class="act"><button class="rm' + (dlArm[it.id] ? ' arm' : '') + '" data-dlrm="'
           +  it.id + '">' + (dlArm[it.id] ? 'Tap again to remove' : 'Remove') + '</button>'
@@ -6023,11 +6157,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       h += '</div>';
     });
 
-    return h + '<div class="cnote">Sizes and progress in this demo are simulated \u2014 no tiles are '
-      + 'actually fetched. In the live build these write to the app\u2019s offline caches, and a '
-      + 'download can be cancelled and resumed without losing what is already saved. '
-      + 'Every dataset shows the AIP edition it came from; check it against the current AIRAC '
-      + 'before you rely on it.</div>';
+    return h + '<div class="cnote"><b>Terrain is real</b> \u2014 it fetches Terrarium elevation '
+      + 'tiles into the app\u2019s offline cache, reports true byte counts, and can be cancelled '
+      + 'and resumed without losing what is already saved. Plates and the data pack are still '
+      + 'placeholders and fetch nothing. Every dataset shows the AIP edition it came from; check '
+      + 'it against the current AIRAC before you rely on it.</div>';
   }
 
   function itemById(id){
@@ -6045,7 +6179,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
     Array.prototype.forEach.call(el.querySelectorAll('[data-dlx]'), function(b){
       b.addEventListener('click', function(){
-        var id = b.getAttribute('data-dlx');
+        var id = b.getAttribute('data-dlx'), itx = itemById(id);
+        if (itx && itx.real){ terrDl.cancel = true; return; }   /* runner reports back */
         if (dlBusy[id]){ clearInterval(dlBusy[id].t); delete dlBusy[id]; }
         again(); toast('Cancelled \u2014 what was saved is kept');
       });
@@ -6055,6 +6190,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         var id = b.getAttribute('data-dlrm');
         if (dlArm[id]){
           clearTimeout(dlArm[id].t); delete dlArm[id];
+          var itr = itemById(id);
+          if (itr && itr.real){
+            terrClearOffline().then(function(){
+              again(); try { refreshProfile(); } catch(_){ }
+              toast('Offline terrain deleted');
+            });
+            return;
+          }
           delete DLSTATE[id]; saveDl(); again();
           toast('Removed');
           return;
@@ -6067,6 +6210,42 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function startDl(id, el){
     var it = itemById(id); if (!it || dlBusy[id]) return;
+
+    if (it.real){
+      if (terrDl.running){ toast('A terrain download is already running'); return; }
+      dlBusy[id] = { pct:0 };
+      el._dlAgain();
+      var lastB = 0;
+      terrRunDownload(it.z, function(done, total, failed, bytes){
+        var b = dlBusy[id]; if (!b) return;
+        b.pct = Math.min(99, Math.round(done / total * 100));
+        lastB = bytes;
+        var bar = document.getElementById('dlb-' + id);
+        var lab = document.getElementById('dlp-' + id);
+        if (bar) bar.style.width = b.pct + '%';
+        if (lab) lab.textContent = b.pct + '% \u00b7 ' + done.toLocaleString() + ' of '
+                                 + total.toLocaleString() + ' tiles \u00b7 ' + fmtBytes(bytes)
+                                 + (failed ? ' \u00b7 ' + failed + ' failed' : '');
+      }).then(function(res){
+        delete dlBusy[id];
+        terrTiles = {};                       /* re-decode from the cache */
+        if (el._dlAgain) el._dlAgain();
+        try { refreshProfile(); } catch(_){ }
+        if (res.cancelled){
+          toast('Cancelled \u2014 ' + res.done.toLocaleString() + ' tiles kept');
+        } else if (res.failed){
+          toast('Stored with ' + res.failed + ' tiles missing \u2014 run it again to fill them');
+        } else {
+          toast('Terrain stored \u00b7 ' + fmtBytes(res.bytes));
+        }
+      }).catch(function(err){
+        delete dlBusy[id];
+        if (el._dlAgain) el._dlAgain();
+        toast('Terrain download failed \u2014 ' + ((err && err.message) || 'storage or network'));
+      });
+      return;
+    }
+
     dlBusy[id] = { pct:0 };
     el._dlAgain();
     /* simulated progress - the live build reports real tile counts */
@@ -8002,7 +8181,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
     map.classList.remove('base-png','base-carto','base-sat');
     map.classList.add('base-' + LAYERS.base);
-    $('#terrOv').classList.toggle('on', !!LAYERS.terrain);
+    $('#terrOv').classList.toggle('on', !!LAYERS.terrain && !LMAP);
+    if (typeof terrSync === 'function') terrSync();
 
     var h = '';
 
@@ -8650,6 +8830,172 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* Clocks and ETAs move whether or not a fix has arrived. */
   setInterval(function(){ drawActy(); }, 1000);
+
+  /* ================================================================
+     TERRAIN SHADING + OFFLINE DOWNLOAD
+
+     Shading is ported from v262 L10499. Red at or above the planned
+     altitude, amber within the margin below it, clear below that. The
+     reference is AC.alt, so changing planned altitude repaints
+     without refetching anything.
+
+     The download walks z5 up to the chosen level over the whole PNG
+     box and writes into nmplotter-iphone-terrain, which the service
+     worker serves back offline and which survives version bumps.
+     Tiles already cached are skipped, so a cancelled download resumes
+     where it stopped.
+     ================================================================ */
+  var TERR_SHADE = { above:[240,60,60], near:[255,176,32], margin:1000, opacity:0.82 };
+  var terrLayer = null;
+
+  function terrBuildLayer(){
+    /* TERR_SHADE is assigned further down this IIFE than bootMap runs,
+       so an early call must bail rather than read it as undefined */
+    if (!window.L || terrLayer || typeof TERR_SHADE === 'undefined' || !TERR_SHADE) return terrLayer || null;
+    var Shade = L.GridLayer.extend({
+      initialize: function(o){ L.GridLayer.prototype.initialize.call(this, o); this._tc = {};
+        var self = this;
+        this.on('tileunload', function(e){ delete self._tc[e.coords.x+':'+e.coords.y+':'+e.coords.z]; }); },
+      getTileUrl: function(c){ return terrUrl(Math.min(c.z, this.options.maxNativeZoom), c.x, c.y); },
+      createTile: function(coords, done){
+        var size = this.getTileSize();
+        var cv = L.DomUtil.create('canvas', 'leaflet-tile');
+        cv.width = size.x; cv.height = size.y;
+        var self = this, img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function(){
+          try {
+            var tmp = document.createElement('canvas');
+            tmp.width = size.x; tmp.height = size.y;
+            var tx = tmp.getContext('2d', { willReadFrequently:true });
+            tx.drawImage(img, 0, 0, size.x, size.y);
+            var src = tx.getImageData(0, 0, size.x, size.y).data;
+            var n = size.x * size.y, el = new Float32Array(n);
+            for (var i = 0; i < n; i++){
+              var o = i * 4;
+              el[i] = (src[o] * 256 + src[o+1] + src[o+2] / 256) - 32768;
+            }
+            self._tc[coords.x+':'+coords.y+':'+coords.z] = { cv:cv, el:el };
+            self._paint(cv, el);
+            done(null, cv);
+          } catch(err){ done(err, cv); }
+        };
+        img.onerror = function(){ done(new Error('tile'), cv); };
+        img.src = this.getTileUrl(coords);
+        return cv;
+      },
+      _paint: function(cv, el){
+        var ctx = cv.getContext('2d', { willReadFrequently:true });
+        var im = ctx.createImageData(cv.width, cv.height), d = im.data;
+        var alt = AC.alt, lo = alt - TERR_SHADE.margin;
+        var A = TERR_SHADE.above, N = TERR_SHADE.near;
+        for (var i = 0; i < el.length; i++){
+          var ft = el[i] * M2FT, o = i * 4;
+          if (ft >= alt){ d[o]=A[0]; d[o+1]=A[1]; d[o+2]=A[2]; d[o+3]=205; }
+          else if (ft >= lo){ d[o]=N[0]; d[o+1]=N[1]; d[o+2]=N[2]; d[o+3]=165; }
+          else { d[o+3] = 0; }
+        }
+        ctx.putImageData(im, 0, 0);
+      },
+      repaintAll: function(){ for (var k in this._tc) this._paint(this._tc[k].cv, this._tc[k].el); }
+    });
+    terrLayer = new Shade({
+      maxZoom: 18,
+      maxNativeZoom: (terrOffCfg() && terrOffCfg().zoom) || TERR_MAXNATIVE,
+      opacity: TERR_SHADE.opacity,
+      zIndex: 6
+    });
+    return terrLayer;
+  }
+
+  /* called by renderMap so the rail toggle drives the real layer */
+  function terrSync(){
+    if (!LMAP) return;
+    var want = !!LAYERS.terrain;
+    if (!want && !terrLayer) return;          /* nothing on, nothing to build */
+    var lyr = terrBuildLayer();
+    if (!lyr) return;
+    if (want && !LMAP.hasLayer(lyr)) lyr.addTo(LMAP);
+    if (!want && LMAP.hasLayer(lyr)) LMAP.removeLayer(lyr);
+  }
+
+  /* ---- offline download ------------------------------------------ */
+  var TERR_OFF_KEY = 'nmp.iphone.terrain.offline';
+  var TERR_BBOX = { w:140.5, s:-12.0, e:160.0, n:-1.0 };   /* PNG + islands */
+  var TERR_MINZ = 5;
+  function terrOffCfg(){
+    try { return JSON.parse(localStorage.getItem(TERR_OFF_KEY)) || null; } catch(_){ return null; }
+  }
+  function tileX(lon, z){ return Math.floor(lon2tx(lon, z)); }
+  function tileY(lat, z){ return Math.floor(lat2ty(lat, z)); }
+  function terrTileList(maxZ){
+    var list = [];
+    for (var z = TERR_MINZ; z <= maxZ; z++){
+      var x0 = tileX(TERR_BBOX.w, z), x1 = tileX(TERR_BBOX.e, z);
+      var y0 = tileY(TERR_BBOX.n, z), y1 = tileY(TERR_BBOX.s, z);
+      for (var x = x0; x <= x1; x++) for (var y = y0; y <= y1; y++) list.push([z, x, y]);
+    }
+    return list;
+  }
+  function terrTileCount(maxZ){ return terrTileList(maxZ).length; }
+  function fmtBytes(b){
+    var mb = b / 1048576;
+    return mb >= 1024 ? (mb / 1024).toFixed(2) + ' GB' : Math.round(mb) + ' MB';
+  }
+
+  var terrDl = { cancel:false, running:false };
+
+  async function terrRunDownload(maxZ, onProg){
+    terrDl.cancel = false; terrDl.running = true;
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch(_){ }
+    var cache = await caches.open(TERR_CACHE_NAME);
+    var list = terrTileList(maxZ);
+    var total = list.length, done = 0, failed = 0, bytes = 0, idx = 0, CONC = 8;
+
+    async function worker(){
+      while (idx < list.length){
+        if (terrDl.cancel) return;
+        var t = list[idx++], url = terrUrl(t[0], t[1], t[2]);
+        try {
+          var hit = await cache.match(url);
+          if (hit){
+            var cl0 = hit.headers.get('content-length');
+            if (cl0) bytes += +cl0;
+          } else {
+            var r = await fetch(url, { mode:'cors' });
+            if (r && r.ok){
+              var cl = r.headers.get('content-length');
+              if (cl) bytes += +cl;
+              await cache.put(url, r.clone());
+            } else failed++;
+          }
+        } catch(_){ failed++; }
+        done++;
+        if (done % 15 === 0 || done === total) onProg(done, total, failed, bytes);
+      }
+    }
+    var ws = []; for (var i = 0; i < CONC; i++) ws.push(worker());
+    await Promise.all(ws);
+    terrDl.running = false;
+
+    if (!terrDl.cancel){
+      try {
+        localStorage.setItem(TERR_OFF_KEY, JSON.stringify({
+          zoom:maxZ, tiles:done - failed, bytes:bytes, date:new Date().toISOString()
+        }));
+      } catch(_){ }
+      /* let cached tiles overzoom, so offline detail matches online */
+      if (terrLayer){ terrLayer.options.maxNativeZoom = maxZ; if (terrLayer.redraw) terrLayer.redraw(); }
+    }
+    return { total:total, done:done, failed:failed, bytes:bytes, cancelled:terrDl.cancel, zoom:maxZ };
+  }
+
+  async function terrClearOffline(){
+    try { await caches.delete(TERR_CACHE_NAME); } catch(_){ }
+    try { localStorage.removeItem(TERR_OFF_KEY); } catch(_){ }
+    terrTiles = {};
+    if (terrLayer){ terrLayer.options.maxNativeZoom = TERR_MAXNATIVE; if (terrLayer.redraw) terrLayer.redraw(); }
+  }
 
 })();
 </script>
