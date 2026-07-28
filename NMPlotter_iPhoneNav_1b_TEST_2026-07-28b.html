@@ -4166,13 +4166,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     :root{ --nmpx-topbar:52px; --nmpx-tabbar:58px; }
     .app{
       grid-template-columns:1fr !important;
-      grid-template-rows: var(--nmpx-topbar) 1fr var(--nmpx-tabbar) !important;
+      grid-template-rows: auto 1fr var(--nmpx-tabbar) !important;
       height:100dvh !important;
     }
     .header-strip{
       grid-row:1; order:0;
-      padding:0 14px !important;
-      height:var(--nmpx-topbar);
+      padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 8px !important;
+      height:auto !important;
+      min-height:var(--nmpx-topbar);
       display:flex; align-items:center; gap:10px;
       background:var(--panel);
       border-bottom:1px solid var(--border-strong);
@@ -4229,7 +4230,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       height:var(--nmpx-tabbar);
       background:var(--panel);
       border-top:1px solid var(--border-strong);
-      padding-bottom:env(safe-area-inset-bottom,0px);
+      padding-bottom:max(calc(env(safe-area-inset-bottom,0px) - 12px), 8px);
       z-index:850;
     }
     .nmpxTab{
@@ -4246,6 +4247,87 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .nmpxTab .lab{ font-size:10px; font-weight:600; letter-spacing:.02em; }
     .nmpxTab.on{ color:var(--text); }
     .nmpxTab.on .ic{ background:var(--accent); color:#0a0e13; }
+
+    /* --- 1b: full-screen view layer (non-map tabs), demo .view spec --- */
+    #nmpxView{
+      position:fixed; left:0; right:0; top:0; z-index:800;
+      background:var(--bg); display:none; flex-direction:column;
+      bottom:calc(var(--nmpx-tabbar) + max(calc(env(safe-area-inset-bottom,0px) - 12px), 8px));
+      padding-top:calc(env(safe-area-inset-top,0px) + 12px);
+    }
+    #nmpxView.on{ display:flex; }
+    .nmpxVhead{
+      flex:0 0 44px; display:flex; align-items:center; justify-content:space-between;
+      gap:10px; padding:0 16px; border-bottom:1px solid var(--border);
+    }
+    .nmpxVhead b{ font-size:17px; font-weight:700; }
+    .nmpxVhead .sub{ font-size:10px; color:#46566a; letter-spacing:.09em; text-transform:uppercase; }
+    .nmpxVbody{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:12px 16px 20px; }
+    .nmpxVempty{
+      flex:1 1 auto; display:flex; align-items:center; justify-content:center;
+      color:#46566a; font-size:13px; letter-spacing:.1em; text-transform:uppercase;
+    }
+
+    /* --- 1b: More sheet (demo right-side drawer .sheet spec) --- */
+    #nmpxScrim{
+      position:fixed; inset:0; z-index:990; background:rgba(0,0,0,.45);
+      opacity:0; pointer-events:none; transition:opacity .2s ease;
+    }
+    #nmpxScrim.on{ opacity:1; pointer-events:auto; }
+    #nmpxSheet{
+      position:fixed; top:0; bottom:0; right:0; width:59%; z-index:1000;
+      background:var(--panel); border-left:1px solid var(--border-strong);
+      transform:translateX(100%); transition:transform .2s ease;
+      display:flex; flex-direction:column;
+      padding-top:calc(env(safe-area-inset-top,0px) + 12px);
+      padding-bottom:max(calc(env(safe-area-inset-bottom,0px) - 12px), 8px);
+    }
+    #nmpxSheet.on{ transform:translateX(0); }
+    #nmpxSheet .shead{ display:flex; align-items:baseline; justify-content:space-between; padding:0 12px 6px; }
+    #nmpxSheet .shead .k{ font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#46566a; }
+    #nmpxSheet .slist{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; border-top:1px solid var(--border); }
+    .nmpxSrow{
+      height:44px; display:flex; align-items:center; gap:12px; padding:0 12px;
+      font-size:14px; color:var(--text); width:100%; text-align:left;
+    }
+    .nmpxSrow + .nmpxSrow{ border-top:1px solid var(--border); }
+    .nmpxSrow:active{ background:var(--inset); }
+    .nmpxSrow .sq{
+      width:26px; height:26px; border-radius:6px; flex:0 0 26px;
+      display:flex; align-items:center; justify-content:center; color:#0a0e13;
+    }
+    .nmpxSrow .sq svg{ width:15px; height:15px; }
+    #nmpxSheet .sver{
+      flex:0 0 auto; padding:10px 12px; border-top:1px solid var(--border);
+      font-family:var(--mono,monospace); font-size:10px; color:#46566a; letter-spacing:.04em;
+    }
+    /* 1b: demo sheet tile row (.top/.stile) + Edit link (.shead .a) */
+    #nmpxSheet .nmpxTop{
+      display:flex; gap:1px; margin:0 10px 16px;
+      background:var(--border); border:1px solid var(--border);
+      border-radius:8px; overflow:hidden;
+    }
+    .nmpxStile{
+      flex:1 1 0; background:var(--bg-2); padding:12px 0; border:0;
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      color:var(--text-2); cursor:pointer;
+    }
+    .nmpxStile:active{ background:var(--inset); }
+    .nmpxStile svg{ width:20px; height:20px; }
+    .nmpxStile .lab{ font-size:13px; font-weight:600; }
+    #nmpxSheet .shead{ align-items:baseline; }
+    .nmpxEdit{
+      font-size:13px; font-weight:600; color:var(--accent-2);
+      background:none; border:0; padding:0; cursor:pointer;
+    }
+    #nmpxNote{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom:calc(var(--nmpx-tabbar) + 26px); z-index:1100;
+      background:var(--panel); border:1px solid var(--border-strong);
+      border-radius:8px; padding:8px 14px; font-size:12px; color:var(--text);
+      opacity:0; pointer-events:none; transition:opacity .18s ease;
+    }
+    #nmpxNote.on{ opacity:1; }
   }
 
   </style>
@@ -4451,6 +4533,23 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   </div>
 
   <div id="nmpxTabbar" aria-label="NM Plotter navigation"></div>
+
+  <!-- 1b: view layer, scrim, More sheet (nmpx) -->
+  <div id="nmpxView" aria-hidden="true">
+    <div class="nmpxVhead"><b id="nmpxVttl">View</b><span class="sub" id="nmpxVsub"></span></div>
+    <div class="nmpxVbody" id="nmpxVbody"></div>
+  </div>
+  <div id="nmpxScrim"></div>
+  <div id="nmpxSheet" aria-label="More views">
+    <div class="nmpxTop">
+      <button class="nmpxStile" id="nmpxStDl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
+      <button class="nmpxStile" id="nmpxStSet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg><span class="lab">Settings</span></button>
+    </div>
+    <div class="shead"><span class="k">Views</span><button class="nmpxEdit" id="nmpxEdit">Edit</button></div>
+    <div class="slist" id="nmpxMoreList"></div>
+    <div class="sver" id="nmpxSver"></div>
+  </div>
+  <div id="nmpxNote"></div>
 
   <aside class="panel right">
     <div class="tabstrip" role="tablist">
@@ -14261,16 +14360,119 @@ if (navigator.storage && navigator.storage.persist) {
       });
     }
   }
+  // ----- 1b: full view registry (demo VIEWS set), tints, and switching -----
+  var NMPX_VIEWS = [
+    { k:'map',       t:'Map'        },
+    { k:'gps',       t:'GPS',  act:true },
+    { k:'airports',  t:'Airports'   },
+    { k:'fuel',      t:'Fuel'       },
+    { k:'charts',    t:'Charts'     },
+    { k:'calc',      t:'Calculator' },
+    { k:'freq',      t:'Freqs'      },
+    { k:'flights',   t:'Flights'    },
+    { k:'notes',     t:'Notes'      },
+    { k:'downloads', t:'Downloads'  }
+  ];
+  // Demo MORE_TINT — hardcoded hexes for tokens v262 lacks (route/magenta/navaid).
+  var NMPX_TINT = {
+    map:'var(--accent-2)', airports:'var(--good)', fuel:'#f0a500',
+    charts:'var(--accent-2)', calc:'#c792ea', freq:'#e0479e',
+    flights:'var(--good)', notes:'#f0a500', gps:'var(--accent)', downloads:'var(--accent-2)'
+  };
+  var NMPX_MORE_TILES = ['downloads'];  // shown as tile, not repeated in list (demo parity; tile deferred)
+  var viewEl  = document.getElementById('nmpxView');
+  var vttl    = document.getElementById('nmpxVttl');
+  var vsub    = document.getElementById('nmpxVsub');
+  var vbody   = document.getElementById('nmpxVbody');
+  var sheet   = document.getElementById('nmpxSheet');
+  var scrim   = document.getElementById('nmpxScrim');
+
+  function nmpxIsAct(k){
+    for (var i=0;i<NMPX_VIEWS.length;i++) if (NMPX_VIEWS[i].k===k) return !!NMPX_VIEWS[i].act;
+    return false;
+  }
+  function nmpxCloseAll(){
+    if (sheet) sheet.classList.remove('on');
+    if (scrim) scrim.classList.remove('on');
+    if (viewEl) viewEl.classList.remove('on');
+  }
+  function nmpxShowView(k){
+    if (k === 'map'){
+      // Map is the real Leaflet map underneath; just hide the overlay.
+      if (viewEl) viewEl.classList.remove('on');
+      return;
+    }
+    // Non-map view: fill the demo-styled shell. 1b = empty shell (vempty).
+    var NMPX_EXTRA = { settings:'Settings' };
+    var meta = null;
+    for (var i=0;i<NMPX_VIEWS.length;i++) if (NMPX_VIEWS[i].k===k) meta = NMPX_VIEWS[i];
+    var title = meta ? meta.t : (NMPX_EXTRA[k] || k);
+    if (vttl) vttl.textContent = title;
+    if (vsub) vsub.textContent = '';
+    if (vbody) vbody.innerHTML = '<div class="nmpxVempty">' + title + '</div>';
+    if (viewEl) viewEl.classList.add('on');
+  }
+
+  function nmpxBuildMore(){
+    var mh = '';
+    for (var i=0;i<NMPX_VIEWS.length;i++){
+      var v = NMPX_VIEWS[i];
+      if (NMPX_MORE_TILES.indexOf(v.k) >= 0) continue;
+      mh += '<button class="nmpxSrow" data-go="'+v.k+'">'
+          +   '<span class="sq" style="background:'+(NMPX_TINT[v.k]||'var(--accent)')+'">'+nmpxSvg(v.k)+'</span>'
+          +   v.t
+          + '</button>';
+    }
+    var ml = document.getElementById('nmpxMoreList');
+    if (ml){
+      ml.innerHTML = mh;
+      var rows = ml.querySelectorAll('.nmpxSrow');
+      for (var j=0;j<rows.length;j++){
+        rows[j].addEventListener('click', function(){ nmpxOnTab(this.getAttribute('data-go')); });
+      }
+    }
+    var sv = document.getElementById('nmpxSver');
+    if (sv) sv.textContent = 'NM Plotter iPhone \u00b7 nav 1b';
+  }
+
   function nmpxOnTab(k){
-    // 1a: only the Map slot has real behaviour (the map is already shown).
-    // Other slots just become active + light up; their views arrive in 1b.
+    if (k === 'more'){
+      var open = sheet && sheet.classList.contains('on');
+      nmpxCloseAll();
+      if (!open && sheet){ sheet.classList.add('on'); if (scrim) scrim.classList.add('on'); nmpxActive='more'; }
+      nmpxRender();
+      return;
+    }
+    if (nmpxIsAct(k)){ /* gps action — deferred */ return; }
+    nmpxCloseAll();
     nmpxActive = k;
+    nmpxShowView(k);
     nmpxRender();
-    // Map tab: make sure Leaflet re-measures if it was hidden. Safe no-op otherwise.
     if (k === 'map' && window.L && window.__nmpxMap && window.__nmpxMap.invalidateSize){
       try{ window.__nmpxMap.invalidateSize(); }catch(e){}
     }
   }
+
+  if (scrim) scrim.addEventListener('click', function(){ nmpxCloseAll(); nmpxActive='map'; nmpxShowView('map'); nmpxRender(); });
+
+  // Sheet tiles (demo .stile): open their view shells.
+  var stDl = document.getElementById('nmpxStDl');
+  var stSet = document.getElementById('nmpxStSet');
+  if (stDl)  stDl.addEventListener('click', function(){ nmpxOnTab('downloads'); });
+  if (stSet) stSet.addEventListener('click', function(){ nmpxCloseAll(); nmpxActive='more'; nmpxShowView('settings'); nmpxRender(); });
+
+  // Edit (demo .shead .a): entry to the slot editor, which is a later piece.
+  var noteEl = document.getElementById('nmpxNote'); var noteT = null;
+  function nmpxNote(msg){
+    if (!noteEl) return;
+    noteEl.textContent = msg; noteEl.classList.add('on');
+    if (noteT) clearTimeout(noteT);
+    noteT = setTimeout(function(){ noteEl.classList.remove('on'); }, 1800);
+  }
+  var edit = document.getElementById('nmpxEdit');
+  if (edit) edit.addEventListener('click', function(){ nmpxNote('Slot editing comes in a later step'); });
+
+  nmpxBuildMore();
   nmpxRender();
 })();
 </script>
