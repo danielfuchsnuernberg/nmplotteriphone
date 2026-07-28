@@ -4152,8 +4152,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
        tap-to-open overlays driven by the plan-tab icons. */
   }
 
-  /* nmpx bottom bar: hidden everywhere except the iPhone band below */
-  #nmpxTabbar{ display:none; }
+  /* nmpx iPhone chrome: hidden everywhere except the iPhone band below */
+  #nmpxTabbar, #nmpxView, #nmpxSheet, #nmpxScrim, #nmpxNote{ display:none; }
 
   /* ===================================================================
      nmpx-iphone-band  -  iPhone-only reskin (<=430px). EXPERIMENT.
@@ -4271,7 +4271,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     /* --- 1b: More sheet (demo right-side drawer .sheet spec) --- */
     #nmpxScrim{
       position:fixed; inset:0; z-index:990; background:rgba(0,0,0,.45);
-      opacity:0; pointer-events:none; transition:opacity .2s ease;
+      display:block; opacity:0; pointer-events:none; transition:opacity .2s ease;
     }
     #nmpxScrim.on{ opacity:1; pointer-events:auto; }
     #nmpxSheet{
@@ -4323,7 +4323,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     #nmpxNote{
       position:fixed; left:50%; transform:translateX(-50%);
       bottom:calc(var(--nmpx-tabbar) + 26px); z-index:1100;
-      background:var(--panel); border:1px solid var(--border-strong);
+      display:block; background:var(--panel); border:1px solid var(--border-strong);
       border-radius:8px; padding:8px 14px; font-size:12px; color:var(--text);
       opacity:0; pointer-events:none; transition:opacity .18s ease;
     }
