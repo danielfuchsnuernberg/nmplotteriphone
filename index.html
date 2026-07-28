@@ -16,6 +16,21 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v79 2026-07-28  Real GPS, and an activity bar that stops lying.
+                       watchPosition with accuracy-gated derivation of
+                       GS/TRK for when iOS reports neither, track held
+                       through a stop, denied-vs-transient error split,
+                       visibilitychange re-arm and a 35 s stall
+                       watchdog - all lifted in behaviour from v262.
+                       Own-ship is the receiver now; the route-crawling
+                       simulation is gone. Every activity-bar field is
+                       a getter returning a measured value or null, and
+                       null dashes. IAS, TAS, baro ALT, HDG, OAT, DA
+                       and WIND dash permanently: a phone cannot know
+                       them and a plausible number in an instrument
+                       strip is worse than no number. Landscape HUD
+                       reads the same sources; its ALT is relabelled
+                       GPS ALT because that is what it is.
        v78 2026-07-28  SPIKE. A real map underneath. Leaflet 1.9.4 and
                        protomaps-leaflet 5.1.0 lifted from v262; a
                        #lmap container sits beneath the existing chrome
@@ -3139,7 +3154,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v78';
+  var VERSION = 'v79';
   var BUILD   = '2026-07-28';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -4336,38 +4351,98 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      Demo values are static placeholders.
      ============================================================ */
   var ACT_FIELDS = [
-    { k:'gs',    t:'GS',        v:'82'    },
-    { k:'trk',   t:'TRK',       v:'284'   },
-    { k:'hdg',   t:'HDG',       v:'279'   },
-    { k:'ias',   t:'IAS',       v:null    },
-    { k:'tas',   t:'TAS',       v:'110'   },
-    { k:'alt',   t:'ALT',       v:'9,500' },
-    { k:'gpsalt',t:'GPS ALT',   v:'9,540' },
-    { k:'agl',   t:'HGT AGL',   v:'3,180' },
-    { k:'dnext', t:'DIST NEXT', v:'14.6'  },
-    { k:'ddest', t:'DIST DEST', v:'128'   },
-    { k:'enext', t:'ETE NEXT',  v:'0:11'  },
-    { k:'edest', t:'ETE DEST',  v:'1:04'  },
-    { k:'anext', t:'ETA NEXT',  v:'0319'  },
-    { k:'adest', t:'ETA DEST',  v:'0412'  },
-    { k:'frem',  t:'FUEL REM',  v:'214'   },
-    { k:'freq',  t:'FUEL REQ',  v:'188'   },
-    { k:'endur', t:'ENDURANCE', v:'1:13'  },
-    { k:'wind',  t:'WIND',      v:null    },
-    { k:'oat',   t:'OAT',       v:'+11'   },
-    { k:'xte',   t:'XTE',       v:'0.2'   },
-    { k:'da',    t:'DA',        v:'11,240'},
-    { k:'utc',   t:'UTC',       v:'0308'  },
-    { k:'lt',    t:'LOCAL',     v:'1308'  }
+    { k:'gs',    t:'GS',        g:function(){ return (GPSFIX && GPSFIX.gs != null) ? String(Math.round(GPSFIX.gs)) : null; } },
+    { k:'trk',   t:'TRK',       g:function(){ return (GPSFIX && GPSFIX.trk != null) ? pad3(GPSFIX.trk) : null; } },
+    { k:'hdg',   t:'HDG',       g:function(){ return null; } },
+    { k:'ias',   t:'IAS',       g:function(){ return null; } },
+    { k:'tas',   t:'TAS',       g:function(){ return null; } },
+    { k:'alt',   t:'ALT',       g:function(){ return null; } },
+    { k:'gpsalt',t:'GPS ALT',   g:function(){ return (GPSFIX && GPSFIX.alt != null) ? thou(GPSFIX.alt) : null; } },
+    { k:'agl',   t:'HGT AGL',   g:function(){ return null; } },
+    { k:'dnext', t:'DIST NEXT', g:function(){ var d = nmToNext(); return d == null ? null : d.toFixed(1); } },
+    { k:'ddest', t:'DIST DEST', g:function(){ var d = nmToDest(); return d == null ? null : (d < 100 ? d.toFixed(1) : thou(d)); } },
+    { k:'enext', t:'ETE NEXT',  g:function(){ return fmtHM(eteH(nmToNext())); } },
+    { k:'edest', t:'ETE DEST',  g:function(){ return fmtHM(eteH(nmToDest())); } },
+    { k:'anext', t:'ETA NEXT',  g:function(){ return etaStr(nmToNext()); } },
+    { k:'adest', t:'ETA DEST',  g:function(){ return etaStr(nmToDest()); } },
+    { k:'frem',  t:'FUEL REM',  g:function(){ return null; } },
+    { k:'freq',  t:'FUEL REQ',  g:function(){ return null; } },
+    { k:'endur', t:'ENDURANCE', g:function(){ return null; } },
+    { k:'wind',  t:'WIND',      g:function(){ return null; } },
+    { k:'oat',   t:'OAT',       g:function(){ return null; } },
+    { k:'xte',   t:'XTE',       g:function(){ var x = xteNm(); return x == null ? null
+        : (Math.abs(x) < 0.05 ? '0.0' : Math.abs(x).toFixed(1) + (x > 0 ? 'R' : 'L')); } },
+    { k:'da',    t:'DA',        g:function(){ return null; } },
+    { k:'utc',   t:'UTC',       g:function(){ return clockHM(new Date(), true); } },
+    { k:'lt',    t:'LOCAL',     g:function(){ return clockHM(new Date(), false); } }
   ];
+  /* ---- live sources for the activity bar -------------------------
+     A field returns null when the value is not genuinely known, and
+     null renders as dashes. Nothing in this bar is ever invented:
+     IAS, TAS, baro ALT, HDG, OAT, DA and WIND need air data, a
+     pressure reference or a magnetometer the airframe would spoil,
+     so they dash until there is a real source for them. */
+  function pad3(n){ n = Math.round(n) % 360; if (n < 0) n += 360;
+    return (n < 10 ? '00' : n < 100 ? '0' : '') + n; }
+  function fmtHM(h){
+    if (h == null || !isFinite(h) || h < 0 || h > 24) return null;
+    var m = Math.round(h * 60);
+    return Math.floor(m / 60) + ':' + (m % 60 < 10 ? '0' : '') + (m % 60);
+  }
+  function clockHM(d, utc){
+    var hh = utc ? d.getUTCHours()    : d.getHours();
+    var mm = utc ? d.getUTCMinutes()  : d.getMinutes();
+    return (hh < 10 ? '0' : '') + hh + (mm < 10 ? '0' : '') + mm;
+  }
+  function thou(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  /* remaining track distance: to the active waypoint, then leg by leg */
+  function nmToNext(){
+    if (!GPSFIX || !ROUTE.length) return null;
+    var i = Math.min(Math.max(toWpt, 0), ROUTE.length - 1);
+    return nmBetween(GPSFIX, ROUTE[i]);
+  }
+  function nmToDest(){
+    if (!GPSFIX || !ROUTE.length) return null;
+    var i = Math.min(Math.max(toWpt, 0), ROUTE.length - 1);
+    var d = nmBetween(GPSFIX, ROUTE[i]);
+    for (var j = i; j < ROUTE.length - 1; j++) d += nmBetween(ROUTE[j], ROUTE[j + 1]);
+    return d;
+  }
+  /* usable groundspeed: below a walking pace an ETE is meaningless */
+  function gsUsable(){
+    if (!GPSFIX || GPSFIX.gs == null || GPSFIX.gs < 5) return null;
+    return GPSFIX.gs;
+  }
+  function eteH(nm){
+    var g = gsUsable();
+    if (nm == null || g == null) return null;
+    return nm / g;
+  }
+  function etaStr(nm){
+    var h = eteH(nm);
+    if (h == null) return null;
+    return clockHM(new Date(Date.now() + h * 3600000), true);
+  }
+  /* signed cross-track from the leg being flown, positive right */
+  function xteNm(){
+    if (!GPSFIX || ROUTE.length < 2) return null;
+    var i = Math.min(Math.max(toWpt, 1), ROUTE.length - 1);
+    var a = ROUTE[i - 1], b = ROUTE[i], R = 3440.065;
+    var d13 = nmBetween(a, GPSFIX);
+    if (!d13) return 0;
+    var t13 = trkBetween(a, GPSFIX) * D2R, t12 = trkBetween(a, b) * D2R;
+    return Math.asin(Math.sin(d13 / R) * Math.sin(t13 - t12)) * R;
+  }
+
   function actField(k){
     for (var i=0;i<ACT_FIELDS.length;i++) if (ACT_FIELDS[i].k===k) return ACT_FIELDS[i];
     return null;
   }
 
   var ACT_KEY = 'nmp.iphone.acty';
-  var ACT_DEFAULT = ['gs','trk','dnext','edest','frem',
-                     'tas','alt','adest','ddest','wind'];
+  var ACT_DEFAULT = ['gs','trk','dnext','enext','edest',
+                     'gpsalt','xte','ddest','adest','utc'];
   function loadAct(){
     try{
       var s = localStorage.getItem(ACT_KEY);
@@ -4385,10 +4460,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     for (var i = 0; i < 5; i++){
       var f = actField(actCfg[pageIdx * 5 + i]);
       if (!f){ h += '<div class="acol"></div>'; continue; }
-      var dash = (f.v === null);
+      var val = null;
+      try { val = f.g ? f.g() : null; } catch(_){ val = null; }
+      var dash = (val === null || val === undefined || val === '');
       h += '<div class="acol"><span class="k">' + f.t + '</span>'
          + '<span class="v' + (dash ? ' dash' : '') + '">'
-         + (dash ? '- - -' : f.v) + '</span></div>';
+         + (dash ? '- - -' : val) + '</span></div>';
     }
     $('#actyPage').innerHTML = h;
   }
@@ -7753,13 +7830,28 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   $('#tbSet').addEventListener('click', openSet);
 
 
-  /* ---------- Track my position: Off -> Centre -> Follow ---------- */
-  var LOC_STATES = ['Off', 'Centred', 'Follow \u00b7 track up'];
+  /* ---------- Track my position: Off -> Centred -> Follow ----------
+     Satellite positioning needs no network, so this works with no
+     signal on any GPS-equipped device. Foreground only, and advisory
+     - it is not a navigation source. */
+  var LOC_STATES = ['Off', 'Centred', 'Follow'];
   var locState = 0;
   $('#tbLoc').addEventListener('click', function(){
     locState = (locState + 1) % LOC_STATES.length;
     $('#tbLoc').classList.toggle('on', locState > 0);
-    toast('Own position: ' + LOC_STATES[locState]);
+    if (locState === 0){
+      NMX_GPS.stop();
+      toast('Position tracking off');
+      return;
+    }
+    follow = (locState === 2);
+    if (!NMX_GPS.running()){
+      NMX_GPS.start();
+      toast('Acquiring GPS\u2026');
+    } else {
+      if (GPSFIX) centreOn(GPSFIX.lat, GPSFIX.lon);
+      toast('Own position: ' + LOC_STATES[locState]);
+    }
   });
 
   /* ---------- Layout metrics overlay ---------- */
@@ -8040,24 +8132,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var follow = true;
   var simT = null;
 
-  /* advance a fake own-ship along the route for the demo */
+  /* Own-ship comes from the GPS receiver now - nothing is advanced
+     along the route. With tracking off there is no ship, the HUD
+     dashes, and that is the honest state. This tick only refreshes
+     what is already on screen. */
   function simStep(){
-    if (!ROUTE.length){ ship = null; return; }
-    if (ROUTE.length === 1){ ship = { lat:ROUTE[0].lat, lon:ROUTE[0].lon, trk:0, gs:0, alt:AC.alt }; }
-    else {
-      if (!ship || ship._leg === undefined){ ship = { _leg:0, _f:0 }; }
-      var a = ROUTE[ship._leg], b = ROUTE[Math.min(ship._leg + 1, ROUTE.length - 1)];
-      ship._f += 0.02;
-      if (ship._f >= 1){ ship._f = 0; ship._leg = (ship._leg + 1) % (ROUTE.length - 1); a = ROUTE[ship._leg]; b = ROUTE[ship._leg + 1]; }
-      ship.lat = a.lat + (b.lat - a.lat) * ship._f;
-      ship.lon = a.lon + (b.lon - a.lon) * ship._f;
-      ship.trk = trkBetween(a, b);
-      ship.gs  = AC.tas;
-      ship.alt = AC.alt;
-    }
-    if (follow && ship.lat !== undefined) centreOn(ship.lat, ship.lon);
-    renderMap();
-    paintShip();
+    drawActy();
     if (hudOn()){
       drawHud();
       if (hudPanelKey === 'rad' || hudPanelKey === 'terr') drawHudPanel();
@@ -8108,22 +8188,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   function hudActHTML(){
-    /* the five most useful in-flight fields, live-ish from the sim */
-    var trk = ship ? String(Math.round(ship.trk)).padStart(3,'0') + '\u00b0' : '- - -';
-    var gs  = ship ? String(Math.round(ship.gs)) : '- - -';
-    var alt = ship ? ship.alt.toLocaleString() : '- - -';
-    var nx = ''; var ete = '- - -';
-    if (ROUTE.length > 1 && ship && ship._leg !== undefined){
-      var nextPt = ROUTE[Math.min(ship._leg + 1, ROUTE.length - 1)];
-      nx = label(nextPt);
-      var d = nmBetween({lat:ship.lat,lon:ship.lon}, nextPt);
-      ete = AC.tas > 0 ? hhmm(d / AC.tas) : '- - -';
+    /* Same sources as the activity bar: measured, or dashed. ALT is
+       labelled GPS ALT because that is what it is - a geometric
+       height, not a barometric altitude. */
+    var D = '- - -';
+    var trk = (GPSFIX && GPSFIX.trk != null) ? pad3(GPSFIX.trk) + '\u00b0' : D;
+    var gs  = (GPSFIX && GPSFIX.gs  != null) ? String(Math.round(GPSFIX.gs)) : D;
+    var alt = (GPSFIX && GPSFIX.alt != null) ? thou(GPSFIX.alt) : D;
+    var nx  = '';
+    if (ROUTE.length){
+      var i = Math.min(Math.max(toWpt, 0), ROUTE.length - 1);
+      nx = label(ROUTE[i]);
     }
-    return '<div class="c"><span class="k">GS</span><span class="v">' + gs + '<span class="u">kt</span></span></div>'
-      + '<div class="c"><span class="k">TRK</span><span class="v">' + trk + '</span></div>'
-      + '<div class="c"><span class="k">ALT</span><span class="v">' + alt + '<span class="u">ft</span></span></div>'
-      + '<div class="c"><span class="k">NEXT</span><span class="v' + (nx ? '' : ' dash') + '">' + (nx || '- - -') + '</span></div>'
-      + '<div class="c"><span class="k">ETE</span><span class="v">' + ete + '</span></div>';
+    var ete = fmtHM(eteH(nmToNext())) || D;
+    return '<div class="c"><span class="k">GS</span><span class="v' + (gs === D ? ' dash' : '') + '">' + gs + (gs === D ? '' : '<span class="u">kt</span>') + '</span></div>'
+      + '<div class="c"><span class="k">TRK</span><span class="v' + (trk === D ? ' dash' : '') + '">' + trk + '</span></div>'
+      + '<div class="c"><span class="k">GPS ALT</span><span class="v' + (alt === D ? ' dash' : '') + '">' + alt + (alt === D ? '' : '<span class="u">ft</span>') + '</span></div>'
+      + '<div class="c"><span class="k">NEXT</span><span class="v' + (nx ? '' : ' dash') + '">' + (nx || D) + '</span></div>'
+      + '<div class="c"><span class="k">ETE</span><span class="v' + (ete === D ? ' dash' : '') + '">' + ete + '</span></div>';
   }
 
   function hudFreqHTML(){
@@ -8131,7 +8213,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     /* area CTAF: nearest enroute band; next field: the next aerodrome ahead */
     var area = '124.1', hf = 'HF 3419 \u00b7 6622 \u00b7 8837';
     var nextField = null;
-    var from = (ship && ship._leg !== undefined) ? ship._leg : toWpt;
+    var from = Math.max(0, toWpt - 1);
     for (var i = from + 1; i < ROUTE.length; i++){
       if (hasAnyFreq(ROUTE[i].id)){ nextField = ROUTE[i]; break; }
     }
@@ -8141,11 +8223,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           + '<span class="f">' + area + '</span></div><div class="hf">' + hf + '</div></div>';
 
     if (nextField){
-      var d = ship && ship.lat !== undefined ? nmBetween({lat:ship.lat,lon:ship.lon}, nextField) : 0;
+      var d = GPSFIX ? nmBetween(GPSFIX, nextField) : null;
       h += '<div class="nx">Next frequency</div>'
         +  '<div class="fldhdr"><b>' + nextField.id + '</b>'
         +    '<span class="nmm">' + nextField.nm + '</span>'
-        +    '<span class="d">' + d.toFixed(0) + ' NM</span></div>'
+        +    '<span class="d">' + (d == null ? '- - -' : d.toFixed(0) + ' NM') + '</span></div>'
         +  '<div class="grid">'
         +  fqAllPairs(nextField.id).sort(function(a,b){ return fqRank(a[0]) - fqRank(b[0]); })
              .slice(0, 4).map(function(r){
@@ -8437,6 +8519,137 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     syncVIEW();
     renderMap();
   })();
+
+  /* ================================================================
+     GPS RECEIVER
+
+     Behaviour lifted from v262 L9935-10201. The parts that matter and
+     are not obvious:
+
+       - iOS often reports coords.speed / coords.heading as null. We
+         derive both from consecutive fixes, but gate on accuracy so
+         position noise while parked cannot invent motion: speed needs
+         max(15 m, accuracy/2) of movement, track needs max(25 m,
+         accuracy).
+       - Track is held through a stop rather than snapping to zero.
+       - Permission denied is fatal and surfaced. "unavailable" and
+         "timeout" fire routinely between sparse fixes, so if a fix
+         already exists we keep it rather than blanking the bar.
+       - iOS Safari can silently stop delivering fixes with no error
+         and no visibilitychange - a whole sector with the phone on
+         your knee. The watchdog re-arms the watch after 35 s of
+         nothing, checked every 12 s.
+     ================================================================ */
+  var GPSFIX = null;      /* {lat,lon,alt(ft),acc(m),gs(kt),trk(deg),t} */
+  var gpsErr = null;
+  var NMX_GPS = (function(){
+    var watch = null, prev = null, lastTrk = null, lastAt = 0, ever = false;
+    var KT = 1.94384, FT = 3.28084;
+
+    function repaint(){
+      try { renderMap(); paintShip(); drawActy(); } catch(_){ }
+      if (hudOn()){
+        try { drawHud(); if (hudPanelKey === 'rad' || hudPanelKey === 'terr') drawHudPanel(); } catch(_){ }
+      }
+    }
+
+    function onPos(pos){
+      var c = pos.coords, now = pos.timestamp || Date.now();
+      var gs  = (c.speed   != null && !isNaN(c.speed))   ? c.speed   : null;   /* m/s */
+      var trk = (c.heading != null && !isNaN(c.heading)) ? c.heading : null;   /* deg */
+
+      if (prev){
+        var dt = (now - prev.t) / 1000;
+        if (dt > 0){
+          var dm = nmBetween({ lat:prev.lat, lon:prev.lon },
+                             { lat:c.latitude, lon:c.longitude }) * 1852;
+          if (gs == null)  gs = dm >= Math.max(15, (c.accuracy || 0) * 0.5) ? dm / dt : 0;
+          if (trk == null && dm >= Math.max(25, (c.accuracy || 0)))
+            trk = trkBetween({ lat:prev.lat, lon:prev.lon },
+                             { lat:c.latitude, lon:c.longitude });
+        }
+      }
+      if (trk == null && lastTrk != null) trk = lastTrk;
+      if (trk != null) lastTrk = trk;
+
+      prev = { lat:c.latitude, lon:c.longitude, t:now };
+      lastAt = Date.now(); ever = true; gpsErr = null;
+
+      GPSFIX = {
+        lat: c.latitude, lon: c.longitude,
+        alt: (c.altitude != null && !isNaN(c.altitude)) ? c.altitude * FT : null,
+        acc: c.accuracy || null,
+        gs:  gs != null ? gs * KT : null,
+        trk: trk,
+        t:   now
+      };
+      /* the existing own-ship marker, HUD and profile all read `ship` */
+      ship = { lat:GPSFIX.lat, lon:GPSFIX.lon,
+               trk:(GPSFIX.trk == null ? 0 : GPSFIX.trk),
+               gs:(GPSFIX.gs == null ? 0 : GPSFIX.gs),
+               alt:(GPSFIX.alt == null ? AC.alt : GPSFIX.alt),
+               acc:GPSFIX.acc };
+      if (follow) centreOn(GPSFIX.lat, GPSFIX.lon);
+      repaint();
+    }
+
+    function onErr(e){
+      if (e && e.code === 1){                 /* denied: fatal, say so */
+        ever = false; GPSFIX = null; ship = null;
+        gpsErr = 'Location permission denied';
+        locState = 0;
+        var b = $('#tbLoc'); if (b) b.classList.remove('on');
+        toast('Location permission denied \u2014 enable it for this site');
+        repaint();
+        return;
+      }
+      if (ever && GPSFIX) return;             /* transient: keep the fix */
+      gpsErr = 'Acquiring GPS\u2026';
+    }
+
+    var OPTS = { enableHighAccuracy:true, maximumAge:1000, timeout:20000 };
+
+    function arm(){
+      if (!navigator.geolocation) return false;
+      try { watch = navigator.geolocation.watchPosition(onPos, onErr, OPTS); }
+      catch(_){ watch = null; return false; }
+      return true;
+    }
+    function rearm(){
+      try { if (watch != null) navigator.geolocation.clearWatch(watch); } catch(_){ }
+      prev = null; lastTrk = null; lastAt = Date.now();
+      arm();
+    }
+
+    setInterval(function(){
+      if (watch != null && lastAt && (Date.now() - lastAt) > 35000) rearm();
+    }, 12000);
+
+    document.addEventListener('visibilitychange', function(){
+      if (document.visibilityState === 'visible' && watch != null) rearm();
+    });
+
+    return {
+      running: function(){ return watch != null; },
+      start: function(){
+        if (watch != null) return true;
+        prev = null; lastTrk = null; ever = false; gpsErr = 'Acquiring GPS\u2026';
+        lastAt = Date.now();
+        if (!arm()){ toast('This device has no position source'); return false; }
+        return true;
+      },
+      stop: function(){
+        try { if (watch != null) navigator.geolocation.clearWatch(watch); } catch(_){ }
+        watch = null; prev = null; lastTrk = null; ever = false;
+        GPSFIX = null; ship = null; gpsErr = null;
+        repaint();
+      },
+      fix: function(){ return GPSFIX; }
+    };
+  })();
+
+  /* Clocks and ETAs move whether or not a fix has arrived. */
+  setInterval(function(){ drawActy(); }, 1000);
 
 })();
 </script>
