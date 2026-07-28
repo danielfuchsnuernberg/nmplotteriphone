@@ -16,6 +16,24 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v84 2026-07-28  v83 shipped overlays that were welded to the
+                       SCREEN instead of the ground - route and markers
+                       held their pixel position while the tiles moved
+                       under them. That can only happen if #mapLayers is
+                       not inside the pane Leaflet translates, so this
+                       build stops assuming and checks
+                       (mapPane.contains) before choosing a coordinate
+                       space. In the pane: layer coordinates, rebuild on
+                       settle, zero pan cost. Not in the pane: container
+                       coordinates and a per-frame redraw, which is
+                       v82's lag but is at least correct - and the map
+                       says "overlay fallback" with the reason so the
+                       cause stops being guesswork.
+                       Also fixed: centreOn() only ever rewrote VIEW,
+                       which the real map does not read. Every caller
+                       that believed it was centring the map - GPS
+                       Follow above all - was doing nothing at all. It
+                       now drives LMAP.panTo.
        v83 2026-07-28  Overlays moved into a Leaflet pane and positioned
                        in LAYER coordinates instead of percent of the
                        container. That was the lag: container percent
@@ -1510,6 +1528,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 #lmap{position:absolute;inset:0;z-index:0}
 .map.live{background:none}
 .map.live .grat,.map.live .mapnote{display:none}
+.map.live .mapnote.diag{display:block;top:auto;bottom:6px;text-transform:none;
+  letter-spacing:.02em;font-family:var(--mono);font-size:var(--t-2xs);
+  color:var(--warn,#f0a500);background:rgba(3,5,8,.78);padding:4px 8px}
 .map.live .leg{pointer-events:none}
 .map.live.base-carto,.map.live.base-sat{background:none}
 .leaflet-container{background:#0a0e13;font:inherit}
@@ -3231,7 +3252,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v83';
+  var VERSION = 'v84';
   var BUILD   = '2026-07-28';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -8872,13 +8893,23 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      drag, so anything positioned this way is welded to the ground and
      costs nothing to pan. Without Leaflet they fall back to container
      px, which is what #mapLayers sits in when it never got re-parented. */
+  /* NMX_INPANE is set only after checking that #mapLayers really did
+     end up inside the pane Leaflet translates. If it did not, layer
+     coordinates would be wrong in exactly the way v83 was wrong -
+     correct at rest, frozen to the screen during a drag - so we use
+     container coordinates instead and redraw every frame. Laggy beats
+     wrong. */
+  var NMX_INPANE = false;
+
   function lpX(lon){
-    if (LMAP) return LMAP.latLngToLayerPoint([0, lon]).x;
+    if (LMAP) return NMX_INPANE ? LMAP.latLngToLayerPoint([0, lon]).x
+                                : LMAP.latLngToContainerPoint([0, lon]).x;
     var el = document.getElementById('map');
     return projX(lon) / 100 * (el ? el.clientWidth : 0);
   }
   function lpY(lat){
-    if (LMAP) return LMAP.latLngToLayerPoint([lat, 0]).y;
+    if (LMAP) return NMX_INPANE ? LMAP.latLngToLayerPoint([lat, 0]).y
+                                : LMAP.latLngToContainerPoint([lat, 0]).y;
     var el = document.getElementById('map');
     return projY(lat) / 100 * (el ? el.clientHeight : 0);
   }
@@ -9120,6 +9151,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
   function var_mb(){ return 52; }   /* --mod-b + tab padding, approx px */
   function centreOn(lat, lon){
+    /* This only ever rewrote VIEW, which the real map does not read -
+       so every caller that thought it was centring the map (GPS
+       Follow above all) was doing nothing at all. */
+    if (LMAP){
+      var bb = LMAP.getBounds();
+      var shift = (bb.getEast() - bb.getWest()) * freqCovers() / 2;
+      LMAP.panTo([lat, lon + shift], { animate:false });
+      return;
+    }
     var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
     /* never allow a collapsed span - that divides by zero in projX/projY
        and paints nothing (the black screen). */
@@ -9405,13 +9445,31 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
        everything inside rides along with the tiles for free. The pane
        is zero-sized with absolutely positioned children, so it cannot
        swallow drags; only the markers themselves take pointer events. */
+    var nmxWhy = '';
     try {
       LMAP.createPane('nmpx');
       var nmxPane = LMAP.getPane('nmpx');
-      nmxPane.style.zIndex = 450;          /* over tiles, under popups */
       var mlEl = document.getElementById('mapLayers');
-      if (mlEl) nmxPane.appendChild(mlEl);
-    } catch(_){ }
+      if (!nmxPane)      nmxWhy = 'pane missing';
+      else if (!mlEl)    nmxWhy = '#mapLayers missing';
+      else {
+        nmxPane.style.zIndex = 450;        /* over tiles, under popups */
+        nmxPane.appendChild(mlEl);
+        /* the fact that decides everything: is it now a descendant of
+           the pane Leaflet actually translates on a drag? */
+        var mp = LMAP.getPane('mapPane');
+        NMX_INPANE = !!(mp && mp.contains && mp.contains(mlEl));
+        if (!NMX_INPANE) nmxWhy = 'not inside mapPane after append';
+      }
+    } catch(e){ NMX_INPANE = false; nmxWhy = (e && e.message) || String(e); }
+
+    if (!NMX_INPANE){
+      var nEl = document.querySelector('.mapnote');
+      if (nEl){
+        nEl.classList.add('diag');
+        nEl.textContent = 'overlay fallback: ' + (nmxWhy || 'unknown');
+      }
+    }
 
     var raster = { updateWhenIdle:true, updateWhenZooming:false, keepBuffer:1,
                    errorTileUrl:NMX_BLANK, maxZoom:19 };
@@ -9488,6 +9546,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       });
     }
     LMAP.on('moveend zoomend resize viewreset', onIdle);
+
+    /* Container coordinates change on every frame of a drag, so on the
+       fallback path the overlays have to be redrawn continuously or
+       they sit still while the ground moves. This is v82's cost, and
+       it only runs when the pane path failed. */
+    if (!NMX_INPANE) LMAP.on('move zoom', onIdle);
 
     /* v262 L4751, verbatim in behaviour: the container settles after
        Leaflet has already measured it. */
