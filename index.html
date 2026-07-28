@@ -16,6 +16,45 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v86 2026-07-28  Overlays: stop depending on the re-parent. Moving
+                       #mapLayers into a Leaflet pane was tried twice
+                       and silently did not take - and v84's container
+                       fallback failed identically, which pointed at the
+                       common factor rather than at either path.
+                       #mapLayers now stays where it has always been and
+                       becomes its own pane: children at LAYER
+                       coordinates, host carrying a transform equal to
+                       the map pane's offset. Same arithmetic
+                       (containerPoint = layerPoint + mapPanePos), one
+                       GPU transform per move, no rebuild while
+                       dragging, and nothing that can be defeated by a
+                       failed appendChild.
+                       renderMap errors were being swallowed by a bare
+                       catch in the settle handler, which is how a
+                       broken render could keep looking like a
+                       positioning bug. They are now captured and shown.
+                       TEMPORARY: a small diagnostic strip at the bottom
+                       left of the map reports zoom, move and draw
+                       counts, marker count, pane offset, the host's
+                       parent and any render error. It comes out once
+                       this is confirmed.
+       v85 2026-07-28  Direct To no longer looks dead when there is no
+                       fix. Refusing was technically right and useless:
+                       on the ground, indoors, or with tracking simply
+                       off, the button appeared to do nothing. It now
+                       switches tracking on, holds the request and
+                       builds the leg the moment the first fix lands,
+                       giving up after 90 s rather than waiting for ever.
+                       Double-tap zoom: Leaflet's doubleClickZoom waits
+                       for a native dblclick, which iOS Safari does not
+                       reliably produce once Leaflet has called
+                       preventDefault on the touch stream - so it never
+                       fired. Zoom is now driven from touch timing
+                       (320 ms, 32 px), Leaflet's own handler disabled
+                       so the step cannot double, and a synthesised
+                       dblclick arriving late is ignored. Two-finger tap
+                       zooms out. A tap that lands on a marker is a
+                       marker tap, not a zoom.
        v84 2026-07-28  v83 shipped overlays that were welded to the
                        SCREEN instead of the ground - route and markers
                        held their pixel position while the tiles moved
@@ -1526,6 +1565,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    #lmap sits beneath every existing overlay. .map.live drops the
    painted placeholder background, the graticule and the note. */
 #lmap{position:absolute;inset:0;z-index:0}
+/* The overlay host is its own pane. Zero-sized and anchored to the
+   map's top-left, so children placed at LAYER coordinates land
+   correctly once the host carries the map pane's offset. Zero size
+   means it can never swallow a drag; only the markers take pointer
+   events. */
+#mapLayers{position:absolute;left:0;top:0;width:0;height:0;
+  overflow:visible;z-index:11;will-change:transform}
+#nmxDbg{position:absolute;left:6px;bottom:6px;z-index:60;pointer-events:none;
+  font-family:var(--mono);font-size:9px;line-height:1.35;color:var(--text-2);
+  background:rgba(3,5,8,.8);padding:3px 6px;border-radius:4px;white-space:pre}
 .map.live{background:none}
 .map.live .grat,.map.live .mapnote{display:none}
 .map.live .mapnote.diag{display:block;top:auto;bottom:6px;text-transform:none;
@@ -3252,7 +3301,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v84';
+  var VERSION = 'v86';
   var BUILD   = '2026-07-28';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -6167,12 +6216,28 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
          kept, so a diversion mid-plan still has its arrival legs.
        - the previous route is stashed so it can be put back. */
   var dctUndo = null;
+  var dctPending = null, dctPendT = null;
 
   function directTo(f){
     if (!GPSFIX){
-      toast('Direct To needs a position fix \u2014 turn on tracking');
-      return false;
+      /* No fix yet. Refusing here is technically correct and useless in
+         practice - it reads as a dead button. Switch tracking on and
+         hold the request; the GPS handler fires it on the first fix. */
+      dctPending = { id:f.id, nm:f.nm, cat:f.cat, lat:f.lat, lon:f.lon };
+      clearTimeout(dctPendT);
+      dctPendT = setTimeout(function(){
+        if (dctPending){ dctPending = null; toast('No fix \u2014 direct to cancelled'); }
+      }, 90000);
+
+      if (!NMX_GPS.running()){
+        NMX_GPS.start();
+        locState = 1;
+        var lb = $('#tbLoc'); if (lb) lb.classList.add('on');
+      }
+      toast('Acquiring GPS \u2014 direct to ' + (f.id || label(f)) + ' on first fix');
+      return true;
     }
+    clearTimeout(dctPendT); dctPending = null;
     var ppos = { id:'PPOS', nm:'Present position', cat:'mine',
                  lat:GPSFIX.lat, lon:GPSFIX.lon };
     var at = -1;
@@ -8891,28 +8956,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      lpX/lpY are LAYER space in px. Leaflet keeps layer coordinates
      fixed relative to the map pane and translates that pane when you
      drag, so anything positioned this way is welded to the ground and
-     costs nothing to pan. Without Leaflet they fall back to container
-     px, which is what #mapLayers sits in when it never got re-parented. */
-  /* NMX_INPANE is set only after checking that #mapLayers really did
-     end up inside the pane Leaflet translates. If it did not, layer
-     coordinates would be wrong in exactly the way v83 was wrong -
-     correct at rest, frozen to the screen during a drag - so we use
-     container coordinates instead and redraw every frame. Laggy beats
-     wrong. */
-  var NMX_INPANE = false;
-
+     costs nothing to pan. #mapLayers is not re-parented into a Leaflet
+     pane - that was tried twice and silently did not take. Instead the
+     host carries the map pane's offset itself, which is the same
+     arithmetic: containerPoint = layerPoint + mapPanePos. */
   function lpX(lon){
-    if (LMAP) return NMX_INPANE ? LMAP.latLngToLayerPoint([0, lon]).x
-                                : LMAP.latLngToContainerPoint([0, lon]).x;
+    if (LMAP) return LMAP.latLngToLayerPoint([0, lon]).x;
     var el = document.getElementById('map');
     return projX(lon) / 100 * (el ? el.clientWidth : 0);
   }
   function lpY(lat){
-    if (LMAP) return NMX_INPANE ? LMAP.latLngToLayerPoint([lat, 0]).y
-                                : LMAP.latLngToContainerPoint([lat, 0]).y;
+    if (LMAP) return LMAP.latLngToLayerPoint([lat, 0]).y;
     var el = document.getElementById('map');
     return projY(lat) / 100 * (el ? el.clientHeight : 0);
   }
+  /* counters, for the diagnostic strip */
+  var nmxMoves = 0, nmxDraws = 0, nmxErr = '', nmxMarks = 0;
   /* is this point worth drawing? padded so a drag reveals markers that
      are already in the DOM rather than waiting for the rebuild */
   function inDrawBounds(lat, lon){
@@ -9043,6 +9102,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
 
     host.innerHTML = h;
+    nmxMarks = host.childElementCount;
     /* Delegation. The old code re-attached a listener to every marker
        on every rebuild - 274 addEventListener calls per frame during a
        pan. One listener on the container survives every rebuild. */
@@ -9445,31 +9505,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
        everything inside rides along with the tiles for free. The pane
        is zero-sized with absolutely positioned children, so it cannot
        swallow drags; only the markers themselves take pointer events. */
-    var nmxWhy = '';
-    try {
-      LMAP.createPane('nmpx');
-      var nmxPane = LMAP.getPane('nmpx');
-      var mlEl = document.getElementById('mapLayers');
-      if (!nmxPane)      nmxWhy = 'pane missing';
-      else if (!mlEl)    nmxWhy = '#mapLayers missing';
-      else {
-        nmxPane.style.zIndex = 450;        /* over tiles, under popups */
-        nmxPane.appendChild(mlEl);
-        /* the fact that decides everything: is it now a descendant of
-           the pane Leaflet actually translates on a drag? */
-        var mp = LMAP.getPane('mapPane');
-        NMX_INPANE = !!(mp && mp.contains && mp.contains(mlEl));
-        if (!NMX_INPANE) nmxWhy = 'not inside mapPane after append';
-      }
-    } catch(e){ NMX_INPANE = false; nmxWhy = (e && e.message) || String(e); }
+    /* #mapLayers stays exactly where it is. Instead of moving it into a
+       pane, we give it the pane's offset ourselves:
 
-    if (!NMX_INPANE){
-      var nEl = document.querySelector('.mapnote');
-      if (nEl){
-        nEl.classList.add('diag');
-        nEl.textContent = 'overlay fallback: ' + (nmxWhy || 'unknown');
-      }
+           containerPoint = layerPoint + mapPanePos
+
+       Children are drawn at layer points; this transform supplies the
+       rest. One style write per move event, no layout, no rebuild. */
+    var mlEl = document.getElementById('mapLayers');
+    function syncOverlayPane(){
+      if (!mlEl) return;
+      var p;
+      try { p = L.DomUtil.getPosition(LMAP.getPane('mapPane')); } catch(_){ p = null; }
+      if (!p) p = { x:0, y:0 };
+      mlEl.style.transform = 'translate3d(' + p.x + 'px,' + p.y + 'px,0)';
     }
+    LMAP.on('move zoom moveend zoomend viewreset resize', function(){
+      nmxMoves++; syncOverlayPane();
+    });
+    syncOverlayPane();
 
     var raster = { updateWhenIdle:true, updateWhenZooming:false, keepBuffer:1,
                    errorTileUrl:NMX_BLANK, maxZoom:19 };
@@ -9542,16 +9596,93 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       settle = requestAnimationFrame(function(){
         settle = 0;
         syncVIEW();
-        try { renderMap(); paintShip(); } catch(_){ }
+        /* errors used to vanish here, which is how a broken render kept
+           looking like a positioning bug */
+        try { renderMap(); paintShip(); nmxDraws++; }
+        catch(err){ nmxErr = (err && err.message) || String(err); }
+        syncOverlayPane();
+        nmxDbgPaint();
       });
     }
     LMAP.on('moveend zoomend resize viewreset', onIdle);
 
-    /* Container coordinates change on every frame of a drag, so on the
-       fallback path the overlays have to be redrawn continuously or
-       they sit still while the ground moves. This is v82's cost, and
-       it only runs when the pane path failed. */
-    if (!NMX_INPANE) LMAP.on('move zoom', onIdle);
+    /* ---- diagnostic strip ------------------------------------------
+       Temporary. Two builds have now been shipped on inference; this
+       one reports what is actually happening. */
+    var dbgEl = document.createElement('div');
+    dbgEl.id = 'nmxDbg';
+    var mapEl = document.getElementById('map');
+    if (mapEl) mapEl.appendChild(dbgEl);
+    function nmxDbgPaint(){
+      if (!dbgEl) return;
+      var p = { x:0, y:0 };
+      try { p = L.DomUtil.getPosition(LMAP.getPane('mapPane')) || p; } catch(_){ }
+      var host = document.getElementById('mapLayers');
+      dbgEl.textContent =
+        'v86  z' + (LMAP.getZoom() || 0).toFixed(1) +
+        '  mv' + nmxMoves + ' dr' + nmxDraws + ' mk' + nmxMarks +
+        '\npane ' + Math.round(p.x) + ',' + Math.round(p.y) +
+        '  host ' + (host ? (host.parentNode && host.parentNode.id ? host.parentNode.id
+                    : (host.parentNode && host.parentNode.className) || '?') : 'MISSING') +
+        (nmxErr ? '\nERR ' + nmxErr.slice(0, 60) : '');
+    }
+    nmxDbgPaint();
+
+    /* ---- Zoom gestures ---------------------------------------------
+       Leaflet's doubleClickZoom waits for a native dblclick. iOS
+       Safari does not reliably produce one once Leaflet has called
+       preventDefault on the touch stream, which is why double-tap did
+       nothing. We time the taps ourselves and disable Leaflet's, so
+       the two can never both fire and double the zoom step.
+
+       Double tap zooms in about the tapped point; two-finger tap zooms
+       out, which is the convention everywhere else on the phone. */
+    try { if (LMAP.doubleClickZoom) LMAP.doubleClickZoom.disable(); } catch(_){ }
+
+    (function tapZoom(){
+      var lastT = 0, lastX = 0, lastY = 0, multi = 0, touchZoomAt = 0;
+
+      function zoomAt(cx, cy, delta){
+        try {
+          var pt = LMAP.mouseEventToContainerPoint({ clientX:cx, clientY:cy });
+          LMAP.setZoomAround(LMAP.containerPointToLatLng(pt), LMAP.getZoom() + delta);
+        } catch(_){ }
+      }
+
+      host.addEventListener('touchstart', function(e){
+        if (e.touches && e.touches.length > 1) multi = e.touches.length;
+      }, { passive:true });
+
+      host.addEventListener('touchend', function(e){
+        if (e.touches && e.touches.length) return;         /* fingers still down */
+        var t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+
+        /* a tap on a marker is a marker tap, not a zoom */
+        if (t.target && t.target.closest && t.target.closest('.fld')){ multi = 0; return; }
+
+        if (multi >= 2){ multi = 0; touchZoomAt = Date.now(); zoomAt(t.clientX, t.clientY, -1); return; }
+        multi = 0;
+
+        var now = Date.now();
+        if (now - lastT < 320 &&
+            Math.abs(t.clientX - lastX) < 32 && Math.abs(t.clientY - lastY) < 32){
+          lastT = 0; touchZoomAt = now;
+          zoomAt(t.clientX, t.clientY, 1);
+          return;
+        }
+        lastT = now; lastX = t.clientX; lastY = t.clientY;
+      }, { passive:true });
+
+      /* mouse, for the desktop breakpoint and the simulator */
+      host.addEventListener('dblclick', function(e){
+        /* if iOS also synthesises a dblclick after our touch handler
+           already zoomed, ignore it or the step doubles */
+        if (Date.now() - touchZoomAt < 700) return;
+        if (e.target && e.target.closest && e.target.closest('.fld')) return;
+        zoomAt(e.clientX, e.clientY, 1);
+      });
+    })();
 
     /* v262 L4751, verbatim in behaviour: the container settles after
        Leaflet has already measured it. */
@@ -9642,6 +9773,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                alt:(GPSFIX.alt == null ? AC.alt : GPSFIX.alt),
                acc:GPSFIX.acc };
       if (follow) centreOn(GPSFIX.lat, GPSFIX.lon);
+
+      /* a Direct To asked for before we had an origin */
+      if (dctPending){
+        var want = dctPending; dctPending = null; clearTimeout(dctPendT);
+        try { directTo(want); } catch(_){ }
+      }
       repaint();
     }
 
