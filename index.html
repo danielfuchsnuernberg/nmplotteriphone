@@ -16,6 +16,50 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v92 2026-07-31  Three corrections, one of them a false statement.
+
+                       "Geometry is estimated, not taken from published
+                       coordinates" was WRONG. The coordinates are
+                       published. v262 carries a `note` on each imperfect
+                       area saying exactly what is imperfect, and that
+                       note was never lifted - a generic sentence was
+                       written instead. Now the note itself is shown.
+                       AYD903 Mount Hagen is not approximate at all: its
+                       note is about an edition discrepancy (boundary per
+                       ENR 5.2, the 2020 ENR 5.1 page prints a truncated
+                       outline). Flag keyed off v262's own convention -
+                       a note beginning "Approximate:" - so AYD903 now
+                       draws solid with no tilde, while Daugo, Kutubu
+                       and Waghi stay marked, because in those three a
+                       20 NM arc, a river and a highway really are drawn
+                       as straight segments.
+
+                       Danger labels moved off the corner vertex to the
+                       area centroid and made chips, same as the CTAF
+                       zones - a label on a boundary cannot say which
+                       side it belongs to. Verified all 8 polygons place
+                       inside themselves.
+
+                       Sheet text ran to the screen edge: .cnote was
+                       written for the view body, which supplies its own
+                       edge padding, and a sheet does not.
+       v91 2026-07-31  CTAF labels said which frequency but not which
+                       area. They hung off ringTop() - the northernmost
+                       VERTEX of each ring - which is a point on the
+                       boundary line, equidistant from the zones either
+                       side of it. On a shared border that is unreadable.
+                       Now placed at the area-weighted centroid, checked
+                       for containment because several rings are concave
+                       and a centroid can fall outside its own polygon;
+                       verified all nine land inside. Zones are larger
+                       than the screen at working zoom, so an off-view
+                       centroid slides to a point that is both visible
+                       and still inside the zone.
+                       The label is a chip now - mono on a dark pill with
+                       the zone's own border colour - so it reads as
+                       belonging to the area rather than floating over a
+                       line. And tapping a zone names it and lists its
+                       HF frequencies, which is the unambiguous answer.
        v90 2026-07-31  Navaids and procedure fixes, real. The six
                        invented "enroute fixes" with round-number
                        coordinates are gone, replaced by 49 procedure
@@ -1662,8 +1706,28 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .asplb,.dgrlb{position:absolute;white-space:nowrap;font-family:var(--mono);
   font-size:var(--t-2xs);font-weight:700}
 .asplb{color:var(--accent-2)}
+/* A frequency chip, not free text - it has to read as belonging to the
+   area it sits in rather than to the line it used to sit on. */
+.ctafchip{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;letter-spacing:.04em;
+  color:var(--accent-2);background:rgba(12,20,28,.82);
+  border:1px solid rgba(127,179,213,.55);border-radius:999px;padding:2px 7px}
 .dgrlb{color:#f0506e}
 .dgrlb.ax{opacity:.8;font-style:italic}
+/* Same chip treatment as the CTAF zones so an area label reads as
+   belonging to the shape it sits in. */
+.dgrchip{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;letter-spacing:.04em;
+  color:var(--route);background:rgba(12,20,28,.82);
+  border:1px solid rgba(240,165,0,.55);border-radius:999px;padding:2px 7px}
+.dgrchip.r{color:#f0506e;border-color:rgba(240,80,110,.55)}
+.dgrchip.ax{border-style:dashed}
+/* .cnote was written for the view body, which supplies its own edge
+   padding. Inside a sheet there is none, so the text ran to the screen
+   edge. */
+.ted .cnote{padding:0 14px 10px}
+.ted .warnnote{margin:0 14px 10px;padding:6px 0 6px 8px;
+  border-left:2px solid var(--route)}
 .warnnote{border-left:2px solid var(--route);padding-left:8px}
 
 .map.live{background:none}
@@ -3409,7 +3473,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v90';
+  var VERSION = 'v92';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -9149,11 +9213,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'AYR921', nm:'PORT MORESBY', cls:'R', up:'20000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Gunnery. Hours by NOTAM. Dept of Defence.', ring:[[-9.63333,146.86667],[-9.69167,146.925],[-9.91667,146.83333],[-9.73333,146.64167],[-9.63333,146.86667]] },
     { id:'AYR959', nm:'SEPIK PLAINS', cls:'R', up:'9000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Mortar firing. Hours by NOTAM. Dept of Defence. When active, confine to north of Sepik Plains airstrip.', ring:[[-3.90833,143.56667],[-3.88333,143.65833],[-3.97083,143.71667],[-4.0,143.575],[-3.90833,143.56667]] },
     { id:'AYR962', nm:'ADMIRALTY ISLANDS', cls:'R', up:'20000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Gunnery & weapon firing. Hours by NOTAM. Dept of Defence.', ring:[[-0.78333,147.0],[-0.78333,147.66667],[-1.78333,147.66667],[-1.78333,147.0],[-0.78333,147.0]] },
-    { id:'AYD901', nm:'DAUGO', cls:'D', up:'4000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flying Training. Hours HJ. CASA.', ax:1, ring:[[-9.45833,147.075],[-9.55833,147.13333],[-9.66622,146.96717],[-9.65421,146.95658],[-9.64172,146.94658],[-9.62877,146.93721],[-9.61539,146.92847],[-9.60161,146.92039],[-9.58747,146.91299],[-9.573,146.90628],[-9.55823,146.90028],[-9.54319,146.895],[-9.52792,146.89046],[-9.51246,146.88667],[-9.49683,146.88362],[-9.48108,146.88134],[-9.46524,146.87982],[-9.44934,146.87907],[-9.43343,146.87909]] },
-    { id:'AYD903', nm:'MOUNT HAGEN', cls:'D', up:'10000 ft', lo:'SFC', ed:'ENR 5.2 · 11 JUL 2024', rk:'Hours HJ. Low flying, subject to CAR 91.131. CASA.', ax:1, ring:[[-5.78333,144.36667],[-5.78333,144.46667],[-5.75,144.48333],[-5.66667,144.46667],[-5.66667,144.36667],[-5.75,144.33333],[-5.78333,144.36667]] },
-    { id:'AYD904A/B', nm:'KUTUBU / GOBE', cls:'D', up:'8000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Low Level Rotor-wing operations. Hours HJ. CASA.', ax:1, ring:[[-6.2,143.56667],[-6.16667,143.01667],[-6.35,142.91667],[-6.36667,142.96667],[-6.8,143.5],[-7.31667,144.18333],[-7.0,144.33333],[-6.66667,144.05],[-6.2,143.56667]] },
+    { id:'AYD901', nm:'DAUGO', cls:'D', up:'4000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flying Training. Hours HJ. CASA.', nt:'Approximate: the south edge is a 20 NM arc centred on Port Moresby, drawn as a polyline.', ax:1, ring:[[-9.45833,147.075],[-9.55833,147.13333],[-9.66622,146.96717],[-9.65421,146.95658],[-9.64172,146.94658],[-9.62877,146.93721],[-9.61539,146.92847],[-9.60161,146.92039],[-9.58747,146.91299],[-9.573,146.90628],[-9.55823,146.90028],[-9.54319,146.895],[-9.52792,146.89046],[-9.51246,146.88667],[-9.49683,146.88362],[-9.48108,146.88134],[-9.46524,146.87982],[-9.44934,146.87907],[-9.43343,146.87909]] },
+    { id:'AYD903', nm:'MOUNT HAGEN', cls:'D', up:'10000 ft', lo:'SFC', ed:'ENR 5.2 · 11 JUL 2024', rk:'Hours HJ. Low flying, subject to CAR 91.131. CASA.', nt:'Boundary per ENR 5.2 (current edition); the ENR 5.1 (2020) page prints a different, partly-truncated outline.', ring:[[-5.78333,144.36667],[-5.78333,144.46667],[-5.75,144.48333],[-5.66667,144.46667],[-5.66667,144.36667],[-5.75,144.33333],[-5.78333,144.36667]] },
+    { id:'AYD904A/B', nm:'KUTUBU / GOBE', cls:'D', up:'8000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Low Level Rotor-wing operations. Hours HJ. CASA.', nt:'Approximate: part of the boundary follows the Hegigio river (drawn straight here). A/B share this footprint; divider line shown separately.', ax:1, ring:[[-6.2,143.56667],[-6.16667,143.01667],[-6.35,142.91667],[-6.36667,142.96667],[-6.8,143.5],[-7.31667,144.18333],[-7.0,144.33333],[-6.66667,144.05],[-6.2,143.56667]] },
     { id:'AYD905', nm:'NAPA NAPA', cls:'D', up:'600 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flame from flare at Napa Napa refinery.', c:[-9.45833,147.11472], r:1 },
-    { id:'AYD907', nm:'WAGHI', cls:'D', up:'10000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flying Training. Hours HJ. Low flying, subject to CAR 91.131. CASA.', ax:1, ring:[[-5.74583,144.50833],[-5.6875,144.5375],[-5.74583,144.69167],[-5.81667,144.66111],[-5.74583,144.50833]] },
+    { id:'AYD907', nm:'WAGHI', cls:'D', up:'10000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flying Training. Hours HJ. Low flying, subject to CAR 91.131. CASA.', nt:'Approximate: part of the boundary follows the old Highlands Highway (drawn straight here).', ax:1, ring:[[-5.74583,144.50833],[-5.6875,144.5375],[-5.74583,144.69167],[-5.81667,144.66111],[-5.74583,144.50833]] },
     { id:'AYD908', nm:'KOMO', cls:'D', up:'6800 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flammable Gas With Heat Radiation. Hours HJ. CAR 91.129. 5 NM NW of Komo (AYXM).', c:[-6.00402,142.81767], r:1 },
     { id:'AYD909', nm:'KOMO', cls:'D', up:'9500 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flammable Gas With Heat Radiation. Hours HJ. CAR 91.129. 12.60 NM NW of Komo (AYXM).', c:[-5.92953,142.71386], r:1 },
     { id:'AYD910', nm:'LEALEA', cls:'D', up:'2400 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Gas Flare Stack. Hours H24. CAR 91.129. 15 NM NW of Port Moresby (AYPY).', c:[-9.32989,147.01907], r:1 }
@@ -9216,10 +9280,35 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       +   '<span class="faq"><span class="l">' + a.r + ' NM</span></span></div>';
     h += '</div>';
     if (a.rk) h += '<div class="cnote">' + a.rk + '</div>';
-    if (a.ax) h += '<div class="cnote warnnote">Geometry is <b>estimated</b>, not taken from '
-      + 'published coordinates. Treat the boundary as indicative and check the AIP.</div>';
+    /* v262 records exactly why a boundary is imperfect. Show that,
+       rather than a generic sentence claiming the coordinates were
+       estimated - they are published; what is simplified is a curve or
+       a river drawn as straight segments. */
+    if (a.nt) h += '<div class="cnote' + (a.ax ? ' warnnote' : '') + '">' + a.nt + '</div>';
     h += '<div class="cnote">' + a.ed + ' \u00b7 verify against the current AIRAC.</div>';
     $('#dgrTitle').textContent = a.nm;
+    $('#dgrBody').innerHTML = h;
+    closeAll();
+    $('#dgrSheet').classList.add('on');
+  }
+
+  /* Tapping a zone is the unambiguous answer to "which area is this
+     frequency for" - it names the zone you touched and lists its HF. */
+  function openCtaf(id){
+    var z = null;
+    for (var i = 0; i < CTAFZ.length; i++) if (CTAFZ[i].id === id) z = CTAFZ[i];
+    if (!z) return;
+    var h = '<div class="tedhint top">Common Traffic Advisory Frequency zone</div>'
+      + '<div class="tedlist">'
+      + '<div class="farow"><span class="fanm">CTAF</span>'
+      +   '<span class="faq"><span class="l">' + z.ctaf + '</span></span></div>';
+    (z.hf || []).forEach(function(f, i){
+      h += '<div class="farow"><span class="fanm">' + (i ? '' : 'HF') + '</span>'
+        +  '<span class="faq"><span class="l">' + f + '</span>'
+        +  '<span class="k">kHz</span></span></div>';
+    });
+    h += '</div><div class="cnote">Advisory. Check the current AIP and NOTAMs before use.</div>';
+    $('#dgrTitle').textContent = 'CTAF zone ' + z.id;
     $('#dgrBody').innerHTML = h;
     closeAll();
     $('#dgrSheet').classList.add('on');
@@ -9260,22 +9349,73 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (!G) return;                      /* no Leaflet, no overlay */
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers();
 
-    /* ---- CTAF zones ---- */
+    /* ---- CTAF zones -------------------------------------------------
+       The frequency has to sit INSIDE its own zone. Hanging it off the
+       northernmost vertex put it on the boundary line, equidistant from
+       two zones, which told you nothing about which one it belonged to.
+
+       Area-weighted centroid, checked for containment because several
+       of these rings are concave and a centroid can fall outside its
+       own polygon. Zones are also bigger than the screen at working
+       zoom, so if the centroid is off-view the label slides to a point
+       that is both visible and still inside the zone. */
     function ringTop(ring){
       var b = ring[0];
       for (var i = 1; i < ring.length; i++) if (ring[i][0] > b[0]) b = ring[i];
       return b;
     }
+    function polyCentroid(ring){
+      var a = 0, cx = 0, cy = 0, n = ring.length;
+      for (var i = 0, j = n - 1; i < n; j = i++){
+        var xi = ring[i][1], yi = ring[i][0], xj = ring[j][1], yj = ring[j][0];
+        var f = xi * yj - xj * yi;
+        a += f; cx += (xi + xj) * f; cy += (yi + yj) * f;
+      }
+      if (!a){
+        for (var k = 0; k < n; k++){ cx += ring[k][1]; cy += ring[k][0]; }
+        return [cy / n, cx / n];
+      }
+      a *= 0.5;
+      return [cy / (6 * a), cx / (6 * a)];
+    }
+    function inPoly(pt, ring){
+      var x = pt[1], y = pt[0], inside = false, n = ring.length;
+      for (var i = 0, j = n - 1; i < n; j = i++){
+        var xi = ring[i][1], yi = ring[i][0], xj = ring[j][1], yj = ring[j][0];
+        if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+      }
+      return inside;
+    }
+    function labelPoint(ring){
+      var c = polyCentroid(ring);
+      if (!inPoly(c, ring)){
+        var n = ring.length, sx = 0, sy = 0;
+        for (var k = 0; k < n; k++){ sx += ring[k][1]; sy += ring[k][0]; }
+        var avg = [sy / n, sx / n];
+        if (inPoly(avg, ring)) c = avg;
+      }
+      var b = LMAP.getBounds().pad(-0.14);
+      if (!b.contains(c)){
+        var cand = [ Math.min(Math.max(c[0], b.getSouth()), b.getNorth()),
+                     Math.min(Math.max(c[1], b.getWest()),  b.getEast()) ];
+        if (inPoly(cand, ring)) c = cand;
+      }
+      return c;
+    }
+
     if (LAYERS.airspace){
       CTAFZ.forEach(function(z){
-        L.polygon(z.ring, { color:'rgba(127,179,213,.8)', weight:1, dashArray:'4 3',
-                            fillColor:'#7fb3d5', fillOpacity:.05,
-                            interactive:false }).addTo(G.box);
-        var t = ringTop(z.ring);
-        L.marker(t, { interactive:false, keyboard:false,
+        var poly = L.polygon(z.ring, {
+          color:'rgba(127,179,213,.8)', weight:1, dashArray:'4 3',
+          fillColor:'#7fb3d5', fillOpacity:.05,
+          interactive:true, bubblingMouseEvents:false
+        });
+        poly.on('click', function(){ openCtaf(z.id); });
+        poly.addTo(G.box);
+        L.marker(labelPoint(z.ring), { interactive:false, keyboard:false,
           icon: L.divIcon({ className:'nmx-di',
-            html:'<b class="asplb">CTAF ' + z.ctaf + '</b>',
-            iconSize:[0, 0], iconAnchor:[-4, -2] })
+            html:'<b class="ctafchip">CTAF ' + z.ctaf + '</b>',
+            iconSize:[0, 0], iconAnchor:[0, 0] })
         }).addTo(G.box);
       });
     }
@@ -9294,12 +9434,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                         : L.polygon(a.ring, opt);
         shape.on('click', function(){ openDanger(a.id); });
         shape.addTo(G.box);
-        var anchor = a.c ? [a.c[0], a.c[1]] : ringTop(a.ring);
+        /* inside its own area, not hanging off a corner vertex */
+        var anchor = a.c ? [a.c[0], a.c[1]] : labelPoint(a.ring);
         L.marker(anchor, { interactive:false, keyboard:false,
           icon: L.divIcon({ className:'nmx-di',
-            html:'<b class="dgrlb' + (a.ax ? ' ax' : '') + '">'
-               + (a.ax ? '~' : '') + a.cls + '-' + a.id + '</b>',
-            iconSize:[0, 0], iconAnchor:[-4, -2] })
+            html:'<b class="dgrchip' + (a.cls === 'R' ? ' r' : '')
+               + (a.ax ? ' ax' : '') + '">' + a.cls + '-' + a.id + '</b>',
+            iconSize:[0, 0], iconAnchor:[0, 0] })
         }).addTo(G.box);
       });
     }
