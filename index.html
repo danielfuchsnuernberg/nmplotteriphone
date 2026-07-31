@@ -16,6 +16,32 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v101 2026-07-31 Three faults in the one-finger zoom, all mine.
+
+                       The blue ring and the black map were the same
+                       cause. Leaflet only applies touch-action:none
+                       while BOTH its drag and zoom handlers are on:
+                       .leaflet-touch-drag.leaflet-touch-zoom. The
+                       gesture disables dragging for its duration, which
+                       drops that class, lets touch-action fall back to
+                       pan-x pan-y, and hands the gesture straight back
+                       to Safari - hence the native blue rounded-rect
+                       highlight and the page scaling that left the map
+                       dark. iOS has ignored user-scalable=no since iOS
+                       10, so the viewport meta was never protecting it.
+                       touch-action is now pinned on #lmap itself,
+                       independent of Leaflet's handler state.
+
+                       The jiggle: setZoomAround fires viewreset and
+                       zoomend on every frame, and each one rebuilt a
+                       few hundred markers. Overlay rebuilds are held
+                       off for the duration and run once when the finger
+                       lifts.
+
+                       Zoom clamped to 4-17, the range the basemaps
+                       actually serve. Past the end the vector layer has
+                       nothing to draw and paints black over the raster
+                       fallback.
        v100 2026-07-31 One-finger zoom. v85 added double-tap to zoom in
                        and two-finger tap to zoom out, but not the
                        gesture other maps have: double tap, keep the
@@ -1853,6 +1879,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 /* ---- Real map substrate (spike) ----------------------------
    #lmap sits beneath every existing overlay. .map.live drops the
    painted placeholder background, the graticule and the note. */
+/* Leaflet only sets touch-action:none while BOTH its drag and zoom
+   handlers are enabled. The double-tap-drag gesture disables dragging
+   for its duration, which drops that class, lets touch-action fall back
+   to pan-x pan-y, and hands the gesture back to Safari - which is where
+   the blue rounded-rect highlight and the page scaling came from. iOS
+   has ignored user-scalable=no since iOS 10, so the meta tag is no
+   defence. Pin it here instead, independent of handler state. */
+#lmap, #lmap.leaflet-container{touch-action:none;-webkit-user-select:none;user-select:none}
 #lmap{position:absolute;inset:0;z-index:0}
 /* The overlay host is its own pane. Zero-sized and anchored to the
    map's top-left, so children placed at LAYER coordinates land
@@ -3734,7 +3768,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v100';
+  var VERSION = 'v101';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -10566,8 +10600,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
        the OLD layer coordinates until we rebuild. A rAF lands before
        the browser paints, so there is no frame showing markers in the
        wrong place. A timeout would show one. */
-    var settle = 0;
+    var settle = 0, nmxGesture = false;
     function onIdle(){
+      /* During a continuous zoom, setZoomAround fires viewreset and
+         zoomend on every frame, and rebuilding a few hundred markers
+         each time is what makes it jiggle. Hold off until the finger
+         lifts, then render once. */
+      if (nmxGesture) return;
       if (settle) return;
       settle = requestAnimationFrame(function(){
         settle = 0;
@@ -10626,6 +10665,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           try {
             var pt = LMAP.mouseEventToContainerPoint({ clientX:t.clientX, clientY:t.clientY });
             dz = { y0:t.clientY, z0:LMAP.getZoom(), ll:LMAP.containerPointToLatLng(pt), moved:false };
+            nmxGesture = true;
             if (LMAP.dragging) LMAP.dragging.disable();
           } catch(_){ dz = null; }
         }
@@ -10645,7 +10685,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         dz.raf = requestAnimationFrame(function(){
           if (!dz) return;
           dz.raf = 0;
-          var z = Math.max(LMAP.getMinZoom(), Math.min(LMAP.getMaxZoom(), dz.want));
+            /* clamp to the range the basemaps actually serve - running off
+             the end leaves the vector layer with nothing to draw and the
+             map goes black */
+          var z = Math.max(4, Math.min(17, dz.want));
           try { LMAP.setZoomAround(dz.ll, z, { animate:false }); } catch(_){ }
         });
       }, { passive:false });
@@ -10655,7 +10698,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         var wasDrag = dz.moved;
         if (dz.raf) cancelAnimationFrame(dz.raf);
         dz = null;
+        nmxGesture = false;
         if (LMAP.dragging) LMAP.dragging.enable();
+        if (wasDrag) onIdle();          /* the one render for the gesture */
         return wasDrag;
       }
       host.addEventListener('touchcancel', endDrag, { passive:true });
