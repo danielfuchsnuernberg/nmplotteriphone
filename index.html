@@ -16,6 +16,23 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v87 2026-07-28  Zoom. Pan was fixed in v86 by mirroring the map
+                       pane's offset, but zoom stayed broken because of
+                       a wrong assumption: Leaflet does NOT scale the
+                       map pane during a zoom. The pane holds its
+                       position and every LAYER scales itself from the
+                       zoomanim event. Mirroring only the offset left
+                       the overlay hanging on the fingers while the
+                       tiles moved beneath it.
+                       The host now does what a Leaflet layer does:
+                       on zoomanim, take the latlng currently at layer
+                       point 0,0, ask where it lands at the target zoom,
+                       and apply that offset composed with the map
+                       pane's own offset, scaled by getZoomScale. Pane
+                       sync is suppressed for the duration so it cannot
+                       clobber the animation, and if the private helper
+                       ever vanishes the overlay hides rather than
+                       showing a wrong position.
        v86 2026-07-28  Overlays: stop depending on the re-parent. Moving
                        #mapLayers into a Leaflet pane was tried twice
                        and silently did not take - and v84's container
@@ -3301,7 +3318,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v86';
+  var VERSION = 'v87';
   var BUILD   = '2026-07-28';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -9513,16 +9530,56 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
        Children are drawn at layer points; this transform supplies the
        rest. One style write per move event, no layout, no rebuild. */
     var mlEl = document.getElementById('mapLayers');
-    function syncOverlayPane(){
-      if (!mlEl) return;
+    if (mlEl) mlEl.style.transformOrigin = '0 0';
+    var nmxZooming = false;
+
+    function panePos(){
       var p;
       try { p = L.DomUtil.getPosition(LMAP.getPane('mapPane')); } catch(_){ p = null; }
-      if (!p) p = { x:0, y:0 };
+      return p || { x:0, y:0 };
+    }
+
+    /* Pan: mirror the map pane's offset. */
+    function syncOverlayPane(){
+      if (!mlEl || nmxZooming) return;
+      var p = panePos();
       mlEl.style.transform = 'translate3d(' + p.x + 'px,' + p.y + 'px,0)';
     }
-    LMAP.on('move zoom moveend zoomend viewreset resize', function(){
-      nmxMoves++; syncOverlayPane();
+
+    /* Zoom: Leaflet does NOT scale the map pane. Each layer scales
+       itself off the zoomanim event, which is why mirroring only the
+       pane offset left the overlay hanging on the fingers while the
+       tiles moved underneath.
+
+       So do what a Leaflet layer does. Our children sit at layer
+       coordinates, so the anchor is whatever latlng is currently at
+       layer point (0,0); asking where that lands at the target zoom
+       gives the offset, and getZoomScale gives the scale. The map pane
+       keeps its own offset through the animation, so the two compose. */
+    LMAP.on('zoomanim', function(e){
+      if (!mlEl) return;
+      nmxZooming = true;
+      try {
+        var scale = LMAP.getZoomScale(e.zoom);
+        var anchorLL = LMAP.layerPointToLatLng([0, 0]);
+        var np = LMAP._latLngToNewLayerPoint(anchorLL, e.zoom, e.center);
+        var p = panePos();
+        mlEl.style.transform =
+          'translate3d(' + (p.x + np.x) + 'px,' + (p.y + np.y) + 'px,0) scale(' + scale + ')';
+      } catch(_){
+        /* if that private helper ever disappears, hide rather than lie */
+        mlEl.style.visibility = 'hidden';
+      }
     });
+
+    LMAP.on('zoomend viewreset', function(){
+      nmxZooming = false;
+      if (mlEl) mlEl.style.visibility = '';
+      syncOverlayPane();
+    });
+
+    LMAP.on('move moveend resize', function(){ nmxMoves++; syncOverlayPane(); });
+    LMAP.on('zoom', function(){ nmxMoves++; });
     syncOverlayPane();
 
     var raster = { updateWhenIdle:true, updateWhenZooming:false, keepBuffer:1,
@@ -9619,9 +9676,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       try { p = L.DomUtil.getPosition(LMAP.getPane('mapPane')) || p; } catch(_){ }
       var host = document.getElementById('mapLayers');
       dbgEl.textContent =
-        'v86  z' + (LMAP.getZoom() || 0).toFixed(1) +
+        'v87  z' + (LMAP.getZoom() || 0).toFixed(1) +
         '  mv' + nmxMoves + ' dr' + nmxDraws + ' mk' + nmxMarks +
-        '\npane ' + Math.round(p.x) + ',' + Math.round(p.y) +
+        '\npane ' + Math.round(p.x) + ',' + Math.round(p.y) + (nmxZooming ? ' ZM' : '') +
         '  host ' + (host ? (host.parentNode && host.parentNode.id ? host.parentNode.id
                     : (host.parentNode && host.parentNode.className) || '?') : 'MISSING') +
         (nmxErr ? '\nERR ' + nmxErr.slice(0, 60) : '');
