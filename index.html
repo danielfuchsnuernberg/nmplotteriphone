@@ -16,6 +16,26 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v88 2026-07-28  Draw with Leaflet instead of emulating it.
+                       Four builds went into hand-positioning the map
+                       overlay - percentages, then layer points, then a
+                       mirrored pane transform, then a mirrored zoom
+                       animation - chasing a problem the desktop build
+                       has never had, because v262 does not hand-position
+                       anything. It uses L.layerGroup, L.polyline,
+                       L.marker with L.divIcon, and lets Leaflet own pan,
+                       zoom animation and scaling.
+                       So the overlay is now real layers: rectangles for
+                       airspace and danger, a polyline for the route,
+                       divIcon markers for airfields, waypoints and
+                       own-ship, in four layer groups cleared and rebuilt
+                       on settle. Every line of pane emulation, the
+                       transform mirroring, the zoomanim handler and the
+                       lpX/lpY helpers are deleted. Styling is unchanged -
+                       the same .fld markup rides inside the divIcons.
+                       Fixed on the way: an orphaned syncOverlayPane()
+                       call left outside the try would have thrown on
+                       every settle.
        v87 2026-07-28  Zoom. Pan was fixed in v86 by mirroring the map
                        pane's offset, but zoom stayed broken because of
                        a wrong assumption: Leaflet does NOT scale the
@@ -1587,8 +1607,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    correctly once the host carries the map pane's offset. Zero size
    means it can never swallow a drag; only the markers take pointer
    events. */
-#mapLayers{position:absolute;left:0;top:0;width:0;height:0;
-  overflow:visible;z-index:11;will-change:transform}
+/* #mapLayers is no longer used for the map overlay - the overlay is
+   real Leaflet layers now. Kept as an empty node so nothing that still
+   queries it has to be guarded. */
+#mapLayers{position:absolute;left:0;top:0;width:0;height:0;overflow:visible}
+/* Leaflet divIcon wrapper: zero-sized and unstyled, so the existing
+   .fld / .nmp-ship markup inside centres on the point exactly as it did
+   when it was hand-positioned. */
+.nmx-di{background:none;border:0;width:0;height:0;overflow:visible}
+.asplb,.dgrlb{position:absolute;white-space:nowrap;font-family:var(--mono);
+  font-size:var(--t-2xs);font-weight:700}
+.asplb{color:var(--accent-2)}
+.dgrlb{color:#f0506e}
 #nmxDbg{position:absolute;left:6px;bottom:6px;z-index:60;pointer-events:none;
   font-family:var(--mono);font-size:9px;line-height:1.35;color:var(--text-2);
   background:rgba(3,5,8,.8);padding:3px 6px;border-radius:4px;white-space:pre}
@@ -3318,7 +3348,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v87';
+  var VERSION = 'v88';
   var BUILD   = '2026-07-28';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -8965,28 +8995,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'R-AYR921', n:-9.20, s:-9.75, w:146.90, e:147.60 }
   ];
 
-  /* ---- layer coordinates -------------------------------------------
-     projX/projY are SCREEN space (percent of the container) and still
-     serve anything drawn outside the map pane - the centring flash,
-     and the whole no-Leaflet fallback path.
-
-     lpX/lpY are LAYER space in px. Leaflet keeps layer coordinates
-     fixed relative to the map pane and translates that pane when you
-     drag, so anything positioned this way is welded to the ground and
-     costs nothing to pan. #mapLayers is not re-parented into a Leaflet
-     pane - that was tried twice and silently did not take. Instead the
-     host carries the map pane's offset itself, which is the same
-     arithmetic: containerPoint = layerPoint + mapPanePos. */
-  function lpX(lon){
-    if (LMAP) return LMAP.latLngToLayerPoint([0, lon]).x;
-    var el = document.getElementById('map');
-    return projX(lon) / 100 * (el ? el.clientWidth : 0);
-  }
-  function lpY(lat){
-    if (LMAP) return LMAP.latLngToLayerPoint([lat, 0]).y;
-    var el = document.getElementById('map');
-    return projY(lat) / 100 * (el ? el.clientHeight : 0);
-  }
+  /* projX/projY are SCREEN space (percent of the container). Nothing
+     on the map is positioned with them any more - the overlay is real
+     Leaflet layers - but the centring flash still lives in screen
+     space, and they remain the fallback if Leaflet ever fails to boot. */
   /* counters, for the diagnostic strip */
   var nmxMoves = 0, nmxDraws = 0, nmxErr = '', nmxMarks = 0;
   /* is this point worth drawing? padded so a drag reveals markers that
@@ -9008,6 +9020,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   var NMX_setBase = null;
 
+  /* Real Leaflet layers, exactly as v262 does it. Leaflet owns pan and
+     zoom animation for these; nothing here positions anything by hand. */
+  var nmxG = null;
+  function nmxGroups(){
+    if (!LMAP) return null;
+    if (!nmxG){
+      nmxG = {
+        box:  L.layerGroup().addTo(LMAP),
+        leg:  L.layerGroup().addTo(LMAP),
+        mk:   L.layerGroup().addTo(LMAP),
+        ship: L.layerGroup().addTo(LMAP)
+      };
+    }
+    return nmxG;
+  }
+  function fldIcon(html){
+    return L.divIcon({ className:'nmx-di', html:html, iconSize:[0, 0], iconAnchor:[0, 0] });
+  }
+
   function renderMap(){
     var map = $('#map'), host = $('#mapLayers');
     if (!map || !host) return;
@@ -9018,41 +9049,42 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#terrOv').classList.toggle('on', !!LAYERS.terrain && !LMAP);
     if (typeof terrSync === 'function') terrSync();
 
-    var h = '';
+    var G = nmxGroups();
+    if (!G) return;                      /* no Leaflet, no overlay */
+    G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers();
 
-    function box(cls, a){
-      var l = lpX(a.w), t = lpY(a.n);
-      return '<div class="' + cls + '" style="left:' + l.toFixed(1) + 'px;top:' + t.toFixed(1)
-           + 'px;width:' + (lpX(a.e) - l).toFixed(1) + 'px;height:' + (lpY(a.s) - t).toFixed(1)
-           + 'px"><b>' + a.id + '</b></div>';
+    /* ---- airspace and danger boxes ---- */
+    function box(kind, a){
+      var opt = (kind === 'dgr')
+        ? { color:'rgba(240,80,110,.75)', weight:1, fillColor:'#f0506e', fillOpacity:.10 }
+        : { color:'rgba(127,179,213,.8)', weight:1, dashArray:'4 3',
+            fillColor:'#7fb3d5', fillOpacity:.07 };
+      opt.interactive = false;
+      L.rectangle([[a.s, a.w], [a.n, a.e]], opt).addTo(G.box);
+      L.marker([a.n, a.w], {
+        interactive:false, keyboard:false,
+        icon: L.divIcon({ className:'nmx-di',
+          html:'<b class="' + kind + 'lb">' + a.id + '</b>',
+          iconSize:[0, 0], iconAnchor:[-4, -2] })
+      }).addTo(G.box);
     }
-    if (LAYERS.airspace) AIRSPACE.forEach(function(a){ h += box('asp', a); });
-    if (LAYERS.danger)   DANGER.forEach(function(a){ h += box('dgr', a); });
+    if (LAYERS.airspace) AIRSPACE.forEach(function(a){ box('asp', a); });
+    if (LAYERS.danger)   DANGER.forEach(function(a){ box('dgr', a); });
 
+    /* ---- route legs ---- */
     if (LAYERS.route && ROUTE.length > 1){
-      for (var i = 0; i < ROUTE.length - 1; i++){
-        var a = ROUTE[i], b = ROUTE[i+1];
-        var ax = lpX(a.lon), ay = lpY(a.lat);
-        var bx = lpX(b.lon), by = lpY(b.lat);
-        var dx = bx - ax, dy = by - ay;
-        h += '<div class="leg" style="left:' + ax.toFixed(1) + 'px;top:' + ay.toFixed(1)
-          +  'px;width:' + Math.sqrt(dx*dx + dy*dy).toFixed(1) + 'px;transform:rotate('
-          +  (Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2) + 'deg)"></div>';
-      }
+      var lls = ROUTE.map(function(p){ return [p.lat, p.lon]; });
+      L.polyline(lls, { color:'#f0a500', weight:2, opacity:.9, interactive:false,
+                        lineJoin:'round', lineCap:'round' }).addTo(G.leg);
     }
 
     /* ---- declutter ------------------------------------------------
-       575 markers at country zoom is noise, so two gates run in
-       series. First rank: only what matters at this zoom draws at
-       all. Then collision: labels are placed in rank order and any
-       whose box overlaps one already down is dropped, so the dot
-       stays but the text does not pile up. Personal waypoints, fixes
-       and route points are never rank-gated - you put them there. */
-    var zNow = LMAP ? LMAP.getZoom() : 8;
+       Rank gates what draws at each zoom; a greedy collision pass then
+       drops any label overlapping one already placed. Layer points are
+       used for the collision maths only - Leaflet still does the
+       actual positioning. */
+    var zNow = LMAP.getZoom();
     function dotMaxRank(z){
-      /* strips are off by default, so this only bites once they are on.
-         Tuned so turning them on at country zoom does not drop ~430
-         markers into a per-frame innerHTML rebuild. */
       if (z < 7)    return 1;   /* 21  majors only */
       if (z < 9)    return 2;   /* 274 ICAO with IATA */
       if (z < 10.5) return 3;   /* 429 all ICAO */
@@ -9077,13 +9109,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       return true;
     }
 
+    var drawn = 0;
     var show = { field:LAYERS.fields, strip:LAYERS.strips, fix:LAYERS.fixes, mine:LAYERS.mine };
     DB.forEach(function(p){
       if (!show[p.cat]) return;
       var ranked = (p.rk != null);
       if (ranked && p.rk > dotCap) return;
       if (!inDrawBounds(p.lat, p.lon)) return;
-      var x = lpX(p.lon), y = lpY(p.lat);
+
       var tint = '';
       if (LAYERS.wxcat && p.cat === 'field'){
         var fi = FIELD_INFO[p.id];
@@ -9094,50 +9127,40 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       if (SET.labels !== 'off' && (!ranked || SET.labels === 'always' || p.rk <= labCap)){
         var txt = p.lb || p.id;
         var chw = (p.cat === 'strip') ? 5.5 : 6.4;
-        if (fits(x, y + 6, txt.length * chw + 4, 12)){
+        var lp = LMAP.latLngToLayerPoint([p.lat, p.lon]);
+        if (fits(lp.x, lp.y + 6, txt.length * chw + 4, 12)){
           lab = '<b' + (SET.labels === 'auto' ? ' style="opacity:.75"' : '') + '>' + txt + '</b>';
         }
       }
-      h += '<div class="fld k-' + p.cat + '" data-fld="' + p.id + '" style="left:' + x.toFixed(1)
-        +  'px;top:' + y.toFixed(1) + 'px"><i' + (tint ? ' style="' + tint + '"' : '') + '></i>'
-        +  lab + '</div>';
+
+      var mk = L.marker([p.lat, p.lon], {
+        keyboard:false,
+        icon: fldIcon('<div class="fld k-' + p.cat + '"><i'
+                    + (tint ? ' style="' + tint + '"' : '') + '></i>' + lab + '</div>')
+      });
+      mk.on('click', function(){ openCard(p.id); });
+      mk.addTo(G.mk);
+      drawn++;
     });
 
-    /* Route points that are not in the database - pasted coordinates and
-       any other custom waypoint. These have no DB entry, so without this
-       they drew a leg line but no marker. */
+    /* Route points with no database entry - pasted coordinates and any
+       other custom waypoint. */
     if (LAYERS.route){
       ROUTE.forEach(function(p, i){
-        if (p.id && dbById(p.id)) return;             /* already drawn above */
+        if (p.id && dbById(p.id)) return;
         if (!inDrawBounds(p.lat, p.lon)) return;
-        var wx = lpX(p.lon), wy = lpY(p.lat);
         var wlab = (SET.labels === 'off') ? ''
                  : '<b>' + (p.id || ddm(p.lat, true) + ' ' + ddm(p.lon, false)) + '</b>';
-        h += '<div class="fld k-wpt" data-rwpt="' + i + '" style="left:' + wx.toFixed(1)
-          +  'px;top:' + wy.toFixed(1) + 'px"><i></i>' + wlab + '</div>';
+        var wm = L.marker([p.lat, p.lon], {
+          keyboard:false,
+          icon: fldIcon('<div class="fld k-wpt"><i></i>' + wlab + '</div>')
+        });
+        wm.on('click', function(){ openChip(i); });
+        wm.addTo(G.mk);
+        drawn++;
       });
     }
-
-    host.innerHTML = h;
-    nmxMarks = host.childElementCount;
-    /* Delegation. The old code re-attached a listener to every marker
-       on every rebuild - 274 addEventListener calls per frame during a
-       pan. One listener on the container survives every rebuild. */
-    if (!host._deleg){
-      host._deleg = 1;
-      host.addEventListener('click', function(e){
-        var el = e.target && e.target.closest ? e.target.closest('.fld') : null;
-        if (!el) return;
-        e.stopPropagation();
-        var id = el.getAttribute('data-fld');
-        if (id){ openCard(id); return; }
-        /* a pasted coordinate has no database entry; open its route
-           row instead of handing openCard a null id, which is what
-           used to happen here */
-        var ri = el.getAttribute('data-rwpt');
-        if (ri != null) openChip(parseInt(ri, 10));
-      });
-    }
+    nmxMarks = drawn;
   }
 
   /* ---------- Layers popover, generated from the model ---------- */
@@ -9250,17 +9273,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   function paintShip(){
-    var host = $('#mapLayers'); if (!host) return;
-    var old = host.querySelector('.nmp-ship'); if (old) old.remove();
+    var G = nmxGroups();
+    if (!G){
+      var host0 = $('#mapLayers');
+      if (host0){ var o0 = host0.querySelector('.nmp-ship'); if (o0) o0.remove(); }
+      return;
+    }
+    G.ship.clearLayers();
     if (!ship || ship.lat === undefined) return;
-    if (!inDrawBounds(ship.lat, ship.lon)) return;
-    var el = document.createElement('div');
-    el.className = 'nmp-ship';
-    el.style.left = lpX(ship.lon).toFixed(1) + 'px';
-    el.style.top  = lpY(ship.lat).toFixed(1) + 'px';
-    el.innerHTML = '<svg viewBox="0 0 24 24" style="transform:rotate(' + (ship.trk || 0) + 'deg)">'
-      + '<path d="M12 2l6 18-6-4-6 4z" fill="#2b8cff" stroke="#dce6f0" stroke-width="1.2" stroke-linejoin="round"/></svg>';
-    host.appendChild(el);
+    L.marker([ship.lat, ship.lon], {
+      interactive:false, keyboard:false, zIndexOffset:1000,
+      icon: L.divIcon({ className:'nmx-di', iconSize:[0, 0], iconAnchor:[0, 0],
+        html:'<div class="nmp-ship"><svg viewBox="0 0 24 24" style="transform:rotate('
+           + (ship.trk || 0) + 'deg)">'
+           + '<path d="M12 2l6 18-6-4-6 4z" fill="#2b8cff" stroke="#dce6f0" '
+           + 'stroke-width="1.2" stroke-linejoin="round"/></svg></div>' })
+    }).addTo(G.ship);
   }
 
   function hudOn(){
@@ -9529,58 +9557,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
        Children are drawn at layer points; this transform supplies the
        rest. One style write per move event, no layout, no rebuild. */
-    var mlEl = document.getElementById('mapLayers');
-    if (mlEl) mlEl.style.transformOrigin = '0 0';
-    var nmxZooming = false;
-
-    function panePos(){
-      var p;
-      try { p = L.DomUtil.getPosition(LMAP.getPane('mapPane')); } catch(_){ p = null; }
-      return p || { x:0, y:0 };
-    }
-
-    /* Pan: mirror the map pane's offset. */
-    function syncOverlayPane(){
-      if (!mlEl || nmxZooming) return;
-      var p = panePos();
-      mlEl.style.transform = 'translate3d(' + p.x + 'px,' + p.y + 'px,0)';
-    }
-
-    /* Zoom: Leaflet does NOT scale the map pane. Each layer scales
-       itself off the zoomanim event, which is why mirroring only the
-       pane offset left the overlay hanging on the fingers while the
-       tiles moved underneath.
-
-       So do what a Leaflet layer does. Our children sit at layer
-       coordinates, so the anchor is whatever latlng is currently at
-       layer point (0,0); asking where that lands at the target zoom
-       gives the offset, and getZoomScale gives the scale. The map pane
-       keeps its own offset through the animation, so the two compose. */
-    LMAP.on('zoomanim', function(e){
-      if (!mlEl) return;
-      nmxZooming = true;
-      try {
-        var scale = LMAP.getZoomScale(e.zoom);
-        var anchorLL = LMAP.layerPointToLatLng([0, 0]);
-        var np = LMAP._latLngToNewLayerPoint(anchorLL, e.zoom, e.center);
-        var p = panePos();
-        mlEl.style.transform =
-          'translate3d(' + (p.x + np.x) + 'px,' + (p.y + np.y) + 'px,0) scale(' + scale + ')';
-      } catch(_){
-        /* if that private helper ever disappears, hide rather than lie */
-        mlEl.style.visibility = 'hidden';
-      }
-    });
-
-    LMAP.on('zoomend viewreset', function(){
-      nmxZooming = false;
-      if (mlEl) mlEl.style.visibility = '';
-      syncOverlayPane();
-    });
-
-    LMAP.on('move moveend resize', function(){ nmxMoves++; syncOverlayPane(); });
-    LMAP.on('zoom', function(){ nmxMoves++; });
-    syncOverlayPane();
+    /* No pane emulation any more. The overlay is real Leaflet layers,
+       so Leaflet moves and scales it exactly as it does the tiles. Four
+       builds of transform mirroring are deleted here. */
+    LMAP.on('move zoom', function(){ nmxMoves++; });
 
     var raster = { updateWhenIdle:true, updateWhenZooming:false, keepBuffer:1,
                    errorTileUrl:NMX_BLANK, maxZoom:19 };
@@ -9657,7 +9637,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
            looking like a positioning bug */
         try { renderMap(); paintShip(); nmxDraws++; }
         catch(err){ nmxErr = (err && err.message) || String(err); }
-        syncOverlayPane();
         nmxDbgPaint();
       });
     }
@@ -9672,16 +9651,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (mapEl) mapEl.appendChild(dbgEl);
     function nmxDbgPaint(){
       if (!dbgEl) return;
-      var p = { x:0, y:0 };
-      try { p = L.DomUtil.getPosition(LMAP.getPane('mapPane')) || p; } catch(_){ }
-      var host = document.getElementById('mapLayers');
       dbgEl.textContent =
-        'v87  z' + (LMAP.getZoom() || 0).toFixed(1) +
+        'v88  z' + (LMAP.getZoom() || 0).toFixed(1) +
         '  mv' + nmxMoves + ' dr' + nmxDraws + ' mk' + nmxMarks +
-        '\npane ' + Math.round(p.x) + ',' + Math.round(p.y) + (nmxZooming ? ' ZM' : '') +
-        '  host ' + (host ? (host.parentNode && host.parentNode.id ? host.parentNode.id
-                    : (host.parentNode && host.parentNode.className) || '?') : 'MISSING') +
-        (nmxErr ? '\nERR ' + nmxErr.slice(0, 60) : '');
+        '  leaflet-layers' +
+        (nmxErr ? '\nERR ' + nmxErr.slice(0, 70) : '');
     }
     nmxDbgPaint();
 
