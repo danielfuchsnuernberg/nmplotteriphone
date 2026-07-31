@@ -16,6 +16,21 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v103 2026-07-31 The route was not sloppy drawing, it was sloppy
+                       DATA. Route points carried hand-entered
+                       coordinates from before the airfield pack landed,
+                       so a leg ending at a field stopped short of the
+                       field's own marker: AYNZ out by 207 m, AYMH by
+                       403 m, AYGA by 33 m. Invisible at planning zoom,
+                       obvious on approach - which is exactly where it
+                       matters.
+                       Any route point carrying an id is now resolved
+                       against the database and takes its position from
+                       there, applied to the seed, to the saved route on
+                       load, and to saved flights. Points with no
+                       database entry - pasted coordinates, personal
+                       waypoints - are untouched, because for those the
+                       stored position IS the truth.
        v102 2026-07-31 v101 did not fix it, for a reason worth writing
                        down: touch-action does NOT inherit. Setting it on
                        #lmap covered that one element and nothing else,
@@ -3788,7 +3803,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v102';
+  var VERSION = 'v103';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -4674,16 +4689,35 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'AYMH', nm:'Mount Hagen Kagamuga',  lat:-5.8267, lon:144.2961 }
   ];
   var ROUTE, toWpt = 1;
+
+  /* A route point that names a field must sit ON that field. The seed
+     and any route saved before the airfield pack landed still carry the
+     old hand-entered coordinates - AYNZ was 207 m out, AYMH 403 m -
+     which at approach zoom shows as the track ending short of the
+     marker. Resolve every point that has an id against the database and
+     take its position from there; points with no database entry (pasted
+     coordinates, personal waypoints) are left exactly as they are. */
+  function snapRoute(list){
+    if (!list || !list.length) return list;
+    return list.map(function(p){
+      if (!p || !p.id) return p;
+      var d = dbById(p.id);
+      if (!d) return p;
+      if (p.lat === d.lat && p.lon === d.lon) return p;
+      return { id:p.id, nm:p.nm || d.nm, cat:p.cat || d.cat, lat:d.lat, lon:d.lon };
+    });
+  }
+
   (function loadRoute(){
     try{
       var s = JSON.parse(localStorage.getItem(ROUTE_KEY));
       if (s && s.route){
-        ROUTE = s.route;
+        ROUTE = snapRoute(s.route);      /* routes saved before the pack */
         if (typeof s.toWpt === 'number') toWpt = s.toWpt;
         return;
       }
     }catch(e){}
-    ROUTE = ROUTE_SEED.slice();          /* first run: the demo seed */
+    ROUTE = snapRoute(ROUTE_SEED.slice());   /* first run: the demo seed */
   })();
   function saveRoute(){
     try{ localStorage.setItem(ROUTE_KEY, JSON.stringify({ route:ROUTE, toWpt:toWpt })); }catch(e){}
@@ -8552,7 +8586,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       }
       clearTimeout(flLoadArm); flLoadArm = null;
       ROUTE.length = 0;
-      flEditing.pts.forEach(function(p){
+      /* a flight saved before the airfield pack carries the old
+         coordinates too */
+      snapRoute(flEditing.pts).forEach(function(p){
         ROUTE.push({ id:p.id, nm:p.nm, cat:p.cat, lat:p.lat, lon:p.lon });
       });
       toWpt = Math.min(1, ROUTE.length - 1);
