@@ -16,6 +16,20 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v102 2026-07-31 v101 did not fix it, for a reason worth writing
+                       down: touch-action does NOT inherit. Setting it on
+                       #lmap covered that one element and nothing else,
+                       so every descendant - the Leaflet panes, the SVG
+                       paths for airspace and danger areas, the marker
+                       icons - stayed on touch-action:auto. Almost every
+                       touch lands on a descendant, so almost every touch
+                       still reached Safari's native double-tap zoom.
+                       Now applied to the whole subtree.
+                       Two further guards, because this has cost enough
+                       rounds: the second tap calls preventDefault
+                       outright, and the touchstart listener was
+                       registered passive - which silently makes
+                       preventDefault a no-op - so it is non-passive now.
        v101 2026-07-31 Three faults in the one-finger zoom, all mine.
 
                        The blue ring and the black map were the same
@@ -1886,7 +1900,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    the blue rounded-rect highlight and the page scaling came from. iOS
    has ignored user-scalable=no since iOS 10, so the meta tag is no
    defence. Pin it here instead, independent of handler state. */
-#lmap, #lmap.leaflet-container{touch-action:none;-webkit-user-select:none;user-select:none}
+/* touch-action does NOT inherit. Setting it on the container alone left
+   every descendant - the panes, the SVG paths for airspace and danger
+   areas, the marker icons - on touch-action:auto, and a touch landing on
+   any of those still reached Safari's native double-tap zoom. It has to
+   be applied to the subtree. */
+#lmap, #lmap *{touch-action:none !important}
+#lmap{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #lmap{position:absolute;inset:0;z-index:0}
 /* The overlay host is its own pane. Zero-sized and anchored to the
    map's top-left, so children placed at LAYER coordinates land
@@ -3768,7 +3788,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v101';
+  var VERSION = 'v102';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -10662,6 +10682,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         var now = Date.now();
         if (now - lastT < 320 &&
             Math.abs(t.clientX - lastX) < 32 && Math.abs(t.clientY - lastY) < 32){
+          /* belt and braces: cancel the native gesture outright on the
+             second tap, so it cannot fire even if a descendant somehow
+             escapes the touch-action rule */
+          if (e.cancelable) e.preventDefault();
           try {
             var pt = LMAP.mouseEventToContainerPoint({ clientX:t.clientX, clientY:t.clientY });
             dz = { y0:t.clientY, z0:LMAP.getZoom(), ll:LMAP.containerPointToLatLng(pt), moved:false };
@@ -10669,7 +10693,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
             if (LMAP.dragging) LMAP.dragging.disable();
           } catch(_){ dz = null; }
         }
-      }, { passive:true });
+      }, { passive:false });   /* must be able to preventDefault */
 
       host.addEventListener('touchmove', function(e){
         if (!dz || !e.touches || e.touches.length !== 1) return;
