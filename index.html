@@ -16,6 +16,54 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v99 2026-07-31  Landscape panel reshaped.
+
+                       The odd look was a squared right edge sitting 10
+                       px clear of the toolbar. A square corner only
+                       reads as correct when it is flush against
+                       something; with a gap it just looks unfinished.
+                       It is a floating card, so it is now rounded on
+                       all four sides with a drop shadow to sit it above
+                       the map.
+
+                       It also stretched the full height for content
+                       that half-filled it, then sliced the last row in
+                       half with no sign there was more. Now sized to
+                       its content up to a max, and the body carries a
+                       soft bottom fade that switches off when nothing
+                       is clipped - so a cut-off row always means scroll.
+
+                       Layers laid out in two columns, which is what the
+                       landscape shape is actually good for: basemap and
+                       map appearance on the left, data overlays on the
+                       right, divided by a hairline. Nine rows in the
+                       tallest column, about 381 px with the header -
+                       one screen, no scrolling. Rows tightened from 10
+                       px padding to 8.
+       v98 2026-07-31  Two in-flight usability fixes.
+
+                       Add point opened on an alphabetical slice of 659
+                       entries, which is no use in the air. With nothing
+                       typed it now shows Recent (up to 5, excluding
+                       what is already in the route) then Nearest (20,
+                       with distance), measured from the GPS fix,
+                       falling back to the active waypoint then the map
+                       centre - and the heading says which. Typing
+                       switches back to ranked matching.
+
+                       Cruise altitude and ETD were four-digit keyboard
+                       entry. Both now use wheels: 44px rows, scroll-
+                       snapped against a fixed centre band, with a large
+                       live readout above and jump buttons below -
+                       plus/minus 500 and 1,000 ft for altitude, Now and
+                       plus/minus 10 and 30 minutes for ETD. No keyboard,
+                       every target at or above 44px, and no validation
+                       to fail because the wheels only contain legal
+                       values. Registration and type keep the text field;
+                       they are set on the ground.
+
+                       Add-point footnote no longer calls the fixes
+                       placeholders - they are ENR 4.3 data now.
        v97 2026-07-31  Landscape locate button was a separate, broken
                        copy of the portrait one. It set follow = true
                        and never started the GPS watch - so with
@@ -1884,6 +1932,38 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fld.k-field.twr b{color:var(--good,#8de84a)}
 .apfrom{padding:2px var(--edge) 8px;font-size:var(--t-2xs);font-weight:700;
   letter-spacing:.1em;text-transform:uppercase;color:var(--text-fainter)}
+/* ---- In-flight value picker ----------------------------------
+   Typing a four-digit time on a phone keyboard in the air is the
+   wrong interaction. Wheels: 44px rows, scroll-snapped, with a
+   fixed centre band, plus large jump buttons either side. No
+   keyboard, and every target clears the 44px minimum. */
+.qkdial{display:none;padding:10px var(--edge) 4px}
+.qkdial.on{display:block}
+#qkText.off{display:none}
+.qkval{text-align:center;font-family:var(--mono);font-size:34px;font-weight:700;
+  color:var(--accent);letter-spacing:.02em;line-height:1.1;margin-bottom:8px}
+.qkwheels{position:relative;display:flex;justify-content:center;gap:10px;
+  height:132px;overflow:hidden}
+.qkwheels::before{content:'';position:absolute;left:0;right:0;top:44px;height:44px;
+  border-top:1px solid var(--border-strong);border-bottom:1px solid var(--border-strong);
+  background:rgba(240,176,32,.07);pointer-events:none;border-radius:6px}
+.whl{height:132px;overflow-y:auto;scroll-snap-type:y mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;min-width:88px}
+.whl::-webkit-scrollbar{display:none}
+.whl .pad{height:44px}
+.whl button{display:block;width:100%;height:44px;scroll-snap-align:center;
+  background:none;border:0;font-family:var(--mono);font-size:20px;font-weight:700;
+  color:var(--text-fainter);letter-spacing:.02em}
+.whl button.sel{color:var(--text)}
+.whlcap{position:absolute;top:2px;width:100%;text-align:center;
+  font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-fainter);pointer-events:none}
+.qkquick{display:flex;gap:var(--gut);margin-top:10px}
+.qkquick button{flex:1 1 0;height:var(--mod-b);border-radius:var(--radius);
+  background:var(--inset);border:1px solid var(--border-strong);color:var(--text-2);
+  font-size:var(--t-sm);font-weight:600;white-space:nowrap}
+.qkquick button:active{background:var(--panel)}
+
 .twrtag{display:none}
 .twrtag.on{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;
   font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;letter-spacing:.04em;
@@ -2584,9 +2664,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .hud-bar button.on{background:var(--accent);color:#0a0e13}
 /* slide-out landscape panel opened by the strip */
 .hud-panel{position:absolute;top:calc(var(--ht) + var(--pedge));bottom:calc(var(--hb) + var(--pedge));
-  right:calc(var(--mod-b) + 8px);width:320px;z-index:2;
+  right:calc(var(--mod-b) + 10px);width:430px;max-width:calc(100% - var(--mod-b) - 20px);
+  z-index:2;
+  /* Was full-height with square right corners 8px clear of the toolbar -
+     a squared edge only reads right when it is flush against something.
+     It is a floating card, so it is rounded on all four sides and sized
+     to its content instead of stretching to the screen. */
+  bottom:auto;max-height:calc(100% - var(--ht) - var(--hb) - var(--pedge) * 2);
   background:rgba(13,18,25,.82);border:1px solid var(--border-strong);
-  border-radius:var(--radius) 0 0 var(--radius);
+  border-radius:var(--radius);
+  box-shadow:0 10px 30px rgba(0,0,0,.45);
   display:flex;flex-direction:column;overflow:hidden;
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   opacity:0;visibility:hidden;pointer-events:none;
@@ -2606,7 +2693,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:var(--bg-2);border:1px solid var(--border)}
 .hud-panel .ptabs button.on{background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13}
 .hud-panel .pb .prow{width:100%;text-align:left;display:flex;align-items:center;gap:10px;
-  padding:10px 0;border-bottom:1px solid var(--border);font-size:var(--t-sm);color:var(--text-2)}
+  padding:8px 0;border-bottom:1px solid var(--border);font-size:var(--t-sm);color:var(--text-2)}
+/* Landscape has width to spare and not much height. Two columns turn a
+   scrolling list into one readable screen: what the map looks like on
+   the left, what is drawn on it on the right. */
+.hud-panel .pb.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;align-items:start}
+.hud-panel .pb.cols .pl:first-child{margin-top:0}
+.hud-panel .pb .pl{margin:0 0 4px}
+.hud-panel .pb .col + .col{border-left:1px solid var(--border);padding-left:18px}
+/* a hint that there is more below, rather than a row sliced in half */
+.hud-panel .pb{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent);
+  mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent)}
+.hud-panel .pb.nofade{-webkit-mask-image:none;mask-image:none}
 /* .prow.sel (0,2,0) sets background:var(--accent-2) with dark text. This
    rule is more specific and overrode only the COLOUR, leaving light blue
    text on a light blue background - the selected basemap rendered as a
@@ -3376,9 +3474,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   <div class="tedw">
     <div class="tedh"><b id="qkTtl">Edit</b>
       <button class="x" id="qkClose" aria-label="Close">&times;</button></div>
-    <div class="tedpage">
+    <div class="tedpage" id="qkText">
       <div class="ntfld" style="margin:0"><label id="qkLab" for="qkIn">Value</label>
         <input id="qkIn" type="text"></div>
+    </div>
+    <div class="qkdial" id="qkDial">
+      <div class="qkval" id="qkVal">&nbsp;</div>
+      <div class="qkwheels" id="qkWheels"></div>
+      <div class="qkquick" id="qkQuick"></div>
     </div>
     <div class="tedlist"><button class="tedrow" id="qkSave" style="color:var(--accent)">Save</button></div>
   </div>
@@ -3612,7 +3715,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v97';
+  var VERSION = 'v99';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -5466,17 +5569,62 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
             || (p.ia && p.ia.toUpperCase().indexOf(q) === 0)
             || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
       });
-      /* Most important first, and an exact id match always on top. */
-      hits.sort(function(a, b){
-        var ax = (q && a.id.toUpperCase() === q) ? -1 : 0;
-        var bx = (q && b.id.toUpperCase() === q) ? -1 : 0;
-        if (ax !== bx) return ax - bx;
-        return (a.rk == null ? 2 : a.rk) - (b.rk == null ? 2 : b.rk);
-      });
-      var HIT_CAP = 30, hitTotal = hits.length;
-      if (hits.length > HIT_CAP) hits = hits.slice(0, HIT_CAP);
+      /* With nothing typed, an alphabetical slice of 659 is useless -
+         what you want to add is almost always somewhere near you or
+         somewhere you used recently. So: Recent, then Nearest. Typing
+         switches to ranked matching. */
+      var HIT_CAP = 30, hitTotal = hits.length, addNear = null, addRecent = null;
+      if (!q){
+        var from, fromLabel;
+        if (GPSFIX){ from = { lat:GPSFIX.lat, lon:GPSFIX.lon }; fromLabel = 'your position'; }
+        else if (ROUTE && ROUTE.length){
+          var w0 = ROUTE[Math.min(Math.max(toWpt, 0), ROUTE.length - 1)];
+          from = { lat:w0.lat, lon:w0.lon }; fromLabel = label(w0);
+        } else if (typeof VIEW !== 'undefined' && VIEW){
+          from = { lat:(VIEW.n + VIEW.s) / 2, lon:(VIEW.w + VIEW.e) / 2 };
+          fromLabel = 'map centre';
+        }
+        var inRoute = {};
+        (ROUTE || []).forEach(function(p){ if (p.id) inRoute[p.id] = 1; });
 
-      if (hitTotal > HIT_CAP){
+        addRecent = (typeof recents !== 'undefined' && recents ? recents : [])
+          .map(dbById).filter(function(p){ return p && !inRoute[p.id]; }).slice(0, 5);
+
+        if (from){
+          var seenR = {};
+          addRecent.forEach(function(p){ seenR[p.id] = 1; });
+          addNear = hits.filter(function(p){ return !seenR[p.id]; })
+            .map(function(p){ return { p:p, d:nmBetween(from, p) }; })
+            .sort(function(a, b){ return a.d - b.d; })
+            .slice(0, 20);
+        }
+        hits = [];
+      } else {
+        /* Most important first, and an exact id match always on top. */
+        hits.sort(function(a, b){
+          var ax = (a.id.toUpperCase() === q) ? -1 : 0;
+          var bx = (b.id.toUpperCase() === q) ? -1 : 0;
+          if (ax !== bx) return ax - bx;
+          return (a.rk == null ? 2 : a.rk) - (b.rk == null ? 2 : b.rk);
+        });
+        if (hits.length > HIT_CAP) hits = hits.slice(0, HIT_CAP);
+      }
+
+      function wrow(p, extra){
+        return '<button class="wrow" data-id="' + p.id + '">'
+             + '<span class="id">' + (p.lb || p.id) + '</span>'
+             + '<span class="nm2">' + p.nm + '</span>'
+             + '<span class="cat">' + (extra || p.ia || '') + '</span></button>';
+      }
+      if (addRecent && addRecent.length){
+        h += '<div class="wsec">Recent</div>';
+        addRecent.forEach(function(p){ h += wrow(p); });
+      }
+      if (addNear && addNear.length){
+        h += '<div class="wsec">Nearest \u2014 from ' + fromLabel + '</div>';
+        addNear.forEach(function(x){ h += wrow(x.p, x.d.toFixed(0) + ' nm'); });
+      }
+      if (hitTotal > HIT_CAP && q){
         h += '<div class="wsec">Showing ' + HIT_CAP + ' of ' + hitTotal
           +  ' \u2014 keep typing to narrow</div>';
       }
@@ -5493,8 +5641,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       });
 
       if (!h) h = '<div class="chipempty">No match</div>';
-      h += '<div class="wnote">Fields are AIP data. Fixes, villages and personal '
-         + 'waypoints in this demo carry placeholder coordinates and are not for navigation.</div>';
+      h += '<div class="wnote">Airfields are OurAirports-derived, not AIP. Procedure fixes '
+         + 'are ENR 4.3; navaids from the v262 pack. Personal waypoints are your own. '
+         + 'Advisory only \u2014 cross-check before use.</div>';
 
       $('#wptList').innerHTML = h;
       $$('#wptList .wrow').forEach(function(b){
@@ -7207,8 +7356,124 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     atsShowOnMap(rd + ' loaded');
   }
 
-  /* ---- quick edit for the FPL header buttons ---- */
-  var qkEd = $('#qkEd'), qkWhat = null;
+  /* ---- quick edit for the FPL header buttons ----------------------
+     Altitude and ETD use wheels rather than a keyboard: 44px rows,
+     scroll-snapped against a fixed centre band, with jump buttons for
+     the coarse moves. Registration and type still use the text field -
+     they are set once on the ground. */
+  var qkEd = $('#qkEd'), qkWhat = null, qkWheelVals = {};
+
+  function buildWheel(key, list, sel, cap, fmt){
+    var w = document.createElement('div');
+    w.className = 'whl'; w.setAttribute('data-whl', key);
+    var h = '<div class="pad"></div>';
+    list.forEach(function(v, i){
+      h += '<button type="button" data-i="' + i + '">' + fmt(v) + '</button>';
+    });
+    w.innerHTML = h + '<div class="pad"></div>';
+    w.__list = list;
+    w.__idx = Math.max(0, sel);
+
+    function mark(){
+      var bs = w.querySelectorAll('button');
+      for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('sel', i === w.__idx);
+      qkWheelVals[key] = w.__list[w.__idx];
+      qkPaintVal();
+    }
+    w.__mark = mark;
+    w.__goto = function(i, smooth){
+      w.__idx = Math.max(0, Math.min(w.__list.length - 1, i));
+      w.scrollTo({ top: w.__idx * 44, behavior: smooth ? 'smooth' : 'auto' });
+      mark();
+    };
+
+    var t = null;
+    w.addEventListener('scroll', function(){
+      clearTimeout(t);
+      t = setTimeout(function(){
+        var i = Math.round(w.scrollTop / 44);
+        if (i !== w.__idx){ w.__idx = Math.max(0, Math.min(w.__list.length - 1, i)); }
+        mark();
+      }, 80);
+    });
+    w.addEventListener('click', function(e){
+      var b = e.target.closest && e.target.closest('button[data-i]');
+      if (b) w.__goto(parseInt(b.getAttribute('data-i'), 10), true);
+    });
+
+    var wrap = document.createElement('div');
+    wrap.style.position = 'relative';
+    if (cap) wrap.innerHTML = '<div class="whlcap">' + cap + '</div>';
+    wrap.appendChild(w);
+    return { wrap:wrap, w:w };
+  }
+
+  function qkPaintVal(){
+    var el = $('#qkVal'); if (!el) return;
+    if (qkWhat === 'alt'){
+      el.textContent = (qkWheelVals.ft == null ? '' : qkWheelVals.ft.toLocaleString()) + ' ft';
+    } else if (qkWhat === 'etd'){
+      var hh = qkWheelVals.hh, mm = qkWheelVals.mm;
+      el.textContent = (hh == null ? '--' : (hh < 10 ? '0' : '') + hh) + ':'
+                     + (mm == null ? '--' : (mm < 10 ? '0' : '') + mm) + 'Z';
+    }
+  }
+
+  function qkBuildDial(what){
+    var wheels = $('#qkWheels'), quick = $('#qkQuick');
+    wheels.innerHTML = ''; quick.innerHTML = ''; qkWheelVals = {};
+    var refs = {};
+
+    if (what === 'alt'){
+      var list = [];
+      for (var ft = 0; ft <= 15000; ft += 100) list.push(ft);
+      var sel = Math.round(Math.min(15000, Math.max(0, AC.alt)) / 100);
+      var a = buildWheel('ft', list, sel, 'feet', function(v){ return v.toLocaleString(); });
+      wheels.appendChild(a.wrap); refs.ft = a.w;
+      [['\u2212 1,000', -10], ['\u2212 500', -5], ['+ 500', 5], ['+ 1,000', 10]]
+        .forEach(function(q){
+          var b = document.createElement('button');
+          b.type = 'button'; b.textContent = q[0];
+          b.addEventListener('click', function(){ refs.ft.__goto(refs.ft.__idx + q[1], true); });
+          quick.appendChild(b);
+        });
+    }
+
+    if (what === 'etd'){
+      var hh = [], mm = [], i;
+      for (i = 0; i < 24; i++) hh.push(i);
+      for (i = 0; i < 60; i++) mm.push(i);
+      var pad = function(v){ return (v < 10 ? '0' : '') + v; };
+      var H = buildWheel('hh', hh, Math.floor(ETD_MIN / 60), 'hh', pad);
+      var M = buildWheel('mm', mm, ETD_MIN % 60, 'mm', pad);
+      wheels.appendChild(H.wrap); wheels.appendChild(M.wrap);
+      refs.hh = H.w; refs.mm = M.w;
+
+      function setMin(total){
+        total = ((total % 1440) + 1440) % 1440;
+        refs.hh.__goto(Math.floor(total / 60), true);
+        refs.mm.__goto(total % 60, true);
+      }
+      [['Now', null], ['\u2212 10', -10], ['+ 10', 10], ['+ 30', 30]].forEach(function(q){
+        var b = document.createElement('button');
+        b.type = 'button'; b.textContent = q[0];
+        b.addEventListener('click', function(){
+          if (q[1] === null){
+            var d = new Date();
+            setMin(d.getUTCHours() * 60 + d.getUTCMinutes());
+          } else {
+            setMin(qkWheelVals.hh * 60 + qkWheelVals.mm + q[1]);
+          }
+        });
+        quick.appendChild(b);
+      });
+    }
+
+    /* position after layout so scrollTop takes */
+    requestAnimationFrame(function(){
+      Object.keys(refs).forEach(function(k){ refs[k].__goto(refs[k].__idx, false); });
+    });
+  }
   function openQk(what){
     closeAll();
     qkWhat = what;
@@ -7219,9 +7484,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       etd:  ['ETD', 'UTC, as HHMM', clock(0).replace(':', '')]
     }[what];
     $('#qkTtl').textContent = cfg[0];
+    var dial = (what === 'alt' || what === 'etd');
+    $('#qkText').classList.toggle('off', dial);
+    $('#qkDial').classList.toggle('on', dial);
+    if (dial){
+      qkBuildDial(what);
+      qkEd.classList.add('on');
+      return;                                  /* no keyboard in the air */
+    }
     $('#qkLab').textContent = cfg[1];
     $('#qkIn').value = cfg[2];
-    $('#qkIn').setAttribute('inputmode', (what === 'alt' || what === 'etd') ? 'numeric' : 'text');
+    $('#qkIn').setAttribute('inputmode', 'text');
     qkEd.classList.add('on');
     setTimeout(function(){ try{ $('#qkIn').focus(); }catch(e){} }, 60);
   }
@@ -7229,6 +7502,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   qkEd.addEventListener('click', function(e){ if (e.target === qkEd) qkEd.classList.remove('on'); });
 
   $('#qkSave').addEventListener('click', function(){
+    /* wheel values are already valid by construction - the list only
+       contains legal ones, so there is nothing to reject */
+    if (qkWhat === 'alt' || qkWhat === 'etd'){
+      if (qkWhat === 'alt') AC.alt = qkWheelVals.ft;
+      else {
+        ETD_MIN = qkWheelVals.hh * 60 + qkWheelVals.mm;
+        try{ localStorage.setItem('nmp.iphone.etd', String(ETD_MIN)); }catch(e){}
+      }
+      if (typeof saveSet === 'function') saveSet();
+      qkEd.classList.remove('on');
+      drawFpl(); renderMap();
+      if (typeof drawSet === 'function' && $('#setView') && $('#setView').classList.contains('on')) drawSet();
+      toast('Saved');
+      return;
+    }
     var v = $('#qkIn').value.trim();
     if (!v){ toast('Nothing entered'); return; }
     if (qkWhat === 'reg'){ AC.reg = v.toUpperCase(); }
@@ -10014,17 +10302,26 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
   function hudLayersHTML(){
     var tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>';
-    var h = '<div class="pl" style="margin-bottom:8px">Basemap</div>';
+    function ov(k, ok){
+      return '<button class="prow" data-hov="' + k + '"' + (ok ? '' : ' style="opacity:.4"') + '>'
+           + '<span class="ck">' + (ok && layOn(k) ? tick : '') + '</span>'
+           + LAYER_META[k].t + '</button>';
+    }
+    /* Left: what the map looks like. Right: what is drawn on it. */
+    var L = '<div class="col"><div class="pl">Basemap</div>';
     BASES.forEach(function(b){
-      h += '<button class="prow' + (LAYERS.base === b[0] ? ' sel' : '') + '" data-hbase="' + b[0] + '">' + b[1] + '</button>';
+      L += '<button class="prow' + (LAYERS.base === b[0] ? ' sel' : '') + '" data-hbase="'
+        +  b[0] + '">' + b[1] + '</button>';
     });
-    h += '<div class="pl" style="margin:12px 0 8px">Overlays</div>';
-    OVERLAYS.forEach(function(o){
-      var k = o[0], ok = o[1];
-      h += '<button class="prow" data-hov="' + k + '"' + (ok ? '' : ' style="opacity:.4"') + '>'
-        +  '<span class="ck">' + (ok && layOn(k) ? tick : '') + '</span>' + LAYER_META[k].t + '</button>';
-    });
-    return h;
+    L += '<div class="pl" style="margin-top:14px">Map</div>';
+    MAP_OVERLAYS.forEach(function(k){ L += ov(k, true); });
+    L += '</div>';
+
+    var R = '<div class="col"><div class="pl">Overlays</div>';
+    OVERLAYS.forEach(function(o){ R += ov(o[0], o[1]); });
+    R += '</div>';
+
+    return L + R;
   }
   function hudSettingsHTML(){
     return '<div class="kv"><span class="k">Aircraft</span><span class="v">' + AC.reg + ' \u00b7 ' + AC.type + '</span></div>'
@@ -10049,7 +10346,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     } else {
       tabs.style.display = 'none'; tabs.innerHTML = '';
     }
-    $('#hudPanelBody').innerHTML = hudPanelHTML(hudPanelKey);
+    var pb = $('#hudPanelBody');
+    pb.innerHTML = hudPanelHTML(hudPanelKey);
+    pb.classList.toggle('cols', hudPanelKey === 'layers');
+    /* the fade is a scroll hint - drop it when nothing is clipped */
+    requestAnimationFrame(function(){
+      pb.classList.toggle('nofade', pb.scrollHeight <= pb.clientHeight + 2);
+    });
 
     if (hudPanelKey === 'layers'){
       $$('#hudPanelBody [data-hbase]').forEach(function(b){
