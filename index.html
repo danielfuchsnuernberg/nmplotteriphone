@@ -16,6 +16,22 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v104 2026-07-31 The marker dot was not on its own coordinate.
+                       .fld held the dot AND the label and was centred as
+                       a whole with translate(-50%,-50%). With a label
+                       hanging below it, the box is about 25px tall, so
+                       the DOT sat roughly 8px above the actual position.
+                       The route line ended at the true coordinate and
+                       the dot was drawn above it - the gap was the
+                       label's height, which is why v103's coordinate fix
+                       changed nothing visible.
+                       The box is now zero-sized and sits exactly on the
+                       point: the dot is centred on it, the label hangs
+                       below. Caught on the way: .fld.k-fix i set
+                       transform:rotate(45deg), which REPLACED the
+                       centring transform rather than adding to it, so
+                       procedure fixes were offset differently again.
+                       Both transforms are composed now.
        v103 2026-07-31 The route was not sloppy drawing, it was sloppy
                        DATA. Route points carried hand-entered
                        coordinates from before the airfield pack landed,
@@ -2002,14 +2018,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   color:var(--text-fainter);letter-spacing:.12em;text-transform:uppercase;
   pointer-events:none;
 }
-.fld{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;z-index:12}
-.fld i{display:block;width:9px;height:9px;border-radius:50%;
-  background:var(--accent-2);margin:0 auto;box-shadow:0 0 0 2px rgba(10,14,19,.9)}
-.fld b{display:block;margin-top:3px;font-size:var(--t-xs);font-weight:600;
+/* The box used to hold the dot AND the label and be centred as a whole,
+   so with a label hanging below it the DOT sat about 8px above the real
+   position - which is why a route leg ended short of its own marker.
+   The box is now zero-sized and sits exactly on the point; the dot is
+   centred on it and the label hangs below. */
+.fld{position:absolute;width:0;height:0;pointer-events:none;z-index:12}
+.fld i{position:absolute;left:0;top:0;width:9px;height:9px;border-radius:50%;
+  transform:translate(-50%,-50%);pointer-events:auto;
+  background:var(--accent-2);box-shadow:0 0 0 2px rgba(10,14,19,.9)}
+.fld b{position:absolute;left:0;top:7px;transform:translateX(-50%);
+  font-size:var(--t-xs);font-weight:600;pointer-events:auto;
   color:var(--text-dim);letter-spacing:.04em;white-space:nowrap}
 .fld.k-strip i{width:6px;height:6px;background:var(--text-muted)}
 .fld.k-strip b{font-size:var(--t-2xs);color:var(--text-fainter)}
-.fld.k-fix i{width:8px;height:8px;border-radius:1px;background:#8de84a;transform:rotate(45deg)}
+.fld.k-fix i{width:8px;height:8px;border-radius:1px;background:#8de84a;
+  transform:translate(-50%,-50%) rotate(45deg)}   /* keep the centring */
 .fld.k-fix b{color:#8de84a;opacity:.85}
 /* Towered aerodrome: the dot gains a separated outer ring, which is how
    a controlled field reads on a chart against an uncontrolled one. The
@@ -3803,7 +3827,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v103';
+  var VERSION = 'v104';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
