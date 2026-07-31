@@ -16,6 +16,25 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v100 2026-07-31 One-finger zoom. v85 added double-tap to zoom in
+                       and two-finger tap to zoom out, but not the
+                       gesture other maps have: double tap, keep the
+                       finger down on the second tap, then slide. Up
+                       zooms in, down zooms out, continuously, anchored
+                       on the point tapped. 110 px of travel per zoom
+                       level.
+                       Worth having because it needs ONE hand where a
+                       pinch needs two. Leaflet has no handler for it, so
+                       it is driven from the raw touch stream, with
+                       Leaflet's own drag suspended for the duration so
+                       the map cannot pan underneath, and the zoom
+                       applied once per frame rather than once per
+                       touchmove - setZoomAround runs a full view reset
+                       and firing it per event would stutter.
+                       A double tap that turns into a slide no longer
+                       also fires the step zoom on release. A plain
+                       double tap still steps in as before, and a tap
+                       landing on a marker is still a marker tap.
        v99 2026-07-31  Landscape panel reshaped.
 
                        The odd look was a squared right edge sitting 10
@@ -3715,7 +3734,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v99';
+  var VERSION = 'v100';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -10585,14 +10604,70 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         } catch(_){ }
       }
 
+      /* ---- double-tap-and-drag: one-finger continuous zoom ----------
+         Double tap, keep the finger down on the second tap, then slide.
+         Up zooms in, down zooms out, anchored on the point you tapped.
+         This is the gesture worth having in the aircraft - it needs one
+         hand, where a pinch needs two. Leaflet has no such handler, so
+         it is driven from the raw touch stream and Leaflet's own drag is
+         suspended for the duration so the map cannot pan underneath. */
+      var dz = null;          /* {y0, z0, ll, moved} while the drag is live */
+      var DZ_PER_LEVEL = 110; /* px of travel per zoom level */
+
       host.addEventListener('touchstart', function(e){
-        if (e.touches && e.touches.length > 1) multi = e.touches.length;
+        if (e.touches && e.touches.length > 1){ multi = e.touches.length; return; }
+        var t = e.touches && e.touches[0];
+        if (!t) return;
+        if (t.target && t.target.closest && t.target.closest('.fld')) return;
+
+        var now = Date.now();
+        if (now - lastT < 320 &&
+            Math.abs(t.clientX - lastX) < 32 && Math.abs(t.clientY - lastY) < 32){
+          try {
+            var pt = LMAP.mouseEventToContainerPoint({ clientX:t.clientX, clientY:t.clientY });
+            dz = { y0:t.clientY, z0:LMAP.getZoom(), ll:LMAP.containerPointToLatLng(pt), moved:false };
+            if (LMAP.dragging) LMAP.dragging.disable();
+          } catch(_){ dz = null; }
+        }
       }, { passive:true });
+
+      host.addEventListener('touchmove', function(e){
+        if (!dz || !e.touches || e.touches.length !== 1) return;
+        var t = e.touches[0];
+        var dy = dz.y0 - t.clientY;
+        if (Math.abs(dy) > 6) dz.moved = true;
+        if (!dz.moved) return;
+        e.preventDefault();
+        /* setZoomAround runs a full view reset, so once per frame, not
+           once per touchmove */
+        dz.want = dz.z0 + dy / DZ_PER_LEVEL;
+        if (dz.raf) return;
+        dz.raf = requestAnimationFrame(function(){
+          if (!dz) return;
+          dz.raf = 0;
+          var z = Math.max(LMAP.getMinZoom(), Math.min(LMAP.getMaxZoom(), dz.want));
+          try { LMAP.setZoomAround(dz.ll, z, { animate:false }); } catch(_){ }
+        });
+      }, { passive:false });
+
+      function endDrag(){
+        if (!dz) return false;
+        var wasDrag = dz.moved;
+        if (dz.raf) cancelAnimationFrame(dz.raf);
+        dz = null;
+        if (LMAP.dragging) LMAP.dragging.enable();
+        return wasDrag;
+      }
+      host.addEventListener('touchcancel', endDrag, { passive:true });
 
       host.addEventListener('touchend', function(e){
         if (e.touches && e.touches.length) return;         /* fingers still down */
         var t = e.changedTouches && e.changedTouches[0];
         if (!t) return;
+
+        /* a double-tap that turned into a slide has already zoomed -
+           releasing it must not also fire the step zoom */
+        if (endDrag()){ lastT = 0; touchZoomAt = Date.now(); return; }
 
         /* a tap on a marker is a marker tap, not a zoom */
         if (t.target && t.target.closest && t.target.closest('.fld')){ multi = 0; return; }
