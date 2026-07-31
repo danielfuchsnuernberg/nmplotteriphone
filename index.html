@@ -16,6 +16,26 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v89 2026-07-31  The airspace layers are real. The app had been
+                       drawing two rectangles labelled with genuine PNG
+                       designators - D-AYD903 and R-AYR921 - at
+                       coordinates invented for a demo, plus three
+                       made-up control zones. Harmless when everything
+                       was obviously a demo; not harmless beside real
+                       airfields, real terrain and a real basemap.
+                       Deleted, and replaced from v262 with 12 danger
+                       and restricted areas (8 polygons, 4 circles) each
+                       carrying class, upper and lower limits, remark
+                       and AIP edition, and with 9 CTAF zones drawn from
+                       real rings with their CTAF and HF frequencies.
+                       Four of the twelve have estimated geometry. Those
+                       draw dashed, lighter, and are labelled with a
+                       leading tilde, and their detail sheet says in
+                       plain words that the boundary is indicative.
+                       Tapping any area opens its limits, remark and
+                       edition date - which is the only place that
+                       provenance can actually be read.
+                       Diagnostic strip removed; it did its job.
        v88 2026-07-28  Draw with Leaflet instead of emulating it.
                        Four builds went into hand-positioning the map
                        overlay - percentages, then layer points, then a
@@ -1619,9 +1639,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   font-size:var(--t-2xs);font-weight:700}
 .asplb{color:var(--accent-2)}
 .dgrlb{color:#f0506e}
-#nmxDbg{position:absolute;left:6px;bottom:6px;z-index:60;pointer-events:none;
-  font-family:var(--mono);font-size:9px;line-height:1.35;color:var(--text-2);
-  background:rgba(3,5,8,.8);padding:3px 6px;border-radius:4px;white-space:pre}
+.dgrlb.ax{opacity:.8;font-style:italic}
+.warnnote{border-left:2px solid var(--route);padding-left:8px}
+
 .map.live{background:none}
 .map.live .grat,.map.live .mapnote{display:none}
 .map.live .mapnote.diag{display:block;top:auto;bottom:6px;text-transform:none;
@@ -3258,6 +3278,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   </div>
 </div>
 
+<!-- Danger / restricted area detail -->
+<div class="ted" id="dgrSheet">
+  <div class="tedw">
+    <div class="tedh">
+      <b id="dgrTitle">Area</b>
+      <button class="x" id="dgrClose" aria-label="Close">&times;</button>
+    </div>
+    <div id="dgrBody"></div>
+  </div>
+</div>
+
 <!-- Fuel additions (carriage reminders) -->
 <div class="ted" id="fuelAdd">
   <div class="tedw">
@@ -3348,8 +3379,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v88';
-  var BUILD   = '2026-07-28';
+  var VERSION = 'v89';
+  var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
   var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -3422,6 +3453,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (typeSc) typeSc.classList.remove('on');
     if (railEd) railEd.classList.remove('on');
     if (fuelAdd) fuelAdd.classList.remove('on');
+    if (dgrSheet) dgrSheet.classList.remove('on');
     if (noteEd) noteEd.classList.remove('on');
     if (flEd) flEd.classList.remove('on');
     if (chView) chView.classList.remove('on');
@@ -8362,6 +8394,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   })();
   function openFuelAdd(){ closeAll(); fuelAdd.classList.add('on'); }
   function closeFuelAdd(){ fuelAdd.classList.remove('on'); }
+  var dgrSheet = $('#dgrSheet');
+  $('#dgrClose').addEventListener('click', function(){ dgrSheet.classList.remove('on'); });
+  dgrSheet.addEventListener('click', function(e){
+    if (e.target === dgrSheet) dgrSheet.classList.remove('on');
+  });
+
   $('#fuelAddClose').addEventListener('click', closeFuelAdd);
   fuelAdd.addEventListener('click', function(e){ if (e.target === fuelAdd) closeFuelAdd(); });
 
@@ -8985,14 +9023,41 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* Demo geometry: boxes in degrees, shape only, NOT AIP data.
      The real build reads PNG_CTA / PNG_TMA_SECTORS and the ENR 5.1
      danger and restricted area coordinates. */
-  var AIRSPACE = [
-    { id:'PY TMA',  n:-9.05, s:-9.90, w:146.70, e:147.80 },
-    { id:'NZ CTR',  n:-6.30, s:-6.85, w:146.40, e:147.05 },
-    { id:'MH CTR',  n:-5.55, s:-6.10, w:144.00, e:144.60 }
-  ];
+  /* ---- Danger and restricted areas -------------------------------
+     Lifted from v262. Every record carries its AIP edition, and `ax`
+     marks the four whose geometry is estimated rather than taken from
+     published coordinates - those draw dashed with a tilde on the
+     label so they can never be mistaken for surveyed boundaries.
+     Circles carry centre and radius in NM; the rest carry rings. */
   var DANGER = [
-    { id:'D-AYD903', n:-6.20, s:-6.95, w:146.30, e:147.20 },
-    { id:'R-AYR921', n:-9.20, s:-9.75, w:146.90, e:147.60 }
+    { id:'AYR920', nm:'GOLDIE RIVER', cls:'R', up:'9000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Artillery. Hours by NOTAM. Dept of Defence.', ring:[[-9.3,147.26667],[-9.36667,147.26667],[-9.36667,147.33333],[-9.3,147.33333],[-9.3,147.26667]] },
+    { id:'AYR921', nm:'PORT MORESBY', cls:'R', up:'20000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Gunnery. Hours by NOTAM. Dept of Defence.', ring:[[-9.63333,146.86667],[-9.69167,146.925],[-9.91667,146.83333],[-9.73333,146.64167],[-9.63333,146.86667]] },
+    { id:'AYR959', nm:'SEPIK PLAINS', cls:'R', up:'9000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Mortar firing. Hours by NOTAM. Dept of Defence. When active, confine to north of Sepik Plains airstrip.', ring:[[-3.90833,143.56667],[-3.88333,143.65833],[-3.97083,143.71667],[-4.0,143.575],[-3.90833,143.56667]] },
+    { id:'AYR962', nm:'ADMIRALTY ISLANDS', cls:'R', up:'20000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Gunnery & weapon firing. Hours by NOTAM. Dept of Defence.', ring:[[-0.78333,147.0],[-0.78333,147.66667],[-1.78333,147.66667],[-1.78333,147.0],[-0.78333,147.0]] },
+    { id:'AYD901', nm:'DAUGO', cls:'D', up:'4000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flying Training. Hours HJ. CASA.', ax:1, ring:[[-9.45833,147.075],[-9.55833,147.13333],[-9.66622,146.96717],[-9.65421,146.95658],[-9.64172,146.94658],[-9.62877,146.93721],[-9.61539,146.92847],[-9.60161,146.92039],[-9.58747,146.91299],[-9.573,146.90628],[-9.55823,146.90028],[-9.54319,146.895],[-9.52792,146.89046],[-9.51246,146.88667],[-9.49683,146.88362],[-9.48108,146.88134],[-9.46524,146.87982],[-9.44934,146.87907],[-9.43343,146.87909]] },
+    { id:'AYD903', nm:'MOUNT HAGEN', cls:'D', up:'10000 ft', lo:'SFC', ed:'ENR 5.2 · 11 JUL 2024', rk:'Hours HJ. Low flying, subject to CAR 91.131. CASA.', ax:1, ring:[[-5.78333,144.36667],[-5.78333,144.46667],[-5.75,144.48333],[-5.66667,144.46667],[-5.66667,144.36667],[-5.75,144.33333],[-5.78333,144.36667]] },
+    { id:'AYD904A/B', nm:'KUTUBU / GOBE', cls:'D', up:'8000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Low Level Rotor-wing operations. Hours HJ. CASA.', ax:1, ring:[[-6.2,143.56667],[-6.16667,143.01667],[-6.35,142.91667],[-6.36667,142.96667],[-6.8,143.5],[-7.31667,144.18333],[-7.0,144.33333],[-6.66667,144.05],[-6.2,143.56667]] },
+    { id:'AYD905', nm:'NAPA NAPA', cls:'D', up:'600 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flame from flare at Napa Napa refinery.', c:[-9.45833,147.11472], r:1 },
+    { id:'AYD907', nm:'WAGHI', cls:'D', up:'10000 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flying Training. Hours HJ. Low flying, subject to CAR 91.131. CASA.', ax:1, ring:[[-5.74583,144.50833],[-5.6875,144.5375],[-5.74583,144.69167],[-5.81667,144.66111],[-5.74583,144.50833]] },
+    { id:'AYD908', nm:'KOMO', cls:'D', up:'6800 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flammable Gas With Heat Radiation. Hours HJ. CAR 91.129. 5 NM NW of Komo (AYXM).', c:[-6.00402,142.81767], r:1 },
+    { id:'AYD909', nm:'KOMO', cls:'D', up:'9500 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Flammable Gas With Heat Radiation. Hours HJ. CAR 91.129. 12.60 NM NW of Komo (AYXM).', c:[-5.92953,142.71386], r:1 },
+    { id:'AYD910', nm:'LEALEA', cls:'D', up:'2400 ft', lo:'SFC', ed:'ENR 5.1 · 23 APR 2020', rk:'Gas Flare Stack. Hours H24. CAR 91.129. 15 NM NW of Port Moresby (AYPY).', c:[-9.32989,147.01907], r:1 }
+  ];
+
+  /* ---- CTAF zones -------------------------------------------------
+     The nine PNG common-frequency zones, real rings, with the CTAF and
+     the HF frequencies for each. This replaces three invented control
+     zones - and for VFR here it is the layer that actually matters. */
+  var CTAFZ = [
+    { id:1, ctaf:'126.7', hf:['3419','6598','8906'], ring:[[-5.100537,140.999882],[-5.097102,142.639637],[-4.930209,144.020547],[-3.50636,143.803229],[-0.816872,143.803229],[-0.874544,140.998968],[-5.100537,140.999882]] },
+    { id:2, ctaf:'123.9', hf:['3425','5565','8861'], ring:[[-8.060204,147.592889],[-7.096418,148.96618],[-5.056949,147.96744],[-5.144491,145.720736],[-6.08485,145.334246],[-6.60896,146.559222],[-7.359394,146.968096],[-8.060204,147.592889]] },
+    { id:3, ctaf:'127.1', hf:['3425','8861'], ring:[[-5.056949,147.96744],[-7.096418,148.96618],[-8.526675,155.861774],[-7.57475,156.367127],[-6.457026,156.317613],[-2.828979,154.793337],[0.026241,149.442861],[-4.372461,149.453801],[-5.056949,147.96744]] },
+    { id:4, ctaf:'120.1', hf:['3419','6538','6598'], ring:[[-5.144491,145.720736],[-5.056949,147.96744],[-4.372461,149.453801],[0.026241,149.442861],[-0.816872,143.803229],[-3.50636,143.803229],[-4.930209,144.020547],[-6.76077,144.608316],[-7.156879,145.0545],[-6.092115,145.051079],[-6.08485,145.334246],[-5.144491,145.720736]] },
+    { id:5, ctaf:'120.9', hf:['6622','3419','3425','8837'], ring:[[-7.165028,143.904524],[-8.987733,143.894437],[-9.487032,144.337438],[-9.47356,147.143276],[-8.060204,147.592889],[-8.022962,146.419898],[-7.156879,145.0545],[-7.165028,143.904524]] },
+    { id:6, ctaf:'120.7', hf:['3419','6622','8837'], ring:[[-7.156879,145.0545],[-8.022962,146.419898],[-8.060204,147.592889],[-7.359394,146.968096],[-6.60896,146.559222],[-6.08485,145.334246],[-6.092115,145.051079],[-7.156879,145.0545]] },
+    { id:7, ctaf:'124.1', hf:['3419','6622','8837'], ring:[[-13.300657,144.220622],[-13.236498,157.579997],[-9.943721,157.536052],[-8.526675,155.861774],[-7.096418,148.96618],[-8.060204,147.592889],[-9.47356,147.143276],[-9.487032,144.337438],[-13.300657,144.220622]] },
+    { id:8, ctaf:'128.5', hf:['3419','6538','6598'], ring:[[-5.097102,142.639637],[-6.496126,142.64513],[-7.165028,143.904524],[-7.156879,145.0545],[-6.76077,144.608316],[-4.930209,144.020547],[-5.097102,142.639637]] },
+    { id:9, ctaf:'124.9', hf:['3425','5565','8861'], ring:[[-9.340527,142.905077],[-9.291445,143.158353],[-8.987733,143.894437],[-7.165028,143.904524],[-6.496126,142.64513],[-5.097102,142.639637],[-5.100537,140.999882],[-6.252541,140.999986],[-6.389035,140.877076],[-6.585523,140.772706],[-6.81466,140.822145],[-7.038236,141.019212],[-9.132757,141.018997],[-9.293274,141.126304],[-9.248369,142.060503],[-9.17788,142.201952],[-9.351368,142.542528],[-9.341882,142.648272],[-9.340527,142.905077]] }
   ];
 
   /* projX/projY are SCREEN space (percent of the container). Nothing
@@ -9016,6 +9081,33 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function projY(lat){
     if (LMAP) return LMAP.latLngToContainerPoint([lat, 0]).y / LMAP.getSize().y * 100;
     return (VIEW.n - lat) / (VIEW.n - VIEW.s) * 100;
+  }
+
+  /* An area is only useful if you can read its limits and provenance,
+     so tapping one opens the demo's standard sheet with class, limits,
+     remark, AIP edition and - when the geometry is estimated - a plain
+     statement that it is. */
+  function openDanger(id){
+    var a = null;
+    for (var i = 0; i < DANGER.length; i++) if (DANGER[i].id === id) a = DANGER[i];
+    if (!a) return;
+    var h = '<div class="tedhint top">' + (a.cls === 'R' ? 'Restricted area' : 'Danger area')
+          + ' \u00b7 ' + a.cls + '-' + a.id + '</div><div class="tedlist">'
+      + '<div class="farow"><span class="fanm">Upper limit</span>'
+      +   '<span class="faq"><span class="l">' + (a.up || '\u2014') + '</span></span></div>'
+      + '<div class="farow"><span class="fanm">Lower limit</span>'
+      +   '<span class="faq"><span class="l">' + (a.lo || '\u2014') + '</span></span></div>';
+    if (a.r) h += '<div class="farow"><span class="fanm">Radius</span>'
+      +   '<span class="faq"><span class="l">' + a.r + ' NM</span></span></div>';
+    h += '</div>';
+    if (a.rk) h += '<div class="cnote">' + a.rk + '</div>';
+    if (a.ax) h += '<div class="cnote warnnote">Geometry is <b>estimated</b>, not taken from '
+      + 'published coordinates. Treat the boundary as indicative and check the AIP.</div>';
+    h += '<div class="cnote">' + a.ed + ' \u00b7 verify against the current AIRAC.</div>';
+    $('#dgrTitle').textContent = a.nm;
+    $('#dgrBody').innerHTML = h;
+    closeAll();
+    $('#dgrSheet').classList.add('on');
   }
 
   var NMX_setBase = null;
@@ -9053,23 +9145,49 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (!G) return;                      /* no Leaflet, no overlay */
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers();
 
-    /* ---- airspace and danger boxes ---- */
-    function box(kind, a){
-      var opt = (kind === 'dgr')
-        ? { color:'rgba(240,80,110,.75)', weight:1, fillColor:'#f0506e', fillOpacity:.10 }
-        : { color:'rgba(127,179,213,.8)', weight:1, dashArray:'4 3',
-            fillColor:'#7fb3d5', fillOpacity:.07 };
-      opt.interactive = false;
-      L.rectangle([[a.s, a.w], [a.n, a.e]], opt).addTo(G.box);
-      L.marker([a.n, a.w], {
-        interactive:false, keyboard:false,
-        icon: L.divIcon({ className:'nmx-di',
-          html:'<b class="' + kind + 'lb">' + a.id + '</b>',
-          iconSize:[0, 0], iconAnchor:[-4, -2] })
-      }).addTo(G.box);
+    /* ---- CTAF zones ---- */
+    function ringTop(ring){
+      var b = ring[0];
+      for (var i = 1; i < ring.length; i++) if (ring[i][0] > b[0]) b = ring[i];
+      return b;
     }
-    if (LAYERS.airspace) AIRSPACE.forEach(function(a){ box('asp', a); });
-    if (LAYERS.danger)   DANGER.forEach(function(a){ box('dgr', a); });
+    if (LAYERS.airspace){
+      CTAFZ.forEach(function(z){
+        L.polygon(z.ring, { color:'rgba(127,179,213,.8)', weight:1, dashArray:'4 3',
+                            fillColor:'#7fb3d5', fillOpacity:.05,
+                            interactive:false }).addTo(G.box);
+        var t = ringTop(z.ring);
+        L.marker(t, { interactive:false, keyboard:false,
+          icon: L.divIcon({ className:'nmx-di',
+            html:'<b class="asplb">CTAF ' + z.ctaf + '</b>',
+            iconSize:[0, 0], iconAnchor:[-4, -2] })
+        }).addTo(G.box);
+      });
+    }
+
+    /* ---- danger and restricted areas ----
+       Estimated geometry is drawn dashed and tagged with a tilde. It is
+       never allowed to look like a published boundary. */
+    if (LAYERS.danger){
+      DANGER.forEach(function(a){
+        var col = (a.cls === 'R') ? '#f0506e' : '#f0a500';
+        var opt = { color:col, weight: a.ax ? 1 : 1.5,
+                    dashArray: a.ax ? '3 4' : null,
+                    fillColor:col, fillOpacity: a.ax ? .05 : .10,
+                    interactive:true, bubblingMouseEvents:false };
+        var shape = a.c ? L.circle(a.c, L.extend({ radius: a.r * 1852 }, opt))
+                        : L.polygon(a.ring, opt);
+        shape.on('click', function(){ openDanger(a.id); });
+        shape.addTo(G.box);
+        var anchor = a.c ? [a.c[0], a.c[1]] : ringTop(a.ring);
+        L.marker(anchor, { interactive:false, keyboard:false,
+          icon: L.divIcon({ className:'nmx-di',
+            html:'<b class="dgrlb' + (a.ax ? ' ax' : '') + '">'
+               + (a.ax ? '~' : '') + a.cls + '-' + a.id + '</b>',
+            iconSize:[0, 0], iconAnchor:[-4, -2] })
+        }).addTo(G.box);
+      });
+    }
 
     /* ---- route legs ---- */
     if (LAYERS.route && ROUTE.length > 1){
@@ -9642,22 +9760,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
     LMAP.on('moveend zoomend resize viewreset', onIdle);
 
-    /* ---- diagnostic strip ------------------------------------------
-       Temporary. Two builds have now been shipped on inference; this
-       one reports what is actually happening. */
-    var dbgEl = document.createElement('div');
-    dbgEl.id = 'nmxDbg';
-    var mapEl = document.getElementById('map');
-    if (mapEl) mapEl.appendChild(dbgEl);
-    function nmxDbgPaint(){
-      if (!dbgEl) return;
-      dbgEl.textContent =
-        'v88  z' + (LMAP.getZoom() || 0).toFixed(1) +
-        '  mv' + nmxMoves + ' dr' + nmxDraws + ' mk' + nmxMarks +
-        '  leaflet-layers' +
-        (nmxErr ? '\nERR ' + nmxErr.slice(0, 70) : '');
-    }
-    nmxDbgPaint();
+    function nmxDbgPaint(){}   /* diagnostic strip removed - it did its job */
 
     /* ---- Zoom gestures ---------------------------------------------
        Leaflet's doubleClickZoom waits for a native dblclick. iOS
