@@ -16,6 +16,103 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v97 2026-07-31  Landscape locate button was a separate, broken
+                       copy of the portrait one. It set follow = true
+                       and never started the GPS watch - so with
+                       tracking off there was nothing to follow, no fix
+                       would ever arrive, and it said "Following
+                       aircraft" regardless. It was also one-way: no
+                       off, and no re-centre.
+                       Both buttons now run one shared cycle, Off ->
+                       Centred -> Follow, which starts the watch, arms a
+                       one-shot recentre so Centred acts on the first
+                       fix, and reports honestly - "acquiring GPS,
+                       centred on first fix" rather than claiming to
+                       follow something that is not there.
+                       The button state was driven by the raw follow
+                       flag, which stayed amber with no watch running.
+                       It now reflects the cycle: Centred draws as a
+                       tint, Follow filled, so the two live states are
+                       distinguishable.
+       v96 2026-07-31  Landscape HUD, three fixes.
+
+                       The light blue block under BASEMAP was the
+                       selected row with invisible text. .prow.sel
+                       (0,2,0) sets background:var(--accent-2) with dark
+                       text; .hud-panel .pb .prow.sel is more specific
+                       and overrode only the COLOUR - to the same light
+                       blue - leaving light blue on light blue. So "PNG
+                       vector (offline)" was there the whole time,
+                       painted on top of itself. Background cleared in
+                       the override. Same cascade trap as the terrain
+                       hint: a later, more specific rule that changes
+                       one property and inherits the rest.
+
+                       Rail glass: .rgrp was rgba(13,18,25,.84) with no
+                       blur while .hud-act and .hud-bar are
+                       rgba(13,18,25,.55) with a 10px blur, so REC/GPS/
+                       zoom read heavier and flatter than the other two
+                       bars. Matched, landscape only - portrait chrome
+                       is opaque by design.
+
+                       Tapping the map now dismisses the panel. Bound on
+                       the Leaflet container rather than #map, so the
+                       rail, strip and toolbar keep working while it is
+                       open.
+       v95 2026-07-31  Fuel additions sheet tidied. Each line was one
+                       right-aligned string with the imperial figure
+                       tacked on after a middot, so nothing lined up
+                       between rows - 20 L and 200 L started at
+                       different offsets, and so did 5.3 and 52.8 US
+                       gal. It read as three unrelated blocks.
+                       Now a 2x2 grid with column widths fixed in ch:
+                       metric left, imperial right, volume above weight.
+                       Every figure aligns down the whole list, so the
+                       three containers can be compared at a glance
+                       rather than parsed line by line. Scoped to this
+                       sheet, since the danger and CTAF sheets reuse
+                       .faq with a different shape. Middot separators
+                       and their now-dead CSS removed - the columns do
+                       that job. Header hint shortened to one line.
+                       Widest row measures 322 px against 375.
+       v94 2026-07-31  Two demo-era sources still in use after the real
+                       data landed.
+
+                       "Nearest" under Airports measured from the MAP
+                       CENTRE - nearest to wherever you last panned,
+                       which is not what the word means. Now measured
+                       from the GPS fix, falling back to the active
+                       waypoint and only then the view, with a caption
+                       saying which, so the list is never silently
+                       relative to something unexpected.
+
+                       "Enroute frequency not in this shell" was not a
+                       gap in the data. The leg row only looked for an
+                       RDO/CNTR entry on the two end fields, which exist
+                       for a handful. The enroute frequency for a leg is
+                       the CTAF zone it crosses, and those have been in
+                       the app since v91. Legs now list the zones
+                       crossed in the order flown, after any field RDO
+                       that genuinely applies - AYGA to AYMH reads
+                       CTAF 123.9, 120.1, 128.5 instead of a placeholder.
+                       Sampled along the leg, not tested at the ends, so
+                       a zone crossed in the middle is not missed.
+       v93 2026-07-31  Towered aerodromes are visually distinct. Not in
+                       v262, so this one is new - but it is DERIVED, not
+                       authored: a field is towered if the pack carries
+                       a published TWR frequency for it. Six do: AYNZ
+                       121.7, AYPY 118.1, AYGA 118.7, AYMD 118.1, AYMH
+                       120.5, AYTK 118.2. No hand-maintained list to
+                       drift out of date.
+                       The dot gains a separated outer ring, drawn with
+                       box-shadow so the marker's size is unchanged and
+                       the label collision maths is undisturbed, and the
+                       airfield card carries a TWR chip with the
+                       frequency.
+                       Deliberately NOT claimed: that everything else is
+                       non-towered. Only 15 of the 575 records carry any
+                       frequency at all, so no TWR entry means the pack
+                       has none, not that the field is uncontrolled.
        v92 2026-07-31  Three corrections, one of them a false statement.
 
                        "Geometry is estimated, not taken from published
@@ -1778,6 +1875,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fld.k-strip b{font-size:var(--t-2xs);color:var(--text-fainter)}
 .fld.k-fix i{width:8px;height:8px;border-radius:1px;background:#8de84a;transform:rotate(45deg)}
 .fld.k-fix b{color:#8de84a;opacity:.85}
+/* Towered aerodrome: the dot gains a separated outer ring, which is how
+   a controlled field reads on a chart against an uncontrolled one. The
+   ring is drawn with box-shadow so it does not change the dot's size or
+   disturb the label collision maths. */
+.fld.k-field.twr i{box-shadow:0 0 0 2px var(--bg,#0a0e13), 0 0 0 3.5px currentColor}
+.fld.k-field.twr{color:var(--good,#8de84a)}
+.fld.k-field.twr b{color:var(--good,#8de84a)}
+.apfrom{padding:2px var(--edge) 8px;font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--text-fainter)}
+.twrtag{display:none}
+.twrtag.on{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;
+  font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;letter-spacing:.04em;
+  color:var(--good,#8de84a);border:1px solid rgba(141,232,74,.5);
+  background:rgba(141,232,74,.10);vertical-align:middle}
+
 /* Navaid: hollow ring, following the chart convention rather than the
    filled dot used for aerodromes. */
 .fld.k-navaid i{width:9px;height:9px;border-radius:50%;background:none;
@@ -2383,6 +2495,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    is the area not covered by the frequency panel. */
 #hud{display:none}
 @media (orientation:landscape) and (max-height:500px){
+  /* .rgrp is rgba(13,18,25,.84) with no blur, while .hud-act and
+     .hud-bar are rgba(13,18,25,.55) with a 10px blur. Over the map the
+     rail read as a heavier, flatter object than the other two bars.
+     Matched here only - portrait chrome is opaque by design. */
+  .rgrp{background:rgba(13,18,25,.55);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+
   .chrome, .tabs, .rail, .acty, .drop, .drop.on, .card, .card.on,
   .setv, .setv.on, .ntv, .ntv.on, .ted, .ted.on, .spanel, .spanel.on,
   .pop, .pop.on, .scrim{display:none !important}
@@ -2439,6 +2558,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   width:var(--mod-b);display:flex;flex-direction:column;gap:var(--gut);z-index:20}
 /* buttons reuse the portrait rail .rgrp/.rb styling verbatim; only the
    landscape-specific states below are added */
+/* Centred is a tint, Follow is filled - otherwise the two live states
+   look identical. */
+.hud-ctl #hudCtr.on:not(.follow){background:rgba(240,176,32,.18);color:var(--accent)}
 .hud-ctl #hudCtr.follow{background:var(--accent);color:#0a0e13}
 .hud-ctl #hudRec.on{background:var(--bad);color:#fff}
 .hud-ctl #hudRec.on .tick{color:#fff}
@@ -2485,7 +2607,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .hud-panel .ptabs button.on{background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13}
 .hud-panel .pb .prow{width:100%;text-align:left;display:flex;align-items:center;gap:10px;
   padding:10px 0;border-bottom:1px solid var(--border);font-size:var(--t-sm);color:var(--text-2)}
-.hud-panel .pb .prow.sel{color:var(--accent-2);font-weight:700}
+/* .prow.sel (0,2,0) sets background:var(--accent-2) with dark text. This
+   rule is more specific and overrode only the COLOUR, leaving light blue
+   text on a light blue background - the selected basemap rendered as a
+   solid blank block. Clear the background here too. */
+.hud-panel .pb .prow.sel{background:none;color:var(--accent-2);font-weight:700}
 .hud-panel .pb .prow .ck{width:18px;height:18px;flex:0 0 auto;color:var(--good)}
 .hud-panel .pb .pl{font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;text-transform:uppercase;
   color:var(--text-fainter)}
@@ -2622,11 +2748,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fanm{flex:1 1 auto;min-width:0;font-size:var(--t-md);color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .faq{flex:0 0 auto;text-align:right;line-height:1.15}
+/* Additions readout: a 2x2 grid with fixed column widths in ch, so the
+   metric and imperial figures line up down the whole list instead of
+   each line being one right-aligned string that starts wherever its
+   own length puts it. Scoped to this sheet - the danger and CTAF
+   sheets reuse .faq with a different shape. */
+#fuelAdd .faq{display:grid;grid-template-columns:auto auto;
+  column-gap:14px;row-gap:3px;justify-items:end;align-items:baseline}
+#fuelAdd .faq span{display:block;font-family:var(--mono);font-weight:700;
+  white-space:nowrap;text-align:right;margin:0}
+#fuelAdd .faq .l,#fuelAdd .faq .k{min-width:6ch;font-size:var(--t-md)}
+#fuelAdd .faq .l{color:var(--text)}
+#fuelAdd .faq .k{color:var(--text-2)}
+#fuelAdd .faq .g,#fuelAdd .faq .p{min-width:11ch;font-size:var(--t-xs);
+  color:var(--text-fainter);letter-spacing:.02em}
+
 .faq .l,.faq .k{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
   color:var(--text);letter-spacing:.01em;white-space:nowrap}
 .faq .k{margin-top:3px;color:var(--text-2)}
-.faq i{font-style:normal;font-size:var(--t-xs);font-weight:700;color:var(--text-fainter)}
-.faq i::before{content:'\00b7';margin:0 5px}
 
 /* ---- Downloads --------------------------------------------- */
 .dlsum{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);
@@ -3152,7 +3291,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" style="width:11px;height:11px"><path d="M15 5l-7 7 7 7"/></svg>
       Map
     </button>
-    <div class="ttl"><b id="cardIcao"></b><span id="cardName"></span></div>
+    <div class="ttl"><b id="cardIcao"></b><span id="cardName"></span>
+      <span class="twrtag" id="cardTwr"></span></div>
     <button class="star" id="cardStar" aria-label="Favourite">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>
     </button>
@@ -3390,8 +3530,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <b>Fuel additions</b>
       <button class="x" id="fuelAddClose" aria-label="Close">&times;</button>
     </div>
-    <div class="tedhint top">Nominal capacities. Weights at 0.80&nbsp;kg/L &mdash;
-      check the density in use.</div>
+    <div class="tedhint top">Nominal capacities &middot; weights at 0.80&nbsp;kg/L</div>
     <div class="tedlist" id="fuelAddList"></div>
   </div>
 </div>
@@ -3473,7 +3612,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v92';
+  var VERSION = 'v97';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -5110,6 +5249,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var u = d.toUpperCase();
     return u.indexOf('TWR') >= 0 || u.indexOf('CTAF') >= 0 || u.indexOf('MTAF') >= 0;
   }
+  /* Which CTAF zones does this leg pass through, in order flown?
+     Sampled along the leg rather than tested at the ends, so a zone
+     crossed in the middle is not missed. */
+  function ctafAlong(a, b){
+    if (typeof CTAFZ === 'undefined' || !CTAFZ) return [];
+    function inRing(pt, ring){
+      var x = pt.lon, y = pt.lat, inside = false, n = ring.length;
+      for (var i = 0, j = n - 1; i < n; j = i++){
+        var xi = ring[i][1], yi = ring[i][0], xj = ring[j][1], yj = ring[j][0];
+        if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+      }
+      return inside;
+    }
+    var out = [], seen = {};
+    for (var s = 0; s <= 32; s++){
+      var p = interp(a, b, s / 32);
+      for (var z = 0; z < CTAFZ.length; z++){
+        var Z = CTAFZ[z];
+        if (!seen[Z.id] && inRing(p, Z.ring)){ seen[Z.id] = 1; out.push(Z); }
+      }
+    }
+    return out;
+  }
+
   function fqEnroute(fi){
     if (!fi) return [];
     return fi.freq.filter(function(r){
@@ -5148,13 +5311,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
       if (i < ROUTE.length - 1){
         var leg = T.legs[i];
+        /* The enroute frequency for a leg is the CTAF zone it passes
+           through. That data is real and country-wide; the old code
+           only looked for an RDO/CNTR entry on the two end fields,
+           which exists for a handful, hence "not in this shell". Field
+           RDO entries still come first where they exist - Lae RDO is
+           genuinely what you call - then the zones crossed, in order. */
         var en = fqEnroute(FIELD_INFO[p.id]).concat(fqEnroute(FIELD_INFO[ROUTE[i+1].id]));
+        ctafAlong(p, ROUTE[i+1]).forEach(function(z){
+          en.push(['CTAF', z.ctaf]);
+        });
         var seen = {}, uniq = [];
         en.forEach(function(r){ if (!seen[r[1]]){ seen[r[1]] = 1; uniq.push(r); } });
         h += '<div class="fqleg"><span class="d">' + (leg ? leg.nm.toFixed(0) + ' nm' : '') + '</span>'
           +  '<span class="e">' + (uniq.length
                ? uniq.map(function(r){ return r[0] + ' ' + r[1]; }).join('  \u00b7  ')
-               : 'Enroute frequency not in this shell') + '</span></div>';
+               : 'No enroute frequency published for this leg') + '</span></div>';
       }
     });
     return h + '<div class="cnote">Aerodrome frequencies are from the live NM Plotter dataset. '
@@ -6326,6 +6498,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var fi = f.id ? FIELD_INFO[f.id] : null;
     $('#cardIcao').textContent = f.id || label(f);
     $('#cardName').textContent = f.nm;
+    /* Only claims what is published. No TWR frequency in the pack means
+       the pack does not carry one - it does not mean uncontrolled. */
+    var tw = twrFreq(f);
+    var twEl = $('#cardTwr');
+    twEl.textContent = tw ? ('TWR ' + tw) : '';
+    twEl.classList.toggle('on', !!tw);
     $('#cardStar').classList.toggle('on', !!(f.id && cardFav[f.id]));
 
     var inRoute = ROUTE.some(function(p){ return p.id === f.id; });
@@ -8190,8 +8368,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var V = (typeof VIEW !== 'undefined' && VIEW) ? VIEW
           : { n:-1.5, s:-11.0, w:140.0, e:156.0 };
     var rec = (typeof recents !== 'undefined' && recents) ? recents : [];
-    var here = { lat:(V.n + V.s) / 2, lon:(V.w + V.e) / 2 };
+    /* "Nearest" measured from the MAP CENTRE is nearest to wherever you
+       last panned, which is not what the word means. Prefer the GPS fix,
+       then the active waypoint, and only then fall back to the view -
+       and say which, so the list is never silently relative to
+       something unexpected. */
+    var here, hereFrom;
+    if (GPSFIX){ here = { lat:GPSFIX.lat, lon:GPSFIX.lon }; hereFrom = 'your position'; }
+    else if (ROUTE && ROUTE.length){
+      var wp = ROUTE[Math.min(Math.max(toWpt, 0), ROUTE.length - 1)];
+      here = { lat:wp.lat, lon:wp.lon }; hereFrom = label(wp);
+    } else {
+      here = { lat:(V.n + V.s) / 2, lon:(V.w + V.e) / 2 }; hereFrom = 'map centre';
+    }
     var modes = [['near','Nearest'],['all','All'],['fav','Favourites'],['rec','Recent']];
+    var hereNote = (npMode === 'near')
+      ? '<div class="apfrom">Distances from ' + hereFrom + '</div>' : '';
 
     var items = DB.filter(function(p){ return p.cat === 'field' || p.cat === 'strip'; });
     var aq = (typeof apQuery === 'string') ? apQuery.trim().toUpperCase() : '';
@@ -8226,7 +8418,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           + '<div class="npseg">' + modes.map(function(m){
       return '<button data-np="' + m[0] + '"' + (npMode === m[0] ? ' class="on"' : '') + '>'
            + m[1] + '</button>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' + hereNote;
 
     if (!items.length){
       h += '<div class="cempty">' + (npMode === 'fav' ? 'No favourites yet \u2014 star a field on its card'
@@ -8568,8 +8760,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
          + 'stroke-linejoin="round" stroke-linecap="round">' + ADD_IC[a.i] + '</svg></span>'
          + '<span class="fanm">' + a.t + '</span>'
          + '<span class="faq">'
-         + '<span class="l">' + a.l + '<i>' + a.g + '</i></span>'
-         + '<span class="k">' + a.k + '<i>' + a.p + '</i></span></span></div>';
+         + '<span class="l">' + a.l + '</span><span class="g">' + a.g + '</span>'
+         + '<span class="k">' + a.k + '</span><span class="p">' + a.p + '</span>'
+         + '</span></div>';
     });
     $('#fuelAddList').innerHTML = h;
   })();
@@ -9065,24 +9258,49 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      signal on any GPS-equipped device. Foreground only, and advisory
      - it is not a navigation source. */
   var LOC_STATES = ['Off', 'Centred', 'Follow'];
-  var locState = 0;
-  $('#tbLoc').addEventListener('click', function(){
+  var locState = 0, locCentreOnFix = false;
+
+  /* One cycle shared by the portrait toolbar button and the landscape
+     rail button. They used to be separate: landscape set follow = true
+     and never started the watch, so with tracking off there was nothing
+     to follow, no fix would ever arrive, and it still said "Following
+     aircraft". Two paths for one control is how they drift. */
+  function locSync(){
+    var a = $('#tbLoc'), b = $('#hudCtr');
+    if (a) a.classList.toggle('on', locState > 0);
+    if (b) b.classList.toggle('on', locState > 0);
+  }
+
+  function cycleLocate(){
     locState = (locState + 1) % LOC_STATES.length;
-    $('#tbLoc').classList.toggle('on', locState > 0);
+    locSync();
+
     if (locState === 0){
+      follow = false; locCentreOnFix = false;
       NMX_GPS.stop();
       toast('Position tracking off');
       return;
     }
+
     follow = (locState === 2);
+
     if (!NMX_GPS.running()){
+      locCentreOnFix = true;
       NMX_GPS.start();
-      toast('Acquiring GPS\u2026');
-    } else {
-      if (GPSFIX) centreOn(GPSFIX.lat, GPSFIX.lon);
-      toast('Own position: ' + LOC_STATES[locState]);
+      toast('Acquiring GPS \u2014 ' + LOC_STATES[locState].toLowerCase() + ' on first fix');
+      return;
     }
-  });
+    if (GPSFIX){
+      centreOn(GPSFIX.lat, GPSFIX.lon);
+      try { renderMap(); paintShip(); if (hudOn()) drawHud(); } catch(_){ }
+      toast(locState === 2 ? 'Following aircraft' : 'Centred on aircraft');
+    } else {
+      locCentreOnFix = true;
+      toast('Acquiring GPS\u2026');
+    }
+  }
+
+  $('#tbLoc').addEventListener('click', cycleLocate);
 
   /* ---------- Layout metrics overlay ---------- */
   var mxOn = false;
@@ -9331,6 +9549,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
     return nmxG;
   }
+  /* Towered is derived from the data: a field is towered if the pack
+     carries a published TWR frequency for it. Six do - AYGA, AYMD,
+     AYMH, AYNZ, AYPY, AYTK.
+
+     Only 15 of the 575 records carry any frequency at all, so the
+     absence of a TWR entry means "not published in this dataset", NOT
+     "non-towered". The marker states the first and stays silent on the
+     second. */
+  function twrFreq(p){
+    var f = p && p.fq;
+    if (!f) return null;
+    for (var i = 0; i < f.length; i++) if (f[i][0] === 'TWR') return f[i][2];
+    return null;
+  }
+
   function fldIcon(html){
     return L.divIcon({ className:'nmx-di', html:html, iconSize:[0, 0], iconAnchor:[0, 0] });
   }
@@ -9510,7 +9743,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
       var mk = L.marker([p.lat, p.lon], {
         keyboard:false,
-        icon: fldIcon('<div class="fld k-' + p.cat + '"><i'
+        icon: fldIcon('<div class="fld k-' + p.cat + (twrFreq(p) ? ' twr' : '') + '"><i'
                     + (tint ? ' style="' + tint + '"' : '') + '></i>' + lab + '</div>')
       });
       mk.on('click', function(){ openCard(p.id); });
@@ -9726,8 +9959,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function drawHud(){
     $('#hudAct').innerHTML = hudActHTML();
     var c = $('#hudCtr');
-    c.classList.toggle('follow', follow);
-    c.classList.toggle('lock', !follow);
+    /* was driven by the raw follow flag, which stayed amber even with no
+       fix and no watch running. Reflect the actual cycle state instead. */
+    c.classList.toggle('on', locState > 0);
+    c.classList.toggle('follow', locState === 2);
     syncHudRec();
   }
 
@@ -9735,11 +9970,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   $('#hudOut').addEventListener('click', function(){ viewZoom(1.4); paintShip(); });
   $('#hudCtr').addEventListener('click', function(e){
     e.stopPropagation();
-    follow = true;
-    if (ship && ship.lat !== undefined){ centreOn(ship.lat, ship.lon); }
-    drawHud();
-    requestAnimationFrame(function(){ renderMap(); paintShip(); });
-    toast('Following aircraft');
+    cycleLocate();
   });
 
   /* record: shares the same timer state as the portrait rail button */
@@ -9851,6 +10082,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     b.addEventListener('click', function(){ openHudPanel(b.getAttribute('data-hp')); });
   });
   $('#hudPanelX').addEventListener('click', closeHudPanel);
+
+  /* Tapping the map dismisses the panel. Bound on the Leaflet container
+     rather than #map so the rail, the strip and the toolbar - which sit
+     outside it - keep working while the panel is open. */
+  (function(){
+    var mapEl = document.getElementById('lmap');
+    if (!mapEl) return;
+    mapEl.addEventListener('click', function(){
+      if (hudPanelKey) closeHudPanel();
+    }, true);
+  })();
 
   /* rotating into landscape starts the sim + HUD; leaving stops it */
   function onOrient(){
@@ -10163,7 +10405,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                gs:(GPSFIX.gs == null ? 0 : GPSFIX.gs),
                alt:(GPSFIX.alt == null ? AC.alt : GPSFIX.alt),
                acc:GPSFIX.acc };
+      /* Follow recentres continuously; Centred recentres once, on the
+         first fix after the button was pressed. */
       if (follow) centreOn(GPSFIX.lat, GPSFIX.lon);
+      else if (locCentreOnFix){ centreOn(GPSFIX.lat, GPSFIX.lon); }
+      locCentreOnFix = false;
 
       /* a Direct To asked for before we had an origin */
       if (dctPending){
