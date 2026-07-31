@@ -16,6 +16,30 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v90 2026-07-31  Navaids and procedure fixes, real. The six
+                       invented "enroute fixes" with round-number
+                       coordinates are gone, replaced by 49 procedure
+                       fixes from ENR 4.3.1/4.3.2 - already transcribed
+                       and Danny-verified for v262 - each carrying its
+                       role (IAF, IF, FAF, MAPT, MATF, MAF, HOLD) and
+                       the procedure it belongs to. AYMD 14, AYPY 12,
+                       AYNZ 11, AYGA 7, AYMH 5.
+                       32 navaid records from v262's 37. Seven
+                       identifiers appeared twice because a site has
+                       both an NDB and a VOR-DME on the same ident.
+                       Five are co-sited within 800 m and merge to one
+                       record reading NDB/VOR-DME; Kavieng (3.3 km) and
+                       Port Moresby (2.2 km) are genuinely separate and
+                       stay separate, because merging them would have
+                       moved a navaid by up to 1.8 NM.
+                       TOK collided with the airfield Torokina 200 NM
+                       away, so the navaid keys as TOK NAV and still
+                       labels TOK on the map. VOR frequencies are stored
+                       in kHz and now read as MHz - 113900 was rendering
+                       as if it were an NDB frequency.
+                       Navaids layer added to the Layers popover; the
+                       dead "proc" toggle removed rather than shipped
+                       doing nothing.
        v89 2026-07-31  The airspace layers are real. The app had been
                        drawing two rectangles labelled with genuine PNG
                        designators - D-AYD903 and R-AYR921 - at
@@ -1690,6 +1714,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fld.k-strip b{font-size:var(--t-2xs);color:var(--text-fainter)}
 .fld.k-fix i{width:8px;height:8px;border-radius:1px;background:#8de84a;transform:rotate(45deg)}
 .fld.k-fix b{color:#8de84a;opacity:.85}
+/* Navaid: hollow ring, following the chart convention rather than the
+   filled dot used for aerodromes. */
+.fld.k-navaid i{width:9px;height:9px;border-radius:50%;background:none;
+  border:1.5px solid var(--navaid,#b48ce0);box-shadow:none}
+.fld.k-navaid b{font-family:var(--mono);font-size:var(--t-2xs);
+  color:var(--navaid,#b48ce0);opacity:.9}
 .fld.k-mine i{width:8px;height:8px;border-radius:2px;background:var(--accent)}
 .fld.k-mine b{color:var(--accent);opacity:.9}
 /* a route point that is not in the database - a pasted coordinate.
@@ -3379,7 +3409,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v89';
+  var VERSION = 'v90';
   var BUILD   = '2026-07-31';
 
   var $  = function(s){ return document.querySelector(s); };
@@ -4111,16 +4141,102 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { id:'WED', ia:'WED', nm:'Wedau', cat:'strip', lat:-10.0954, lon:150.0826, el:90, mu:'Wedau', rk:4 }
   ];
 
-  /* Enroute fixes and personal waypoints remain DEMO coordinates,
-     pending ENR 4.3 / 4.4 transcription and Danny's own list. */
-  var DB_EXTRA = [
-    { id:'TESEM', nm:'Enroute fix',   cat:'fix', lat:-6.3400, lon:146.1200 },
-    { id:'IKERU', nm:'Enroute fix',   cat:'fix', lat:-5.9500, lon:144.8000 },
-    { id:'BULOM', nm:'Enroute fix',   cat:'fix', lat:-6.7100, lon:146.9800 },
-    { id:'MAROS', nm:'Enroute fix',   cat:'fix', lat:-6.9500, lon:146.2000 },
-    { id:'KAGUL', nm:'Enroute fix',   cat:'fix', lat:-5.5200, lon:145.1000 },
-    { id:'WAPEN', nm:'Enroute fix',   cat:'fix', lat:-5.6800, lon:143.9500 },
+  /* ---- Navaids ------------------------------------------------------
+     37 from v262, with type and frequency. NDB, NDB-DME and VOR-DME. */
+  var NAVAIDS = [
+    { id:'BUK', nm:'Buka', cat:'navaid', lat:-5.44302, lon:154.66701, ty:'NDB-DME', fq:'269 kHz' },
+    { id:'DAU', nm:'Daru', cat:'navaid', lat:-9.07502, lon:143.213, ty:'NDB-DME', fq:'290 kHz' },
+    { id:'FIN', nm:'Finschhafen', cat:'navaid', lat:-6.61498, lon:147.858, ty:'NDB-DME', fq:'232 kHz' },
+    { id:'GA', nm:'Goroka', cat:'navaid', lat:-6.07782, lon:145.39, ty:'NDB', fq:'173 kHz' },
+    { id:'GBE', nm:'Gobe', cat:'navaid', lat:-6.89032, lon:143.679, ty:'NDB-DME', fq:'215 kHz' },
+    { id:'GNY', nm:'Gurney', cat:'navaid', lat:-10.3158, lon:150.362, ty:'NDB/VOR-DME', fq:'115.6 MHz · 162 kHz' },
+    { id:'GUA', nm:'Girua', cat:'navaid', lat:-8.73611, lon:148.254, ty:'NDB-DME', fq:'224 kHz' },
+    { id:'HKN', nm:'Hoskins', cat:'navaid', lat:-5.45903, lon:150.414, ty:'NDB-DME', fq:'251 kHz' },
+    { id:'JSN', nm:'Jackson', cat:'navaid', lat:-9.37615, lon:147.177, ty:'NDB', fq:'380 kHz' },
+    { id:'KAV VOR', lb:'KAV', nm:'Kavieng', cat:'navaid', lat:-2.60383, lon:150.83701, ty:'VOR-DME', fq:'116.4 MHz' },
+    { id:'KAV NDB', lb:'KAV', nm:'Kavieng', cat:'navaid', lat:-2.58651, lon:150.813, ty:'NDB', fq:'368 kHz' },
+    { id:'KIK', nm:'Kikori', cat:'navaid', lat:-7.42747, lon:144.25101, ty:'NDB', fq:'308 kHz' },
+    { id:'KIU', nm:'Kiunga', cat:'navaid', lat:-6.1216, lon:141.287, ty:'NDB-DME', fq:'169 kHz' },
+    { id:'KRM', nm:'Kerema', cat:'navaid', lat:-7.96262, lon:145.77499, ty:'NDB-DME', fq:'401 kHz' },
+    { id:'KUB', nm:'Kubuna', cat:'navaid', lat:-8.69305, lon:146.755, ty:'NDB', fq:'166 kHz' },
+    { id:'KUT', nm:'Kumul Platform', cat:'navaid', lat:-8.06435, lon:144.561, ty:'NDB', fq:'174 kHz' },
+    { id:'LAE', nm:'Lae', cat:'navaid', lat:-6.73727, lon:146.998, ty:'NDB', fq:'388 kHz' },
+    { id:'LHR', nm:'Kunaye', cat:'navaid', lat:-3.04482, lon:152.62601, ty:'NDB', fq:'218 kHz' },
+    { id:'MD', nm:'Madang', cat:'navaid', lat:-5.21163, lon:145.77699, ty:'NDB/VOR-DME', fq:'116.3 MHz · 362 kHz' },
+    { id:'MH', nm:'Mount Hagen', cat:'navaid', lat:-5.83787, lon:144.30901, ty:'NDB-DME', fq:'169 kHz' },
+    { id:'MIS', nm:'Misima', cat:'navaid', lat:-10.6882, lon:152.83501, ty:'NDB', fq:'218 kHz' },
+    { id:'MOE', nm:'Momote', cat:'navaid', lat:-2.06142, lon:147.42599, ty:'NDB-DME', fq:'212 kHz' },
+    { id:'MOR', nm:'Moro', cat:'navaid', lat:-6.36287, lon:143.254, ty:'NDB-DME', fq:'164 kHz' },
+    { id:'NZ', nm:'Nadzab', cat:'navaid', lat:-6.56833, lon:146.709, ty:'NDB/VOR-DME', fq:'113.9 MHz · 162 kHz' },
+    { id:'OKT', nm:'Ok Tedi', cat:'navaid', lat:-5.4099, lon:141.319, ty:'NDB-DME', fq:'163 kHz' },
+    { id:'PRE', nm:'Parer', cat:'navaid', lat:-9.32667, lon:147.14, ty:'NDB', fq:'395 kHz' },
+    { id:'PY VOR', lb:'PY', nm:'Port Moresby', cat:'navaid', lat:-9.45296, lon:147.215, ty:'VOR-DME', fq:'117 MHz' },
+    { id:'PY NDB', lb:'PY', nm:'Port Moresby', cat:'navaid', lat:-9.46105, lon:147.233, ty:'NDB', fq:'368 kHz' },
+    { id:'TOK NAV', lb:'TOK', nm:'Tokua', cat:'navaid', lat:-4.3465, lon:152.39799, ty:'NDB/VOR-DME', fq:'113.6 MHz · 227 kHz' },
+    { id:'TVI', nm:'Tavai', cat:'navaid', lat:-9.71797, lon:147.472, ty:'NDB', fq:'350 kHz' },
+    { id:'VNO', nm:'Vanimo', cat:'navaid', lat:-2.6789, lon:141.30299, ty:'NDB-DME', fq:'257 kHz' },
+    { id:'WK', nm:'Wewak', cat:'navaid', lat:-3.58352, lon:143.67599, ty:'NDB/VOR-DME', fq:'116.6 MHz · 336 kHz' }
+  ];
 
+  /* ---- Procedure fixes ---------------------------------------------
+     49 from ENR 4.3.1 / 4.3.2, already transcribed and verified for
+     v262. Each carries its role in the procedure (IAF, IF, FAF, MAPT,
+     MATF, MAF, HOLD) and the procedure it belongs to. These sit at true
+     lat/lon; the plate supplies tracks, altitudes and sequence. */
+  var PROCFIX = [
+    { id:'TESEM', nm:'AYPY ILS 32R', cat:'fix', lat:-9.460833, lon:147.232500, role:'IAF/HOLD', ap:'AYPY' },
+    { id:'YPYST', nm:'AYPY RNAV 32R', cat:'fix', lat:-9.380683, lon:147.182919, role:'MATF', ap:'AYPY' },
+    { id:'YPYSM', nm:'AYPY RNAV 32R', cat:'fix', lat:-9.476325, lon:147.241975, role:'MAPT', ap:'AYPY' },
+    { id:'YPYSF', nm:'AYPY RNAV 32R', cat:'fix', lat:-9.533744, lon:147.277425, role:'FAF', ap:'AYPY' },
+    { id:'YPYSH', nm:'AYPY RNAV 32R', cat:'fix', lat:-9.578206, lon:147.147314, role:'MAF', ap:'AYPY' },
+    { id:'ISLOK', nm:'AYPY RNAV 32R', cat:'fix', lat:-9.632806, lon:147.338636, role:'IF/IAF', ap:'AYPY' },
+    { id:'YPYNF', nm:'AYPY RNAV 14L', cat:'fix', lat:-9.361511, lon:147.171086, role:'FAF', ap:'AYPY' },
+    { id:'YPYNZ', nm:'AYPY RNAV 14L', cat:'fix', lat:-9.390061, lon:147.188711, role:'SDF', ap:'AYPY' },
+    { id:'YPYNM', nm:'AYPY RNAV 14L', cat:'fix', lat:-9.430858, lon:147.213903, role:'MAPT', ap:'AYPY' },
+    { id:'YPYNT', nm:'AYPY RNAV 14L', cat:'fix', lat:-9.502236, lon:147.257975, role:'MATF', ap:'AYPY' },
+    { id:'YPYNH', nm:'AYPY RNAV 14L', cat:'fix', lat:-9.518744, lon:147.127589, role:'MAF', ap:'AYPY' },
+    { id:'VIMIB', nm:'AYPY RNAV 14L', cat:'fix', lat:-9.275856, lon:147.118225, role:'IF/IAF', ap:'AYPY' },
+    { id:'YNZEI', nm:'AYNZ RNAV 27', cat:'fix', lat:-6.586811, lon:146.922956, role:'IF', ap:'AYNZ' },
+    { id:'YNZEZ', nm:'AYNZ RNAV 27', cat:'fix', lat:-6.583214, lon:146.881244, role:'SDF', ap:'AYNZ' },
+    { id:'YNZEF', nm:'AYNZ RNAV 27', cat:'fix', lat:-6.578172, lon:146.822850, role:'FAF', ap:'AYNZ' },
+    { id:'YNZEM', nm:'AYNZ RNAV 27', cat:'fix', lat:-6.570769, lon:146.737236, role:'MAPT', ap:'AYNZ' },
+    { id:'YNZEH', nm:'AYNZ RNAV 27', cat:'fix', lat:-6.563542, lon:146.653819, role:'MATF', ap:'AYNZ' },
+    { id:'YNZWA', nm:'AYNZ RNAV 09', cat:'fix', lat:-6.696111, lon:146.106683, role:'IAF', ap:'AYNZ' },
+    { id:'WESFI', nm:'AYNZ RNAV 09', cat:'fix', lat:-6.550439, lon:146.407517, role:'IAF', ap:'AYNZ' },
+    { id:'YNZWI', nm:'AYNZ RNAV 09', cat:'fix', lat:-6.554300, lon:146.547397, role:'IF', ap:'AYNZ' },
+    { id:'YNZWF', nm:'AYNZ RNAV 09', cat:'fix', lat:-6.561544, lon:146.630811, role:'FAF', ap:'AYNZ' },
+    { id:'YNZWM', nm:'AYNZ RNAV 09', cat:'fix', lat:-6.568867, lon:146.715258, role:'MAPT', ap:'AYNZ' },
+    { id:'YNZWH', nm:'AYNZ RNAV 09', cat:'fix', lat:-6.576083, lon:146.798678, role:'MATF', ap:'AYNZ' },
+    { id:'YMDNA', nm:'AYMD RNAV 25', cat:'fix', lat:-5.063208, lon:145.967194, role:'IAF', ap:'AYMD' },
+    { id:'YMDNC', nm:'AYMD RNAV 25', cat:'fix', lat:-5.137464, lon:146.055125, role:'IAF', ap:'AYMD' },
+    { id:'YMDND', nm:'AYMD RNAV 25', cat:'fix', lat:-5.245714, lon:146.015606, role:'IAF', ap:'AYMD' },
+    { id:'YMDNI', nm:'AYMD RNAV 25', cat:'fix', lat:-5.163294, lon:145.958269, role:'IF', ap:'AYMD' },
+    { id:'YMDNF', nm:'AYMD RNAV 25', cat:'fix', lat:-5.184808, lon:145.877550, role:'FAF', ap:'AYMD' },
+    { id:'YMDNM', nm:'AYMD RNAV 25', cat:'fix', lat:-5.207039, lon:145.794097, role:'MAPT', ap:'AYMD' },
+    { id:'YMDWD', nm:'AYMD RNAV 07', cat:'fix', lat:-5.393931, lon:145.622708, role:'IAF', ap:'AYMD' },
+    { id:'YMDWE', nm:'AYMD RNAV 07', cat:'fix', lat:-5.339561, lon:145.521269, role:'IAF', ap:'AYMD' },
+    { id:'YMDWG', nm:'AYMD RNAV 07', cat:'fix', lat:-5.225475, lon:145.537550, role:'IAF', ap:'AYMD' },
+    { id:'YMDWI', nm:'AYMD RNAV 07', cat:'fix', lat:-5.294169, lon:145.610708, role:'IF', ap:'AYMD' },
+    { id:'YMDWF', nm:'AYMD RNAV 07', cat:'fix', lat:-5.256333, lon:145.685231, role:'FAF', ap:'AYMD' },
+    { id:'YMDWZ', nm:'AYMD RNAV 07', cat:'fix', lat:-5.232569, lon:145.732025, role:'SDF', ap:'AYMD' },
+    { id:'YMDWM', nm:'AYMD RNAV 07', cat:'fix', lat:-5.213644, lon:145.769292, role:'MAPT', ap:'AYMD' },
+    { id:'YMDWH', nm:'AYMD RNAV 07', cat:'fix', lat:-5.175786, lon:145.843792, role:'MAHF', ap:'AYMD' },
+    { id:'YMHEA', nm:'AYMH RNAV proc A', cat:'fix', lat:-5.611569, lon:144.563975, role:'IAF', ap:'AYMH' },
+    { id:'YMHEB', nm:'AYMH RNAV proc A', cat:'fix', lat:-5.819050, lon:144.589378, role:'IAF', ap:'AYMH' },
+    { id:'YMHEI', nm:'AYMH RNAV proc A', cat:'fix', lat:-5.767586, lon:144.503206, role:'IF', ap:'AYMH' },
+    { id:'YMHEF', nm:'AYMH RNAV proc A', cat:'fix', lat:-5.765669, lon:144.419622, role:'FAF', ap:'AYMH' },
+    { id:'YMHEM', nm:'AYMH RNAV proc A', cat:'fix', lat:-5.827550, lon:144.306658, role:'MAPT', ap:'AYMH' },
+    { id:'YGASA', nm:'AYGA RNAV 35L', cat:'fix', lat:-6.477211, lon:145.504133, role:'IAF', ap:'AYGA' },
+    { id:'YGASI', nm:'AYGA RNAV 35L', cat:'fix', lat:-6.330625, lon:145.413050, role:'IF', ap:'AYGA' },
+    { id:'YGASF', nm:'AYGA RNAV 35L', cat:'fix', lat:-6.252036, lon:145.406156, role:'FAF', ap:'AYGA' },
+    { id:'YGASG', nm:'AYGA RNAV 35L', cat:'fix', lat:-6.225853, lon:145.403858, role:'SDF', ap:'AYGA' },
+    { id:'YGASH', nm:'AYGA RNAV 35L', cat:'fix', lat:-6.251275, lon:145.511700, role:'MATF', ap:'AYGA' },
+    { id:'YGASY', nm:'AYGA RNAV 35L', cat:'fix', lat:-6.142067, lon:145.396511, role:'MAPT', ap:'AYGA' },
+    { id:'YGASZ', nm:'AYGA RNAV 35L', cat:'fix', lat:-6.155167, lon:145.397661, role:'MAPT', ap:'AYGA' }
+  ];
+
+  /* Personal waypoints remain Danny's own list, entered by hand. */
+  var DB_EXTRA = [
     { id:'LAE BASE',    nm:'Company base',      cat:'mine', lat:-6.7338, lon:146.9998 },
     { id:'ANGAU PAD',   nm:'Angau hospital',    cat:'mine', lat:-6.7280, lon:146.9910 },
     { id:'RIDGE GATE',  nm:'Markham valley',    cat:'mine', lat:-6.4500, lon:146.5000 }
@@ -4129,7 +4245,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* One searchable list. Personal waypoints first so a typed match on
      your own name wins over a similarly-named strip. */
   var DB = DB_EXTRA.filter(function(p){ return p.cat === 'mine'; })
-            .concat(AF, DB_EXTRA.filter(function(p){ return p.cat !== 'mine'; }));
+            .concat(AF, NAVAIDS, PROCFIX,
+                    DB_EXTRA.filter(function(p){ return p.cat !== 'mine'; }));
   var CAT_NM = { field:'Fields', fix:'Fixes', strip:'Strips &amp; villages', mine:'My waypoints' };
   /* Storage owns the whole personal-waypoint set once it exists, so a
      rename or a delete cannot leave a seeded copy behind. */
@@ -8941,7 +9058,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var LAYERS = {
     base:'png', terrain:false,
     fields:true, strips:false, fixes:false, mine:true,
-    route:true, airspace:false, danger:false, wxcat:false
+    route:true, airspace:false, danger:false, wxcat:false,
+    navaid:false
   };
   var LAY_KEY = 'nmp.iphone.layers';
   (function(){
@@ -8957,7 +9075,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       d:'<path d="M12 4l8 15H4z"/>' },
     strips: { t:'Strips &amp; villages',
       d:'<circle cx="12" cy="12" r="3.2"/><path d="M12 4.4v2M12 17.6v2M4.4 12h2M17.6 12h2"/>' },
-    fixes:  { t:'Enroute fixes',
+    fixes:  { t:'Procedure fixes',
       d:'<path d="M12 3.2l2.3 6.5 6.5 2.3-6.5 2.3-2.3 6.5-2.3-6.5L3.2 12l6.5-2.3z"/>' },
     mine:   { t:'My waypoints',
       d:'<path d="M12 21.2s6.4-5.9 6.4-10.6a6.4 6.4 0 1 0-12.8 0C5.6 15.3 12 21.2 12 21.2z"/><circle cx="12" cy="10.4" r="2.2"/>' },
@@ -9016,13 +9134,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var OVERLAYS = [
     ['fields', true], ['strips', true], ['fixes',  true], ['mine',  true],
     ['route',  true], ['airspace', true], ['danger', true], ['wxcat',  true],
-    ['navaid', false], ['proc',  false]
+    ['navaid', true]
   ];
   var lastLabelMode = (SET.labels === 'off') ? 'auto' : SET.labels;
 
-  /* Demo geometry: boxes in degrees, shape only, NOT AIP data.
-     The real build reads PNG_CTA / PNG_TMA_SECTORS and the ENR 5.1
-     danger and restricted area coordinates. */
   /* ---- Danger and restricted areas -------------------------------
      Lifted from v262. Every record carries its AIP edition, and `ax`
      marks the four whose geometry is estimated rather than taken from
@@ -9228,7 +9343,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
 
     var drawn = 0;
-    var show = { field:LAYERS.fields, strip:LAYERS.strips, fix:LAYERS.fixes, mine:LAYERS.mine };
+    var show = { field:LAYERS.fields, strip:LAYERS.strips, fix:LAYERS.fixes,
+                 mine:LAYERS.mine, navaid:LAYERS.navaid };
     DB.forEach(function(p){
       if (!show[p.cat]) return;
       var ranked = (p.rk != null);
