@@ -16,6 +16,202 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v132 2026-08-01 FREQUENCY WINDOW, replacing the compact panel.
+
+                       Floats over the map, fixed top right, so the map
+                       keeps its full height instead of being pushed
+                       down. The radio button in the chrome toggles it.
+                       Two blocks, the shape of the old build's window:
+                       AREA CTAF for where you are now, resolved by
+                       testing the GPS fix against the zone rings, and
+                       NEXT FREQUENCY for the next route point that
+                       actually has one, with its distance. Tap any
+                       frequency to copy. A link opens the full
+                       route-order list rather than duplicating it here.
+
+                       Distance is measured from the GPS fix, or the
+                       active waypoint when there is none - the old
+                       version showed 7278 nm because it measured to a
+                       field on the other side of the world. If there is
+                       no route it says so instead of printing a number.
+
+                       Found while building it: allFreqFor only ever read
+                       FIELD_INFO, which has 6 fields - but the airfield
+                       pack carries published frequencies under `fq` for
+                       15. Nine fields' frequencies were sitting in the
+                       data and never displayed anywhere in the app.
+                       Now merged, deduplicated by value. AYBK, AYDU,
+                       AYGN, AYHK, AYKM, AYKV, AYMO, AYVN and AYWK gain
+                       their frequencies everywhere - card, route
+                       walkthrough, window.
+
+                       Two clean-ups the compact removal exposed: it had
+                       left an orphaned `.dgrip{display:none}` which
+                       would have hidden every resize grip in the app,
+                       plus three other dead rules. And fqWin was read by
+                       closeAll before being assigned - guarded, so
+                       harmless, but hoisted to the top where it belongs.
+       v131 2026-08-01 The memory line is now set as one: its own card at
+                       the top of Holds, centred, 15px against 13px body,
+                       split across two lines with the second half - the
+                       part that earns the tab existing - in amber.
+                       Also removed the "degrees" hint from the two hold
+                       course editors. Worth being clear that this is a
+                       no-op on screen: openQk returns before it sets
+                       that label whenever the field is a wheel, so it
+                       had already stopped rendering in v130. Cleanup so
+                       nobody later assumes it shows.
+       v130 2026-08-01 Hold courses are wheels now, not a keyboard. A
+                       heading is continuous, so it gets the same control
+                       the ETD does - 234 is quicker to dial than to type
+                       with one hand.
+                       Two wheels, tens and units, the way a heading is
+                       read aloud: "two three four" is 23 and 4. Each
+                       wheel stays short, 36 rows and 10, where one
+                       360-row wheel would be a very long spin. Quick
+                       buttons for minus 10, plus 10 and Reverse, which
+                       is the one you actually want when ATC gives the
+                       outbound instead of the inbound.
+                       Nothing to validate, since the wheels only contain
+                       legal values - and 360 wraps to 000 rather than
+                       being rejected.
+       v129 2026-08-01 Layers menu on the phone was clipping its labels.
+                       Two causes. .pcol.l was pinned at 168px inside a
+                       ~308px popover, leaving the right column about
+                       90px of text width - not enough for "Controlled
+                       airspace" or "Danger & restricted". And the
+                       ellipsis never fired because the label was a bare
+                       text node inside a flex container, which is not
+                       what text-overflow acts on, so it hard-clipped
+                       instead of truncating.
+                       Two columns do not fit a 375px phone, so they are
+                       stacked: full-width rows, about 248px of label
+                       width against the ~122px the longest label needs.
+                       Section headers Basemap / Map / Overlays, and the
+                       label is now its own element so it can truncate if
+                       it ever needs to. Rows up to 44px. The list
+                       scrolls, which 17 rows always would have.
+                       Basemap rows gained the tick the overlay rows
+                       already had - the selected one was shown only by
+                       its fill, which read differently from every other
+                       row in the same menu.
+                       Also cleared the last two "demo shell" strings.
+       v128 2026-08-01 ENROUTE FIXES. 170 five-letter significant points
+                       lifted from v262's PNG_ENROUTE, each carrying the
+                       airways it serves. These are the ENR 4.4 points,
+                       distinct from PROCFIX which is ENR 4.3 terminal
+                       procedure fixes.
+
+                       Own map layer, own category, drawn as a diamond in
+                       navaid blue so it reads as related to a procedure
+                       fix but not the same thing. Both search surfaces
+                       pick it up automatically because both iterate
+                       CAT_ORDER. The airways show on the point's card.
+
+                       TESEM and WESFI are published in BOTH ENR 4.3 and
+                       ENR 4.4, identical to the metre. Rather than stack
+                       two markers on one spot the enroute record is
+                       folded into the procedure fix, which keeps its
+                       terminal context and gains the airway list. 168
+                       enroute records after the merge, 827 points in the
+                       database, zero identifier collisions.
+
+                       Data checked on extraction: all 170 five-letter,
+                       no duplicates, every one with at least one airway,
+                       all inside the PNG FIR. Distances to the majors
+                       read correctly - MUDIX 0.2 nm from AYGA, ALBUP
+                       0.8 nm from AYMD, IKERU 0.8 nm from AYMH.
+
+                       Process note: the first edit script aborted on its
+                       last assertion, so its write never ran and ALL its
+                       changes were discarded - but the next script
+                       succeeded and added ENROUTE to the DB concat. The
+                       app briefly referenced a dataset that did not
+                       exist, which would have been a blank screen. Only
+                       caught because the record count came back null.
+                       Verify the data landed, not just that the edit
+                       reported ok.
+       v127 2026-08-01 Holds cut back to what it should have been: a
+                       drawing aid, sitting alongside the calculator.
+
+                       Three inputs, all straight out of the clearance -
+                       holding course (inbound or outbound), turn
+                       direction, and the track you will be on when you
+                       arrive. Out of it comes the picture, the quadrant
+                       sentence, and the entry.
+
+                       Removed: the fix picker, the map layer that drew
+                       the racetrack at a real position, "Hold here" on
+                       the airfield card and route rows, the leg
+                       time/distance, the optional altitude/speed/EFC,
+                       and the magnetic-variation setting that only
+                       existed to serve the map drawing. Roughly 9,000
+                       characters of machinery and 1,600 of dead CSS,
+                       plus every orphan it left behind - checked, all
+                       zero references.
+
+                       Kept: the entry rule, verified 10 of 10 against
+                       the reference cases, and the sector geometry drawn
+                       as bearings FROM the fix so the aircraft sits in
+                       the slice that names its own entry.
+
+                       It says plainly what it is: it does not know where
+                       you are and does not draw on the map. Courses are
+                       whatever you type, magnetic in and magnetic out,
+                       since only the difference decides the entry -
+                       which is also why no variation is needed.
+       v126 2026-08-01 A hold can be set on ANY point. The picker filtered
+                       to fields, navaids, procedure fixes and personal
+                       waypoints, which silently dropped all 554 strips -
+                       108 holdable points out of 659. It now offers
+                       every point in the database, ordered fixes first
+                       when nothing is typed, with the category shown on
+                       each row.
+                       "Hold here" is also an action on the airfield card
+                       and on any route point, so a hold can be set from
+                       wherever you already are rather than only from the
+                       Holds view. All three routes go through one
+                       setHoldFix() so they cannot drift apart - the same
+                       lesson as Direct To and the locate control.
+       v125 2026-08-01 HOLDS. New view under More, modelled on how
+                       ForeFlight presents it: the hold belongs to a fix,
+                       you type in exactly what ATC said, and the app
+                       works out the part they do NOT say - the entry.
+
+                       Fields in the order the clearance is spoken: fix,
+                       inbound/outbound course, turn direction, leg by
+                       time or distance, then optional altitude, speed
+                       and EFC. It writes the quadrant sentence itself -
+                       "Hold Southwest of AYNZ" - the same way ForeFlight
+                       does.
+
+                       Entry by the thumb rule: 180 direct, 110 parallel,
+                       70 teardrop, mirrored for left turns, taken from
+                       your GPS track or, on the ground, from the route
+                       leg into the fix. Within 10 degrees of a boundary
+                       it says either is acceptable rather than pretending
+                       the answer is sharp.
+
+                       The pattern draws on the REAL map at the real fix,
+                       sized from your cruise TAS at standard rate - one
+                       minute at 120 kt is a 2.0 nm leg on a 0.637 nm
+                       radius - with chevrons showing which way it is
+                       flown. Plus an inline sector diagram with your
+                       aircraft in its own slice.
+
+                       Magnetic variation is now a Settings field. ATC
+                       gives magnetic and every track in this app is
+                       true; there is no variation data anywhere in it,
+                       so rather than invent a number for PNG it is left
+                       at zero, the two are treated as identical, and the
+                       Holds view says so plainly until you set it.
+
+                       Endpoint convention caught by regression: the
+                       outbound course itself (relative 180) is TEARDROP
+                       for right turns and PARALLEL for left. The
+                       intervals are written out rather than generated so
+                       that asymmetry stays visible. 10 of 10 reference
+                       cases pass.
        v124 2026-08-01 Phone tab pill back to 38x26; the tablet keeps the
                        larger 58x38, which is where it was needed.
 
@@ -2448,6 +2644,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   color:var(--text-dim);letter-spacing:.04em;white-space:nowrap}
 .fld.k-strip i{width:6px;height:6px;background:var(--text-muted)}
 .fld.k-strip b{font-size:var(--t-2xs);color:var(--text-fainter)}
+/* Enroute fixes: same diamond as a procedure fix but in the navaid
+   blue, so the two read as related but not the same thing. */
+/* the airways a fix serves - long lists wrap rather than clip */
+.cinfo .m .awy{display:block;font-family:var(--mono);font-size:var(--t-2xs);
+  color:var(--navaid);line-height:1.5;margin-top:2px;white-space:normal}
+.fld.k-enr i{width:8px;height:8px;border-radius:1px;background:var(--navaid);
+  transform:translate(-50%,-50%) rotate(45deg)}
+.fld.k-enr b{color:var(--navaid);opacity:.85}
 .fld.k-fix i{width:8px;height:8px;border-radius:1px;background:#8de84a;
   transform:translate(-50%,-50%) rotate(45deg)}   /* keep the centring */
 .fld.k-fix b{color:#8de84a;opacity:.85}
@@ -2461,6 +2665,40 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 /* a recorded flight is a different kind of object from a saved route */
 .flc.rec{border-left:2px solid var(--good,#8de84a)}
 .flc.rec .rt{color:var(--good,#8de84a);opacity:.8}
+/* The memory line. Centred, larger than body, and split so the second
+   half - the part that earns the tab - carries the accent. */
+.hmem{margin:2px 0 18px;padding:15px 14px;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);text-align:center}
+.hmem .a,.hmem .b{display:block;line-height:1.5;letter-spacing:.01em}
+.hmem .a{font-size:var(--t-md);color:var(--text-2)}
+.hmem .b{font-size:var(--t-md);font-weight:700;color:var(--accent);margin-top:4px}
+
+/* ---- Holds ----------------------------------------------------
+   Layout follows the order ATC speaks: fix, course, turns, leg. */
+.hcard{padding:14px;border-radius:var(--radius);margin-bottom:12px;
+  background:var(--bg-2);border:1px solid var(--border)}
+.hseg{display:flex;align-items:center;gap:var(--gut)}
+.hseg .grp{display:flex;flex:1 1 auto;border:1px solid var(--border-strong);
+  border-radius:var(--radius);overflow:hidden}
+.hseg .grp button{flex:1 1 0;height:var(--mod-b);background:var(--bg);
+  font-size:var(--t-xs);font-weight:700;letter-spacing:.03em;color:var(--text-muted)}
+.hseg .grp button.on{background:var(--accent);color:#0a0e13}
+.hlab{flex:1 1 auto;font-size:var(--t-sm);color:var(--text-2)}
+.hval{flex:0 0 auto;min-width:7.5ch;height:var(--mod-b);padding:0 12px;
+  border-radius:var(--radius);background:var(--bg);border:1px solid var(--border-strong);
+  font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--accent)}
+.hval u{text-decoration:none;font-size:var(--t-2xs);color:var(--text-fainter);margin-left:3px}
+.hquad{margin-top:11px;padding-top:11px;border-top:1px solid var(--border);
+  font-size:var(--t-sm);color:var(--text-2)}
+.hdiag{margin:4px 0 10px;padding:8px;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border)}
+.hdiag svg{width:100%;height:auto;display:block}
+.hent{display:flex;gap:var(--gut)}
+.hent .e{flex:1 1 0;padding:10px 12px;border-radius:var(--radius);background:var(--inset)}
+.hent .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter);margin-bottom:3px}
+.hent .v{display:block;font-family:var(--mono);font-size:var(--t-lg);font-weight:700;color:var(--text)}
+
 /* Cloud view */
 /* a section that follows a card needs room, or the rule crowds it */
 .cldsec{margin-top:24px}
@@ -2675,15 +2913,23 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   border-top:1px solid var(--border-strong);
   transform:rotate(45deg);
 }
-.pop2{display:flex;max-height:60vh}
-.pcol{flex:1 1 0;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.pcol + .pcol{border-left:1px solid var(--border)}
-.pcol.l{flex:0 0 168px}
+/* Two columns do not fit a phone. The left column was fixed at 168px in
+   a ~308px panel, leaving about 90px of text width on the right - so
+   "Controlled airspace" hard-clipped. And the ellipsis never fired
+   because the label is a bare text node inside a flex container, which
+   is not what text-overflow acts on. Stacked, full width, and the label
+   is now its own element so it can actually truncate. */
+.pop2{display:flex;flex-direction:column;max-height:64vh;
+  overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pcol{flex:0 0 auto}
+.pcol + .pcol{border-top:1px solid var(--border-strong)}
 .prow{
-  height:40px;display:flex;align-items:center;gap:8px;
-  padding:0 12px;font-size:var(--t-sm);font-weight:600;color:var(--text-2);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  height:44px;display:flex;align-items:center;gap:10px;
+  padding:0 14px;font-size:var(--t-sm);font-weight:600;color:var(--text-2);
 }
+.prow .lb{flex:1 1 auto;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .nod{flex:0 0 auto;font-size:var(--t-2xs);color:var(--text-fainter)}
 .prow + .prow{border-top:1px solid var(--border)}
 .prow:active{background:var(--inset)}
 .prow.sel{background:var(--accent-2);color:#0a0e13}
@@ -2813,26 +3059,46 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:var(--bg-2);border:1px solid var(--border);
 }
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
-/* Compact radio: the active leg only, so the map keeps the screen.
-   The panel sizes to its content and the drag grip goes away - there is
-   nothing to resize when the height is the content. */
-.radsize{position:absolute;top:6px;right:10px;z-index:2;
-  height:var(--mod-a);padding:0 12px;border-radius:var(--radius);
-  background:var(--inset);border:1px solid var(--border-strong);
-  font-size:var(--t-xs);font-weight:700;letter-spacing:.04em;color:var(--text-2)}
-.radsize:active{background:var(--panel)}
-.drop.compact .dgrip{display:none}
-.drop.compact .dbody{overflow-y:auto}
-.radc{padding:0 var(--edge) 10px}
-.radleg{display:flex;align-items:baseline;gap:8px;
-  padding:12px 0 7px;margin-top:2px}
-.radleg .lb{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
-  text-transform:uppercase;color:var(--text-fainter);
+/* ---- Frequency window ------------------------------------------
+   Floats over the map rather than pushing it down, so the map keeps its
+   full height. Fixed top right - one less thing to fiddle with in the
+   air. Two blocks: where you are now, and what is next. */
+.fqwin{position:fixed;z-index:900;display:none;width:270px;max-width:calc(100% - 28px);
+  background:var(--panel);border:1px solid var(--accent);border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.55)}
+.fqwin.on{display:block}
+.fqwin .h{display:flex;align-items:center;justify-content:space-between;padding:10px 11px 8px}
+.fqwin .h .t{font-size:var(--t-2xs);font-weight:700;letter-spacing:.13em;color:var(--accent)}
+.fqwin .h .x{width:26px;height:26px;margin:-4px -4px -4px 0;background:none;
+  color:var(--text-fainter);font-size:19px;line-height:1}
+.fqwin .b{padding:0 11px 11px}
+.fqarea{border:1px solid var(--accent);border-radius:7px;padding:9px 10px;margin-bottom:10px}
+.fqarea .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.13em;
+  color:var(--accent);margin-bottom:3px}
+.fqarea .r{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.fqarea .nm{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.radleg .d{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-2xs);
-  color:var(--text-fainter)}
-.radleg.nx{border-top:1px solid var(--border);margin-top:10px}
-.radleg.nx .lb{color:var(--accent)}
+.fqarea .v{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-lg);font-weight:700;
+  color:var(--accent)}
+.fqarea .sub{display:block;margin-top:3px;font-size:var(--t-2xs);color:var(--text-fainter)}
+.fqnext{border-top:1px solid var(--border);padding-top:9px}
+.fqnext .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.13em;
+  color:var(--accent-2);margin-bottom:5px}
+.fqnid{display:flex;align-items:baseline;gap:7px;margin-bottom:5px}
+.fqnid b{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-md);color:var(--accent-2)}
+.fqnid span{flex:1 1 auto;min-width:0;font-size:var(--t-xs);color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fqnid u{flex:0 0 auto;text-decoration:none;font-family:var(--mono);
+  font-size:var(--t-sm);font-weight:700;color:var(--text)}
+.fqwr{width:100%;display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  padding:6px 0;border-top:1px solid var(--border);background:none;text-align:left}
+.fqwr .t{font-size:var(--t-xs);color:var(--text-fainter)}
+.fqwr .f{font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text)}
+.fqwr.pri .f{color:var(--accent)}
+.fqwfoot{margin-top:9px;text-align:center;font-size:var(--t-2xs);
+  color:var(--text-fainter);line-height:1.5}
+.fqwfoot button{background:none;color:var(--accent-2);font-size:var(--t-2xs);
+  text-decoration:underline}
 
 .dgrip{
   flex:0 0 auto;height:22px;display:flex;align-items:center;justify-content:center;
@@ -4055,7 +4321,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
 <!-- Radio: frequencies in route order -->
 <div class="drop" id="dropRad">
-  <button class="radsize" id="radSize" aria-label="Show the active leg only">Compact</button>
   <div class="dbody" id="radBody"></div>
   <div class="dgrip" id="radGrip" aria-label="Resize panel"><span></span></div>
 </div>
@@ -4422,7 +4687,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v124';
+  var VERSION = 'v132';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -4432,6 +4697,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      at first use and the TypeError killed the whole script. It belongs
      at the top, with the other primitives. */
   var TAB_MQ = window.matchMedia('(min-width:600px)');
+  /* read by closeAll, which runs long before the frequency-window code */
+  var fqWin = null;
 
   var $  = function(s){ return document.querySelector(s); };
   var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -4508,6 +4775,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (noteEd) noteEd.classList.remove('on');
     if (flEd) flEd.classList.remove('on');
     if (chView) chView.classList.remove('on');
+    if (fqWin) fqWin.classList.remove('on');
     if (fqEd) fqEd.classList.remove('on');
     if (shEd) shEd.classList.remove('on');
     if (actsEd) actsEd.classList.remove('on');
@@ -5269,10 +5537,207 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* One searchable list. Personal waypoints first so a typed match on
      your own name wins over a similarly-named strip. */
+  /* TESEM and WESFI are published in BOTH ENR 4.3 and ENR 4.4 - the same
+     point to the metre. Two records would put two markers on one spot,
+     so the enroute entry is folded into the procedure fix, which keeps
+     its terminal context and gains the airway list. */
+  (function mergeEnr(){
+    var byId = {};
+    PROCFIX.forEach(function(p){ byId[p.id] = p; });
+    for (var i = ENROUTE.length - 1; i >= 0; i--){
+      var e = ENROUTE[i], p = byId[e.id];
+      if (p){ if (e.awy && !p.awy) p.awy = e.awy; ENROUTE.splice(i, 1); }
+    }
+  })();
+
   var DB = DB_EXTRA.filter(function(p){ return p.cat === 'mine'; })
-            .concat(AF, NAVAIDS, PROCFIX,
+            .concat(AF, NAVAIDS, PROCFIX, ENROUTE,
                     DB_EXTRA.filter(function(p){ return p.cat !== 'mine'; }));
-  var CAT_NM = { field:'Fields', fix:'Fixes', strip:'Strips &amp; villages', mine:'My waypoints' };
+  var CAT_NM = { field:'Fields', fix:'Procedure fixes', enr:'Enroute fixes',
+                 strip:'Strips &amp; villages', mine:'My waypoints' };
+
+  /* ---- Enroute significant points ---------------------------------
+     Lifted from v262's PNG_ENROUTE: 170 five-letter fixes, each with
+     the airways it serves. These are the ENR 4.4 points - distinct
+     from PROCFIX, which is ENR 4.3 terminal procedure fixes.
+
+     Checked on extraction: all 170 five-letter, no duplicates, every
+     one carrying at least one airway, all inside the PNG FIR. Nearest
+     to the majors reads correctly - MUDIX 0.2 nm from AYGA, ALBUP
+     0.8 nm from AYMD, IKERU 0.8 nm from AYMH. */
+  var ENROUTE = [
+    {id:'ADBON',lat:-0.0,lon:154.22917,cat:'enr',awy:'A597'},
+    {id:'AKBOK',lat:-6.14195,lon:153.33076,cat:'enr',awy:'H422'},
+    {id:'ALBUP',lat:-5.21167,lon:145.77667,cat:'enr',awy:'H401, H414, H415, H416, H417, H418, H419, H531, H779, H781, H785, H799'},
+    {id:'ANLOB',lat:-9.31174,lon:147.12559,cat:'enr',awy:'AYPY STAR/SID'},
+    {id:'ANNIR',lat:-4.24787,lon:153.64796,cat:'enr',awy:'H657'},
+    {id:'ANULO',lat:-7.30949,lon:145.64333,cat:'enr',awy:'H537'},
+    {id:'APISO',lat:-12.0,lon:147.60667,cat:'enr',awy:'B462'},
+    {id:'APOMU',lat:-8.00122,lon:149.72373,cat:'enr',awy:'H422'},
+    {id:'APUKA',lat:-12.0,lon:144.96222,cat:'enr',awy:'A216'},
+    {id:'ARAWE',lat:-6.10479,lon:148.99879,cat:'enr',awy:'H410'},
+    {id:'ASIXA',lat:-9.07404,lon:143.21243,cat:'enr',awy:'A215, H544, H546, H547, H668, H673, H777'},
+    {id:'ATGAP',lat:-4.86928,lon:144.03612,cat:'enr',awy:'H667'},
+    {id:'AVLIX',lat:-6.61498,lon:147.85793,cat:'enr',awy:'H410, H655, H663, H780, H781, H787, H788, H793, H796, H798'},
+    {id:'BASSE',lat:-8.59293,lon:146.18381,cat:'enr',awy:'H797'},
+    {id:'BELUP',lat:-9.43053,lon:146.96269,cat:'enr',awy:'AYPY SID, H536, H546'},
+    {id:'BEMGO',lat:-6.53246,lon:146.24222,cat:'enr',awy:'H408, H414'},
+    {id:'BETLA',lat:-6.99525,lon:144.24734,cat:'enr',awy:'H786'},
+    {id:'BICHI',lat:-6.46332,lon:151.73062,cat:'enr',awy:'H533'},
+    {id:'BINNA',lat:-5.92049,lon:150.92685,cat:'enr',awy:'H421'},
+    {id:'BOBEN',lat:-7.12943,lon:141.94052,cat:'enr',awy:'H547'},
+    {id:'BOGIA',lat:-4.40355,lon:144.73198,cat:'enr',awy:'H401'},
+    {id:'BORBO',lat:-5.91754,lon:146.81299,cat:'enr',awy:'H781'},
+    {id:'BOSVI',lat:-6.77236,lon:142.75922,cat:'enr',awy:'H539'},
+    {id:'BUTYO',lat:-2.92578,lon:148.41847,cat:'enr',awy:'H656'},
+    {id:'CADAM',lat:-6.09001,lon:150.99678,cat:'enr',awy:'H663'},
+    {id:'CHAMB',lat:-4.18834,lon:143.10892,cat:'enr',awy:'H670'},
+    {id:'COWRY',lat:-7.65474,lon:148.66515,cat:'enr',awy:'H529'},
+    {id:'DAKNU',lat:-6.99193,lon:149.91888,cat:'enr',awy:'H421'},
+    {id:'DAULI',lat:-5.96553,lon:142.97395,cat:'enr',awy:'H775'},
+    {id:'DOHRT',lat:-0.0,lon:156.83333,cat:'enr',awy:'B452'},
+    {id:'DOMRA',lat:-9.81412,lon:148.51698,cat:'enr',awy:'H674'},
+    {id:'DOTUB',lat:-3.58333,lon:143.67667,cat:'enr',awy:'B456, H401, H528, H652, H656, H657, H658, H665, H667, H668, H669, H670, H784'},
+    {id:'DUKIS',lat:-8.12226,lon:147.10843,cat:'enr',awy:'H405'},
+    {id:'DUKUB',lat:-12.0,lon:149.32667,cat:'enr',awy:'B333'},
+    {id:'EKUTA',lat:-6.44905,lon:155.42629,cat:'enr',awy:'H545'},
+    {id:'EMLEN',lat:-3.13137,lon:142.48773,cat:'enr',awy:'H401, H528'},
+    {id:'EMPRA',lat:-8.70577,lon:146.09686,cat:'enr',awy:'B462, H539'},
+    {id:'ENTOG',lat:-9.40594,lon:147.88919,cat:'enr',awy:'AYPY STAR, H526'},
+    {id:'EPKED',lat:-7.96258,lon:145.77838,cat:'enr',awy:'H413, H536, H537, H538, H544, H777, H778, H779, H784, H786, H791, H797'},
+    {id:'ESKEL',lat:-6.60337,lon:143.77086,cat:'enr',awy:'H783'},
+    {id:'ESKIM',lat:-9.765,lon:145.90556,cat:'enr',awy:'B598'},
+    {id:'ESNIV',lat:-4.34667,lon:152.39833,cat:'enr',awy:'H410, H415, H421, H533, H651, H652, H789'},
+    {id:'FACED',lat:-0.0,lon:144.0,cat:'enr',awy:'A216'},
+    {id:'GIZAR',lat:-5.62585,lon:147.76022,cat:'enr',awy:'H780, H785'},
+    {id:'GUARI',lat:-8.125,lon:146.98,cat:'enr',awy:'H401'},
+    {id:'GUGPU',lat:-7.00148,lon:145.11134,cat:'enr',awy:'AYMH STAR, H536'},
+    {id:'GUMOT',lat:-9.45691,lon:149.56855,cat:'enr',awy:'H660'},
+    {id:'GUNKI',lat:-9.40795,lon:146.71201,cat:'enr',awy:'AYPY SID, H546, H797'},
+    {id:'GURUG',lat:-4.23333,lon:145.9818,cat:'enr',awy:'H658'},
+    {id:'GUVOG',lat:-10.15833,lon:152.36167,cat:'enr',awy:'B598'},
+    {id:'HIPEL',lat:-4.00004,lon:149.78156,cat:'enr',awy:'H655'},
+    {id:'HOBBO',lat:-12.0,lon:153.15833,cat:'enr',awy:'R213'},
+    {id:'HOUJI',lat:-4.65851,lon:153.04077,cat:'enr',awy:'H789'},
+    {id:'IDSUT',lat:-6.06941,lon:142.66028,cat:'enr',awy:'H786'},
+    {id:'IGPIS',lat:-7.72253,lon:143.23333,cat:'enr',awy:'H668'},
+    {id:'IKERU',lat:-5.83833,lon:144.30833,cat:'enr',awy:'H409, H418, H419, H530, H536, H667, H775, H782, H783'},
+    {id:'IOKEA',lat:-8.40689,lon:146.35646,cat:'enr',awy:'H778'},
+    {id:'IRNUS',lat:-9.66508,lon:147.34948,cat:'enr',awy:'IAC AYPY'},
+    {id:'ISKEG',lat:-7.21462,lon:147.96533,cat:'enr',awy:'H543, H788'},
+    {id:'ISMAR',lat:-3.84039,lon:146.49644,cat:'enr',awy:'H416, H652'},
+    {id:'JAQIN',lat:-5.99289,lon:152.50987,cat:'enr',awy:'H651'},
+    {id:'KADAB',lat:-4.96556,lon:141.0,cat:'enr',awy:'B462'},
+    {id:'KADKA',lat:-4.78993,lon:144.25177,cat:'enr',awy:'H784'},
+    {id:'KAIFU',lat:-8.22804,lon:146.64296,cat:'enr',awy:'H414'},
+    {id:'KAKOP',lat:-5.64444,lon:157.66861,cat:'enr',awy:'A597'},
+    {id:'KALIN',lat:-0.0,lon:142.0,cat:'enr',awy:'R204'},
+    {id:'KALKO',lat:-10.315,lon:150.36167,cat:'enr',awy:'B598, G205, H411, H532, H533, H549, H674'},
+    {id:'KAMUL',lat:-8.18626,lon:146.73463,cat:'enr',awy:'H407'},
+    {id:'KANTU',lat:-6.22239,lon:145.77736,cat:'enr',awy:'H409, H779'},
+    {id:'KAPKI',lat:-10.24861,lon:148.29556,cat:'enr',awy:'B586, B589A, B598, H532, H660'},
+    {id:'KAPPU',lat:-5.885,lon:142.21,cat:'enr',awy:'B462, R204'},
+    {id:'KAPSO',lat:-12.0,lon:146.71667,cat:'enr',awy:'R210'},
+    {id:'KASVA',lat:-6.36287,lon:143.25418,cat:'enr',awy:'AYMR GPS ARRIVAL, AYMR - GPS DEPARTURE, AYMR - STANDARD DEPARTURE ROUTE, AYGB GPS ARRIVAL, AYXM STAR RWY 16, AYXM SID RWY 34, AYXM RNAV (GNSS) STAR RWY 16, H541, H668, H671, H776, H783, H786'},
+    {id:'KEMNI',lat:-6.54056,lon:143.40639,cat:'enr',awy:'IAC - AYMR GPS ARRIVAL'},
+    {id:'KIBAV',lat:-7.42833,lon:144.24833,cat:'enr',awy:'A216, B462, H539, H541, H673, H782, H790, H791, H792'},
+    {id:'KIETA',lat:-6.30612,lon:155.728,cat:'enr',awy:'H545'},
+    {id:'KRARI',lat:-4.95843,lon:143.46776,cat:'enr',awy:'H668'},
+    {id:'LARID',lat:-6.73667,lon:146.99833,cat:'enr',awy:'H405, H411, H535, H543, H796'},
+    {id:'LAROT',lat:-8.065,lon:144.56,cat:'enr',awy:'H544, H790'},
+    {id:'LAVUN',lat:-4.00969,lon:152.72795,cat:'enr',awy:'H527'},
+    {id:'LEBOK',lat:-5.25898,lon:142.66704,cat:'enr',awy:'H671'},
+    {id:'LELID',lat:-8.91109,lon:147.11942,cat:'enr',awy:'AYPY SID, H401'},
+    {id:'LEMUP',lat:-4.27286,lon:151.50365,cat:'enr',awy:'H529, H652'},
+    {id:'LENAK',lat:-10.76,lon:146.96,cat:'enr',awy:'R210'},
+    {id:'LETKA',lat:-5.29509,lon:147.26974,cat:'enr',awy:'H799'},
+    {id:'LIDIT',lat:-9.3,lon:141.33333,cat:'enr',awy:'R204'},
+    {id:'LOBAU',lat:-4.54514,lon:150.92148,cat:'enr',awy:'H415'},
+    {id:'LUDGA',lat:-6.95175,lon:147.434,cat:'enr',awy:'H543, H798'},
+    {id:'LUGLI',lat:-7.58299,lon:145.78612,cat:'enr',awy:'H530'},
+    {id:'LUMMI',lat:-3.46712,lon:142.04979,cat:'enr',awy:'H536'},
+    {id:'LUNTO',lat:-5.44333,lon:154.66667,cat:'enr',awy:'B589, H422, H527, H657, H663, H789, H795'},
+    {id:'MABRO',lat:-10.78167,lon:147.155,cat:'enr',awy:'R346'},
+    {id:'MAIPA',lat:-8.28613,lon:146.52679,cat:'enr',awy:'H665'},
+    {id:'MAYUI',lat:-4.68425,lon:144.43034,cat:'enr',awy:'H665'},
+    {id:'MIKIT',lat:-5.37551,lon:148.77356,cat:'enr',awy:'H655, H799'},
+    {id:'MINEN',lat:-7.8077,lon:152.57292,cat:'enr',awy:'H545'},
+    {id:'MOKIN',lat:-6.40333,lon:153.555,cat:'enr',awy:'B589, H795'},
+    {id:'MORBE',lat:-7.71577,lon:147.60857,cat:'enr',awy:'H411, H793'},
+    {id:'MUBEK',lat:-3.43782,lon:149.18826,cat:'enr',awy:'H531'},
+    {id:'MUDIX',lat:-6.07833,lon:145.39,cat:'enr',awy:'AYGA SID, H409, H417, H537, H665'},
+    {id:'MUKIK',lat:-6.37456,lon:146.18645,cat:'enr',awy:'AYGA SID, H409, H414'},
+    {id:'NILAK',lat:-3.94941,lon:141.30702,cat:'enr',awy:'H672'},
+    {id:'NIPOK',lat:-9.92778,lon:155.0,cat:'enr',awy:'B598, R213'},
+    {id:'NIXUT',lat:-9.84452,lon:147.76249,cat:'enr',awy:'IAC AYPY'},
+    {id:'NODAR',lat:-6.44637,lon:142.82456,cat:'enr',awy:'H791'},
+    {id:'NOGOT',lat:-9.33055,lon:145.86766,cat:'enr',awy:'A215, H546'},
+    {id:'OBLAM',lat:-6.29183,lon:142.66779,cat:'enr',awy:'H776'},
+    {id:'ODOLU',lat:-4.36517,lon:147.41042,cat:'enr',awy:'H531'},
+    {id:'OKOMM',lat:-5.10045,lon:142.25136,cat:'enr',awy:'H670'},
+    {id:'OKTUX',lat:-4.30026,lon:147.07103,cat:'enr',awy:'H404'},
+    {id:'OLBOR',lat:-4.55511,lon:142.41354,cat:'enr',awy:'H669'},
+    {id:'OLRIG',lat:-7.00034,lon:149.40588,cat:'enr',awy:'H423'},
+    {id:'OLSOD',lat:-8.53974,lon:144.45265,cat:'enr',awy:'H777'},
+    {id:'OMBOG',lat:-7.26237,lon:145.99809,cat:'enr',awy:'AYGA SID, H665'},
+    {id:'ONODO',lat:-7.05355,lon:154.16565,cat:'enr',awy:'H545'},
+    {id:'OPILU',lat:-5.70613,lon:153.19158,cat:'enr',awy:'H663'},
+    {id:'OREMO',lat:-4.09915,lon:149.44832,cat:'enr',awy:'H652'},
+    {id:'OSERO',lat:-8.6,lon:141.0,cat:'enr',awy:'A215'},
+    {id:'PADLU',lat:-3.25878,lon:146.03821,cat:'enr',awy:'H656'},
+    {id:'PALDO',lat:-7.42499,lon:147.42697,cat:'enr',awy:'H411, H787'},
+    {id:'PAPTI',lat:-5.6148,lon:142.76914,cat:'enr',awy:'H409'},
+    {id:'PASDU',lat:-6.12167,lon:141.28667,cat:'enr',awy:'H539, H547, H670, H672, H775, H776'},
+    {id:'PELCA',lat:-7.10635,lon:147.74576,cat:'enr',awy:'H543, H793'},
+    {id:'PIKOK',lat:-0.0,lon:141.1425,cat:'enr',awy:'B586'},
+    {id:'PINUR',lat:-5.89575,lon:145.77718,cat:'enr',awy:'H661, H779'},
+    {id:'PONOK',lat:-5.285,lon:158.25972,cat:'enr',awy:'B452'},
+    {id:'POSOX',lat:-10.22444,lon:143.92611,cat:'enr',awy:'B598'},
+    {id:'POXIT',lat:-8.17225,lon:146.812,cat:'enr',awy:'H535'},
+    {id:'RAMMU',lat:-5.13995,lon:144.95993,cat:'enr',awy:'H419'},
+    {id:'REDOX',lat:-10.06667,lon:153.43167,cat:'enr',awy:'B598'},
+    {id:'RENEB',lat:-3.04482,lon:152.62642,cat:'enr',awy:'IAC - AYKY GPS ARRIVAL, H421, H529, H657'},
+    {id:'RUMIS',lat:-9.71797,lon:147.47222,cat:'enr',awy:'IAC AYPY'},
+    {id:'RUPNO',lat:-8.74557,lon:148.25419,cat:'enr',awy:'H411, H421, H422, H423, H525, H526, H788'},
+    {id:'RUTAG',lat:-8.3506,lon:146.44114,cat:'enr',awy:'H530'},
+    {id:'RUTUS',lat:-0.0,lon:148.82833,cat:'enr',awy:'G205'},
+    {id:'SAKAR',lat:-4.88621,lon:148.32793,cat:'enr',awy:'H415, H658'},
+    {id:'SAKTO',lat:-8.70286,lon:146.74289,cat:'enr',awy:'AYPY STAR, H407, H414, H530, H535, H665, H778, H787'},
+    {id:'SAPRI',lat:-6.89,lon:143.67833,cat:'enr',awy:'H792'},
+    {id:'SEKDI',lat:-10.47031,lon:150.75517,cat:'enr',awy:'H549, H674'},
+    {id:'SHAOL',lat:-9.76399,lon:147.41226,cat:'enr',awy:'IAC AYPY'},
+    {id:'SLUMI',lat:-4.48333,lon:143.01514,cat:'enr',awy:'H536'},
+    {id:'SNAPA',lat:-8.52819,lon:146.23755,cat:'enr',awy:'H536'},
+    {id:'SOLOM',lat:-8.57024,lon:152.6871,cat:'enr',awy:'H651'},
+    {id:'SONAH',lat:-7.00787,lon:150.75224,cat:'enr',awy:'H659'},
+    {id:'STARF',lat:-9.12656,lon:146.7253,cat:'enr',awy:'AYPY SID, H536, H539'},
+    {id:'TALPA',lat:-7.49814,lon:152.27042,cat:'enr',awy:'H795'},
+    {id:'TASAK',lat:-1.44167,lon:160.0,cat:'enr',awy:'B589'},
+    {id:'TAVUK',lat:-3.96177,lon:141.98007,cat:'enr',awy:'H671'},
+    {id:'TAXAD',lat:-6.43183,lon:148.99565,cat:'enr',awy:'H663'},
+    {id:'TEDED',lat:-8.50628,lon:151.08093,cat:'enr',awy:'B589, B589A, H525, H533, H545, H659, H660, H795'},
+    {id:'TEKAN',lat:-12.0,lon:150.72444,cat:'enr',awy:'B586'},
+    {id:'TEKEE',lat:-3.73577,lon:147.58279,cat:'enr',awy:'H780'},
+    {id:'TESEM',lat:-9.46083,lon:147.2325,cat:'enr',awy:'IAC AYPY ILS RWY 32R'},
+    {id:'TOSAS',lat:-12.0,lon:147.09833,cat:'enr',awy:'R346'},
+    {id:'UGTOK',lat:-6.12914,lon:146.09984,cat:'enr',awy:'H414, H661'},
+    {id:'UKETI',lat:-2.82218,lon:145.55686,cat:'enr',awy:'H657'},
+    {id:'UNTIS',lat:-6.99661,lon:144.64696,cat:'enr',awy:'H538'},
+    {id:'UPRAP',lat:-6.56091,lon:145.77756,cat:'enr',awy:'H779'},
+    {id:'UPSET',lat:-8.89633,lon:149.51041,cat:'enr',awy:'B589, H545'},
+    {id:'VANKA',lat:-2.72333,lon:141.0,cat:'enr',awy:'B456'},
+    {id:'VATVO',lat:-5.45833,lon:150.415,cat:'enr',awy:'H410, H423, H529, H658, H659, H799'},
+    {id:'VEBGO',lat:-2.32128,lon:149.09914,cat:'enr',awy:'H657'},
+    {id:'VEVEK',lat:-8.74667,lon:150.12667,cat:'enr',awy:'G205'},
+    {id:'VIDOT',lat:-6.84854,lon:146.35397,cat:'enr',awy:'IAC AYNZ, H413, H414'},
+    {id:'VIPAM',lat:-12.0,lon:148.02,cat:'enr',awy:'B220'},
+    {id:'WEENA',lat:-12.0,lon:150.3,cat:'enr',awy:'G205'},
+    {id:'WESFI',lat:-6.55044,lon:146.40752,cat:'enr',awy:'IAC AYNZ RWY 09 IAF, H408'},
+    {id:'WILEK',lat:-8.62724,lon:149.68228,cat:'enr',awy:'H525'},
+    {id:'YABAL',lat:-5.94897,lon:144.8071,cat:'enr',awy:'H409, H784'},
+    {id:'YALOL',lat:-6.99746,lon:151.68131,cat:'enr',awy:'H422'}
+  ];
+
   /* Storage owns the whole personal-waypoint set once it exists, so a
      rename or a delete cannot leave a seeded copy behind. */
   var MARK_KEY = 'nmp.iphone.marks';
@@ -5311,7 +5776,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     delete cardFav[id];
     saveMarks();
   }
-  var CAT_ORDER = ['field','fix','strip','mine'];
+  var CAT_ORDER = ['field','fix','enr','strip','mine'];
 
   var ROUTE_KEY = 'nmp.iphone.route';
   var ROUTE_SEED = [
@@ -6097,16 +6562,27 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* Which CTAF zones does this leg pass through, in order flown?
      Sampled along the leg rather than tested at the ends, so a zone
      crossed in the middle is not missed. */
+  /* hoisted out of ctafAlong so the frequency window can ask the same
+     question - which zone am I standing in - without a second copy */
+  function inRing(pt, ring){
+    var x = pt.lon, y = pt.lat, inside = false, n = ring.length;
+    for (var i = 0, j = n - 1; i < n; j = i++){
+      var xi = ring[i][1], yi = ring[i][0], xj = ring[j][1], yj = ring[j][0];
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+  /* the CTAF zone containing a position, if any */
+  function ctafAt(p){
+    if (typeof CTAFZ === 'undefined' || !CTAFZ || !p) return null;
+    for (var i = 0; i < CTAFZ.length; i++){
+      if (CTAFZ[i].ring && inRing(p, CTAFZ[i].ring)) return CTAFZ[i];
+    }
+    return null;
+  }
+
   function ctafAlong(a, b){
     if (typeof CTAFZ === 'undefined' || !CTAFZ) return [];
-    function inRing(pt, ring){
-      var x = pt.lon, y = pt.lat, inside = false, n = ring.length;
-      for (var i = 0, j = n - 1; i < n; j = i++){
-        var xi = ring[i][1], yi = ring[i][0], xj = ring[j][1], yj = ring[j][0];
-        if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
-      }
-      return inside;
-    }
     var out = [], seen = {};
     for (var s = 0; s <= 32; s++){
       var p = interp(a, b, s / 32);
@@ -6132,65 +6608,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return allFreqFor(id).map(function(r){ return [r.lb, r.vl]; });
   }
 
-  /* ---- Compact radio -------------------------------------------------
-     In the air you do not need the whole route's frequencies, you need
-     the one you are on and the one you dial next - and you need the map
-     at the same time. Compact shows exactly the active leg and takes
-     about a fifth of the screen; the full walkthrough is a tap away.
-     The choice is remembered. */
-  var radCompact = (function(){
-    try { return localStorage.getItem('nmp.iphone.radc') === '1'; } catch(_){ return false; }
-  })();
-  function setRadCompact(v){
-    radCompact = !!v;
-    try { localStorage.setItem('nmp.iphone.radc', radCompact ? '1' : '0'); } catch(_){ }
-    sizeRad(); drawRad();
-  }
-
-  function radCompactHTML(){
-    if (ROUTE.length < 1) return '<div class="chipempty">No route. Build one in FPL.</div>';
-    var i = Math.min(Math.max(toWpt, 0), ROUTE.length - 1);
-    var from = ROUTE[Math.max(0, i - 1)], to = ROUTE[i];
-    var T = totals(), leg = T.legs[Math.max(0, i - 1)];
-
-    function primary(p){
-      if (!p || !p.id) return [];
-      return fqAllPairs(p.id).sort(function(a, b){ return fqRank(a[0]) - fqRank(b[0]); })
-               .filter(function(r){ return fqPrimary(r[0]); }).slice(0, 2);
-    }
-    function rows(list){
-      if (!list.length) return '<div class="fqnone">No published frequency</div>';
-      return list.map(function(r){
-        return '<button class="fqr pri" data-f="' + r[1] + '">'
-             + '<span class="t">' + r[0] + '</span><span class="f">' + r[1] + '</span></button>';
-      }).join('');
-    }
-
-    var en = [], seen = {};
-    if (i > 0){
-      fqEnroute(FIELD_INFO[from.id]).concat(fqEnroute(FIELD_INFO[to.id]))
-        .forEach(function(r){ if (!seen[r[1]]){ seen[r[1]] = 1; en.push(r); } });
-      ctafAlong(from, to).forEach(function(z){
-        if (!seen[z.ctaf]){ seen[z.ctaf] = 1; en.push(['CTAF', z.ctaf]); }
-      });
-    }
-
-    var h = '<div class="radc">';
-    h += '<div class="radleg"><span class="lb">Enroute</span>'
-      +  '<span class="d">' + (leg ? leg.nm.toFixed(0) + ' nm' : '') + '</span></div>'
-      +  (en.length ? en.map(function(r){
-             return '<button class="fqr pri" data-f="' + r[1] + '">'
-                  + '<span class="t">' + r[0] + '</span><span class="f">' + r[1] + '</span></button>';
-           }).join('')
-         : '<div class="fqnone">No enroute frequency published for this leg</div>');
-    h += '<div class="radleg nx"><span class="lb">Next \u00b7 ' + label(to) + '</span>'
-      +  '<span class="d">' + (i === ROUTE.length - 1 ? 'destination' : 'enroute point') + '</span></div>'
-      +  rows(primary(to));
-    return h + '</div>';
-  }
-
   function radHTML(){
-    if (radCompact) return radCompactHTML();
     if (ROUTE.length < 1) return '<div class="chipempty">No route. Build one in FPL.</div>';
     var h = '', T = totals();
     ROUTE.forEach(function(p, i){
@@ -6250,15 +6668,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
     radMax = Math.max(FPL_MIN, window.innerHeight - top - tabH - 10);
     radDrop.style.top = top + 'px';
-    radDrop.classList.toggle('compact', radCompact);
-    if (radCompact){
-      /* sized to its content, capped near a fifth of the screen so the
-         map keeps the rest */
-      radDrop.style.height = 'auto';
-      radDrop.style.maxHeight = Math.round(window.innerHeight * 0.25) + 'px';
-      return;
-    }
-    radDrop.style.maxHeight = '';
     radDrop.style.height = Math.max(FPL_MIN, Math.min(radMax, Math.round(radFrac * radMax))) + 'px';
   }
   function drawRad(){
@@ -6266,24 +6675,108 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $$('#radBody .fqr').forEach(function(b){
       b.addEventListener('click', function(){ copyText(b.getAttribute('data-f')); });
     });
-    var t = $('#radSize');
-    if (t){
-      t.textContent = radCompact ? 'Full list' : 'Compact';
-      t.setAttribute('aria-label', radCompact ? 'Show the full route' : 'Show the active leg only');
-    }
   }
-  $('#radSize').addEventListener('click', function(e){
-    e.stopPropagation();
-    setRadCompact(!radCompact);
-  });
-  $('#tbRad').addEventListener('click', function(){
-    var open = radDrop.classList.contains('on');
+  /* ---- Frequency window -------------------------------------------
+     Two questions, answered at a glance: which area frequency am I on
+     NOW, and what do I dial next. The full route-order list stays a tap
+     away rather than being duplicated here. */
+  fqWin = $('#fqWin');
+
+  function fqNextTarget(){
+    /* the next point in the route that actually has a frequency, and how
+       far it is from the GPS fix - or from the active waypoint if there
+       is no fix. A distance to nothing is worse than no distance. */
+    var from = GPSFIX || (ROUTE.length ? ROUTE[Math.min(toWpt, ROUTE.length - 1)] : null);
+    if (!from || !ROUTE.length) return null;
+    for (var i = Math.max(0, toWpt); i < ROUTE.length; i++){
+      var p = ROUTE[i];
+      if (p.id && allFreqFor(p.id).length){
+        return { p:p, nm: nmBetween(from, p) };
+      }
+    }
+    return null;
+  }
+
+  function drawFqWin(){
+    if (!fqWin.classList.contains('on')) return;
+    var h = '';
+
+    var z = GPSFIX ? ctafAt(GPSFIX) : null;
+    h += '<div class="fqarea"><span class="k">AREA CTAF</span>';
+    if (z){
+      h += '<div class="r"><span class="nm">' + esc(z.id || 'Zone') + '</span>'
+        +  '<button class="v" data-fqc="' + z.ctaf + '">' + z.ctaf + '</button></div>'
+        +  (z.hf ? '<span class="sub">HF ' + esc(z.hf) + '</span>' : '');
+    } else if (!GPSFIX){
+      h += '<div class="r"><span class="nm">No GPS fix</span></div>'
+        +  '<span class="sub">Start tracking to know which zone you are in</span>';
+    } else {
+      h += '<div class="r"><span class="nm">Outside every published zone</span></div>'
+        +  '<span class="sub">No area CTAF here</span>';
+    }
+    h += '</div>';
+
+    var nx = fqNextTarget();
+    h += '<div class="fqnext"><span class="k">NEXT FREQUENCY</span>';
+    if (!nx){
+      h += '<div class="fqnid"><span>' + (ROUTE.length ? 'No frequency ahead on this route'
+                                                       : 'No route \u2014 build one in FPL') + '</span></div>';
+    } else {
+      h += '<div class="fqnid"><b>' + esc(nx.p.id) + '</b>'
+        +  '<span>' + esc(nx.p.nm || '') + '</span>'
+        +  '<u>' + nx.nm.toFixed(0) + '<span style="font-size:var(--t-2xs);color:var(--text-fainter)"> nm</span></u></div>';
+      allFreqFor(nx.p.id).sort(function(a, b){ return fqRank(a.lb) - fqRank(b.lb); })
+        .slice(0, 4).forEach(function(r){
+          h += '<button class="fqwr' + (fqPrimary(r.lb) ? ' pri' : '') + '" data-fqc="' + r.vl + '">'
+            +  '<span class="t">' + esc(r.lb) + '</span><span class="f">' + r.vl + '</span></button>';
+        });
+    }
+    h += '</div>';
+
+    h += '<div class="fqwfoot">Tap a frequency to copy \u00b7 advisory only<br>'
+      +  '<button data-fqfull="1">Full route list</button></div>';
+
+    $('#fqWinBody').innerHTML = h;
+    $$('#fqWinBody [data-fqc]').forEach(function(b){
+      b.addEventListener('click', function(){ copyText(b.getAttribute('data-fqc')); });
+    });
+    var fl = $('#fqWinBody [data-fqfull]');
+    if (fl) fl.addEventListener('click', function(){ closeFqWin(); openRad(); });
+  }
+
+  function sizeFqWin(){
+    var top = $('#chrome').getBoundingClientRect().bottom;
+    fqWin.style.top = (top + 12) + 'px';
+    fqWin.style.right = '14px';
+  }
+  function openFqWin(){
     closeAll();
-    if (open) return;
+    sizeFqWin(); fqWin.classList.add('on'); drawFqWin();
+    $('#tbRad').classList.add('on');
+  }
+  function closeFqWin(){
+    fqWin.classList.remove('on');
+    $('#tbRad').classList.remove('on');
+  }
+  $('#fqWinX').addEventListener('click', closeFqWin);
+
+  /* it shows live values, so it refreshes with the clock */
+  setInterval(function(){ drawFqWin(); }, 2000);
+
+  /* the full route-order list, reached from the window's own link */
+  function openRad(){
+    closeAll();
     sizeRad(); drawRad();
     radDrop.classList.add('on');
     scrim.classList.add('on');
     $('#tbRad').classList.add('on');
+  }
+
+  /* The chrome radio button now opens the WINDOW, which is the glance
+     you want in flight. The full list is one tap further in. */
+  $('#tbRad').addEventListener('click', function(){
+    if (fqWin.classList.contains('on')){ closeFqWin(); return; }
+    openFqWin();
   });
   window.addEventListener('resize', function(){ if (radDrop.classList.contains('on')) sizeRad(); });
   (function(){
@@ -7405,12 +7898,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var WX_SUBS   = [['metar','METAR'],['taf','TAF'],['wind','Winds']];
 
   function dbById(id){ for (var i=0;i<DB.length;i++) if (DB[i].id === id) return DB[i]; return null; }
-  var CAT_LABEL = { field:'Aerodrome', fix:'Enroute fix', strip:'Strip / village', mine:'My waypoint' };
+  var CAT_LABEL = { field:'Aerodrome', fix:'Procedure fix', enr:'Enroute fix',
+                    strip:'Strip / village', mine:'My waypoint' };
   /* copy glyph, shown wherever a value can be tapped to copy */
   var CPI = '<svg class="cpi" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
           + 'stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/>'
           + '<path d="M15 5.6H6a1.6 1.6 0 0 0-1.6 1.6v9"/></svg>';
-  var CAT_SHORT = { field:'RWY', fix:'FIX', strip:'STRIP', mine:'WPT' };
+  var CAT_SHORT = { field:'RWY', fix:'FIX', enr:'ENR', strip:'STRIP', mine:'WPT' };
 
   /* ---- sun times: real NOAA calculation, PNG is UTC+10 ---- */
   /* zen 90.833 = sunrise/sunset (refraction + solar disc)
@@ -7553,6 +8047,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return '<div class="cinfo"><div class="cthumb">' + (CAT_SHORT[f.cat] || 'WPT') + '</div>'
       + '<div class="m"><b>' + f.nm + '</b>'
       + '<span>' + (fi ? fi.town : (CAT_LABEL[f.cat] || 'Waypoint')) + '</span>'
+      + (f.awy ? '<span class="awy">' + esc(f.awy) + '</span>' : '')
       + '<span>' + (fi ? 'Elevation ' + fi.elev.toLocaleString() + '\'' + (fi.iata ? ' &middot; ' + fi.iata : '')
                        : (CAT_LABEL[f.cat] || '')) + '</span>'
       + (light ? '<span class="lt">' + light + '</span>' : '')
@@ -8615,6 +9110,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   var IC = {
     /* cloud with an up/down pair - the library is two-way and explicit */
+    /* a racetrack with an arrow entering it */
+    holds:    '<path d="M9.6 5.4h4.8a4.5 4.5 0 0 1 0 9H9.6a4.5 4.5 0 0 1 0-9z"/>'
+            + '<path d="M12 14.4V19.2"/><path d="M9.7 16.9L12 19.2l2.3-2.3"/>',
     cloud:    '<path d="M7 18.4h9.6a3.9 3.9 0 0 0 .5-7.8 5.4 5.4 0 0 0-10.5-1.2A3.9 3.9 0 0 0 7 18.4z"/>'
             + '<path d="M10 15.2l2-2.2 2 2.2"/><path d="M12 13v4"/>',
     map:      '<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>',
@@ -8645,6 +9143,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { k:'freq',     t:'Freqs'    },
     { k:'flights',  t:'Flights'  },
     { k:'cloud',    t:'Cloud'    },
+    { k:'holds',    t:'Holds'    },
     { k:'notes',    t:'Notes'    },
     { k:'downloads',t:'Downloads' }
   ];
@@ -9021,7 +9520,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function qkPaintVal(){
     var el = $('#qkVal'); if (!el) return;
-    if (qkWhat === 'alt'){
+    if (qkWhat && qkWhat.indexOf('hold:') === 0){
+      var dg = (qkWheelVals.t == null || qkWheelVals.u == null)
+             ? null : qkWheelVals.t * 10 + qkWheelVals.u;
+      el.textContent = (dg == null ? '\u2014' : String(dg).padStart(3, '0')) + '\u00b0';
+    } else if (qkWhat === 'alt'){
       el.textContent = (qkWheelVals.ft == null ? '' : qkWheelVals.ft.toLocaleString()) + ' ft';
     } else if (qkWhat === 'etd'){
       var hh = qkWheelVals.hh, mm = qkWheelVals.mm;
@@ -9129,6 +9632,41 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if ($('#qkSeg')) $('#qkSeg').style.display = 'none';
     var refs = {};
 
+    if (what.indexOf('hold:') === 0){
+      /* Two wheels, tens and units, the way a heading is read aloud:
+         "two three four" is 23 and 4. Each wheel stays short - 36 rows
+         and 10 - where one 360-row wheel would be a very long spin. */
+      var cur = (what === 'hold:crs') ? HOLD.inb : HOLD.trk;
+      var tens = [], units = [], i2;
+      for (i2 = 0; i2 < 36; i2++) tens.push(i2);
+      for (i2 = 0; i2 < 10; i2++) units.push(i2);
+      /* no captions: the big readout above already says 234 degrees */
+      var T = buildWheel('t', tens, Math.floor(cur / 10) % 36, '',
+                         function(v){ return (v < 10 ? '0' : '') + v; });
+      var Uw = buildWheel('u', units, cur % 10, '', function(v){ return String(v); });
+      wheels.appendChild(T.wrap); wheels.appendChild(Uw.wrap);
+      refs.t = T.w; refs.u = Uw.w;
+
+      function setDeg(d){
+        d = ((d % 360) + 360) % 360;
+        refs.t.__goto(Math.floor(d / 10), true);
+        refs.u.__goto(d % 10, true);
+      }
+      [['\u2212 10', -10], ['+ 10', 10], ['Reverse', 180]].forEach(function(q){
+        var b = document.createElement('button');
+        b.type = 'button'; b.textContent = q[0];
+        b.addEventListener('click', function(){
+          setDeg(qkWheelVals.t * 10 + qkWheelVals.u + q[1]);
+        });
+        quick.appendChild(b);
+      });
+
+      requestAnimationFrame(function(){
+        refs.t.__goto(refs.t.__idx, false); refs.u.__goto(refs.u.__idx, false);
+      });
+      return;
+    }
+
     if (what === 'alt'){
       /* a list of legal levels, not a wheel */
       wheels.style.display = 'none';
@@ -9192,10 +9730,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       reg:  ['Registration', 'Registration', AC.reg],
       type: ['Aircraft type', 'Type', AC.type],
       alt:  ['Cruise altitude', 'Feet', String(AC.alt)],
-      etd:  ['ETD', 'UTC, as HHMM', (ETD_MIN == null ? '' : clock(0).replace(':', ''))]
+      etd:  ['ETD', 'UTC, as HHMM', (ETD_MIN == null ? '' : clock(0).replace(':', ''))],
+      /* no hint line: the wheel has no format to explain, and the
+         readout above it already shows the value in degrees */
+      'hold:crs': ['Holding course', '', String(HOLD.inb)],
+      'hold:trk': ['Track to the fix', '', String(HOLD.trk)]
     }[what];
     $('#qkTtl').textContent = cfg[0].toUpperCase();   /* the window header is mono caps */
-    var dial = (what === 'alt' || what === 'etd');
+    /* a heading is continuous, so it gets a wheel like the ETD rather
+       than a keyboard - 234 is quicker to dial than to type in flight */
+    var dial = (what === 'alt' || what === 'etd' || what.indexOf('hold:') === 0);
     $('#qkText').classList.toggle('off', dial);
     $('#qkDial').classList.toggle('on', dial);
     if (dial){
@@ -9229,6 +9773,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       drawFpl(); renderMap();
       if (typeof drawSet === 'function' && $('#setView') && $('#setView').classList.contains('on')) drawSet();
       toast('Saved');
+      return;
+    }
+    if (qkWhat && qkWhat.indexOf('hold:') === 0){
+      /* wheels only hold legal values, so there is nothing to reject */
+      var c = (qkWheelVals.t * 10 + qkWheelVals.u) % 360;
+      if (qkWhat === 'hold:crs') HOLD.inb = c; else HOLD.trk = c;
+      saveHold(); qkEd.classList.remove('on'); drawHold();
       return;
     }
     var v = $('#qkIn').value.trim();
@@ -9508,8 +10059,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* published + mine, tagged, in the usual radio order */
   function allFreqFor(id){
     var fi = FIELD_INFO[id];
-    var out = [];
-    if (fi && fi.freq) fi.freq.forEach(function(r){ out.push({ lb:r[0], vl:r[1], mine:false }); });
+    var out = [], seen = {};
+    if (fi && fi.freq) fi.freq.forEach(function(r){
+      out.push({ lb:r[0], vl:r[1], mine:false }); seen[r[1]] = 1;
+    });
+    /* The airfield pack carries published frequencies under `fq` for 15
+       fields, but this only ever read FIELD_INFO, which has 6. Nine
+       fields' frequencies were in the data and never shown. */
+    var af = dbById(id);
+    if (af && af.fq) af.fq.forEach(function(r){
+      var lb = r[1] || r[0], vl = r[2];
+      if (vl && !seen[vl]){ out.push({ lb:lb, vl:vl, mine:false }); seen[vl] = 1; }
+    });
     myFreqFor(id).forEach(function(r){ out.push({ lb:r[0], vl:r[1], mine:true }); });
     out.sort(function(a, b){ return fqRank(a.lb) - fqRank(b.lb); });
     return out;
@@ -10810,6 +11371,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                  : (k === 'downloads')? '<div class="vhead"><b>Downloads</b>'
                      + '<span class="sub">offline data</span></div>'
                      + '<div class="vbody">' + downloadsHTML() + '</div>'
+                 : (k === 'holds')    ? '<div class="vhead"><b>Holds</b>'
+                     + '<span class="sub">instrument holding</span></div>'
+                     + '<div class="vbody" id="holdBody">' + holdHTML() + '</div>'
                  : (k === 'cloud')    ? '<div class="vhead"><b>Cloud</b>'
                      + '<span class="sub">shared library</span></div>'
                      + '<div class="vbody" id="cloudBody">' + cloudHTML() + '</div>'
@@ -10824,6 +11388,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (k === 'freq') wireFreqs(el);
     if (k === 'downloads') wireDownloads(el);
     if (k === 'cloud') wireCloud(el);
+    if (k === 'holds') wireHold(el);
     if (k === 'calc') wireCalc(el);
     return el;
   }
@@ -10911,7 +11476,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     map:'var(--accent-2)', airports:'var(--good)', fuel:'var(--route)',
     charts:'var(--accent-2)', wb:'var(--navaid)', freq:'var(--magenta)',
     flights:'var(--good)', notes:'var(--route)', gps:'var(--accent)',
-    cloud:'var(--accent-2)'
+    cloud:'var(--accent-2)', holds:'var(--navaid)'
   };
   /* anything with a tile at the top of the sheet is not repeated below */
   var MORE_TILES = ['downloads'];
@@ -11673,7 +12238,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      ============================================================ */
   var LAYERS = {
     base:'png', terrain:false,
-    fields:true, strips:false, fixes:false, mine:true,
+    fields:true, strips:false, fixes:false, enroute:false, mine:true,
     route:true, airspace:false, danger:false, wxcat:false,
     navaid:false
   };
@@ -11693,6 +12258,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       d:'<circle cx="12" cy="12" r="3.2"/><path d="M12 4.4v2M12 17.6v2M4.4 12h2M17.6 12h2"/>' },
     fixes:  { t:'Procedure fixes',
       d:'<path d="M12 3.2l2.3 6.5 6.5 2.3-6.5 2.3-2.3 6.5-2.3-6.5L3.2 12l6.5-2.3z"/>' },
+    enroute:{ t:'Enroute fixes',
+      d:'<path d="M12 4.2l6.6 11.4H5.4z"/><circle cx="12" cy="12.6" r="1.5"/>' },
     mine:   { t:'My waypoints',
       d:'<path d="M12 21.2s6.4-5.9 6.4-10.6a6.4 6.4 0 1 0-12.8 0C5.6 15.3 12 21.2 12 21.2z"/><circle cx="12" cy="10.4" r="2.2"/>' },
     route:  { t:'Active route',
@@ -11748,7 +12315,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      data sits on it. Right column: data layers. */
   var MAP_OVERLAYS = ['terrain', 'labels'];
   var OVERLAYS = [
-    ['fields', true], ['strips', true], ['fixes',  true], ['mine',  true],
+    ['fields', true], ['strips', true], ['fixes',  true], ['enroute', true], ['mine',  true],
     ['route',  true], ['airspace', true], ['danger', true], ['wxcat',  true],
     ['navaid', true]
   ];
@@ -12043,6 +12610,170 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      Deliberately plain: what is set up, what is here, and four buttons.
      No status light that implies a background process, because there
      isn't one. */
+  /* ---- Holds view ---------------------------------------------------
+     Field order follows what ATC actually says, so you fill it top to
+     bottom as you hear it: fix, course, turns, leg, then the optional
+     altitude/speed/EFC. The entry is the one thing that is computed. */
+  /* ================================================================
+     HOLDS - a drawing aid, nothing more.
+
+     Three inputs, all of which come straight out of the clearance:
+     the inbound course, the turn direction, and the track you will be
+     on when you get there. Out of it comes the picture and the entry.
+
+     It deliberately does NOT attach to a fix, draw on the map, or join
+     the route. It sits alongside the calculator: something you look at,
+     not something that navigates.
+     ================================================================ */
+  var HOLD = (function(){
+    try {
+      var h = JSON.parse(localStorage.getItem('nmp.iphone.hold'));
+      if (h && typeof h.inb === 'number') return h;
+    } catch(_){ }
+    return { inb:360, dirIn:true, turns:'R', trk:90 };
+  })();
+  function saveHold(){
+    try { localStorage.setItem('nmp.iphone.hold', JSON.stringify(HOLD)); } catch(_){ }
+  }
+  function holdInbound(){ return HOLD.dirIn ? HOLD.inb : (HOLD.inb + 180) % 360; }
+
+  /* which side of the fix the pattern lies on, in words */
+  function holdQuadrant(){
+    var ic = holdInbound(), d = (HOLD.turns === 'R') ? 1 : -1;
+    var b = ((ic + 180) + 45 * d + 360) % 360;
+    var names = ['north','northeast','east','southeast','south','southwest','west','northwest'];
+    return names[Math.round(b / 45) % 8];
+  }
+
+  /* Entry by the thumb rule: 180 direct, 110 parallel, 70 teardrop,
+     mirrored for left turns. The endpoints are NOT symmetric - the
+     outbound course itself (relative 180) is teardrop for right turns
+     and parallel for left - so they are written out longhand. */
+  function holdEntry(){
+    var ic = holdInbound();
+    var r = ((HOLD.trk - ic) % 360 + 360) % 360;
+    var R_ = (HOLD.turns === 'R'), name;
+    if (R_) name = (r > 110 && r <= 180) ? 'Teardrop'
+                 : (r > 180 && r <= 290) ? 'Parallel' : 'Direct';
+    else    name = (r >= 180 && r < 250) ? 'Teardrop'
+                 : (r >= 70  && r < 180) ? 'Parallel' : 'Direct';
+    var edges = R_ ? [110,180,290] : [70,180,250];
+    var near = edges.some(function(e){
+      return Math.abs(180 - Math.abs(((r - e + 540) % 360) - 180)) <= 10;
+    });
+    return { name:name, rel:r, near:near };
+  }
+
+  function holdDiagramHTML(){
+    var ic = holdInbound(), trk = HOLD.trk;
+    var d = (HOLD.turns === 'R') ? 1 : -1;
+    var F = [160, 136], RD = 118, L = 76, r = 30, W = 60;
+    function U(b){ var a = ((b % 360) + 360) % 360 * D2R; return [Math.sin(a), -Math.cos(a)]; }
+    function P(p, b, n){ var v = U(b); return [p[0] + v[0] * n, p[1] + v[1] * n]; }
+    function C(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }
+    function S(p){ return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }
+
+    var OB = ic + 180, hold = ic + 90 * d;
+    var inS = P(F, OB, L), obS = P(F, hold, W), obE = P(inS, hold, W);
+    var sw = (d > 0) ? 1 : 0;
+
+    /* sectors are drawn as bearings FROM the fix, which is 180 off the
+       heading-space angles the rule is stated in - so the aircraft sits
+       inside the slice that names its own entry */
+    var sec = (d > 0) ? [[290,110,'#ffb020'],[180,290,'#2b8cff'],[110,180,'#b48ce0']]
+                      : [[250,70,'#ffb020'],[70,180,'#2b8cff'],[180,250,'#b48ce0']];
+    var g = sec.map(function(x){
+      var b0 = ic + 180 + x[0], b1 = ic + 180 + x[1];
+      var p0 = P(F, b0, RD), p1 = P(F, b1, RD), sp = ((b1 - b0) % 360 + 360) % 360;
+      return '<path d="M ' + S(F) + ' L ' + S(p0) + ' A ' + RD + ' ' + RD + ' 0 '
+           + (sp > 180 ? 1 : 0) + ' 1 ' + S(p1) + ' Z" fill="' + x[2] + '" opacity=".15"/>';
+    }).join('');
+    var div = [sec[1][0], sec[2][0], sec[2][1]].map(function(a){
+      var p = P(F, ic + 180 + a, RD);
+      return '<line x1="' + F[0] + '" y1="' + F[1] + '" x2="' + p[0].toFixed(1)
+           + '" y2="' + p[1].toFixed(1) + '" stroke="#46525f" stroke-width="1"/>';
+    }).join('');
+
+    var track = '<path d="M ' + S(F) + ' A ' + r + ' ' + r + ' 0 0 ' + sw + ' ' + S(obS)
+              + ' L ' + S(obE) + ' A ' + r + ' ' + r + ' 0 0 ' + sw + ' ' + S(inS)
+              + '" fill="none" stroke="#ffb020" stroke-width="1.9" stroke-linejoin="round"/>'
+              + '<path d="M ' + S(inS) + ' L ' + S(F) + '" fill="none" stroke="#ffb020" '
+              + 'stroke-width="3.8" stroke-linecap="round"/>';
+    function arrow(p, b){
+      return '<polygon points="' + [P(p,b,7.5), P(p,b+142,7), P(p,b+218,7)].map(C).join(' ')
+           + '" fill="#ffb020"/>';
+    }
+    track += arrow(P(F, OB, L * 0.55), ic) + arrow(P(obS, OB, L * 0.45), OB);
+
+    var fixm = '<polygon points="' + [P(F,0,9), P(F,120,9), P(F,240,9)].map(C).join(' ')
+             + '" fill="#0a0e13" stroke="#8de84a" stroke-width="2"/>';
+
+    var sp = P(F, trk + 180, RD - 5);
+    var ship = '<line x1="' + sp[0].toFixed(1) + '" y1="' + sp[1].toFixed(1) + '" x2="' + F[0]
+             + '" y2="' + F[1] + '" stroke="#2b8cff" stroke-width="1.3" stroke-dasharray="5 4" opacity=".6"/>'
+             + '<polygon points="' + [P(sp,trk,10.5), P(sp,trk+142,9.5), P(sp,trk+218,9.5)].map(C).join(' ')
+             + '" fill="#2b8cff" stroke="#dce6f0" stroke-width="1.6"/>';
+
+    return '<div class="hdiag"><svg viewBox="0 0 320 272">'
+         + g + div + '<circle cx="160" cy="136" r="118" fill="none" stroke="#1c2530"/>'
+         + track + fixm + ship + '</svg></div>';
+  }
+
+  function holdHTML(){
+    var E = holdEntry();
+    var col = { Direct:'var(--accent)', Parallel:'#2b8cff', Teardrop:'#b48ce0' }[E.name];
+
+    /* The memory line is the point of the tab, so it is set as one -
+       centred, larger, and the payload half in amber. */
+    var h = '<div class="hmem">'
+          + '<span class="a">What you hear is what you type in.</span>'
+          + '<span class="b">What you don\u2019t hear is the entry.</span>'
+          + '</div>';
+
+    h += '<div class="hcard">'
+      +    '<div class="hseg"><span class="grp">'
+      +      '<button data-h="dirin"' + (HOLD.dirIn ? ' class="on"' : '') + '>Inbound</button>'
+      +      '<button data-h="dirout"' + (!HOLD.dirIn ? ' class="on"' : '') + '>Outbound</button>'
+      +    '</span>'
+      +    '<button class="hval" data-h="crs">' + String(HOLD.inb).padStart(3,'0') + '<u>\u00b0</u></button></div>'
+      +    '<div class="hseg" style="margin-top:10px"><span class="grp">'
+      +      '<button data-h="tl"' + (HOLD.turns === 'L' ? ' class="on"' : '') + '>Left turns</button>'
+      +      '<button data-h="tr"' + (HOLD.turns === 'R' ? ' class="on"' : '') + '>Right turns</button>'
+      +    '</span></div>'
+      +    '<div class="hquad">Hold ' + holdQuadrant() + ' of the fix, inbound '
+      +      String(holdInbound()).padStart(3,'0') + '\u00b0</div>'
+      +  '</div>';
+
+    h += '<div class="hcard"><div class="hseg">'
+      +    '<span class="hlab">Your track to the fix</span>'
+      +    '<button class="hval" data-h="trk">' + String(HOLD.trk).padStart(3,'0') + '<u>\u00b0</u></button>'
+      +  '</div>'
+      +  (GPSFIX && GPSFIX.trk != null && GPSFIX.gs > 15
+          ? '<button class="e6btn" style="margin-top:10px" data-h="gps">Use GPS track \u00b7 '
+            + String(Math.round(GPSFIX.trk)).padStart(3,'0') + '\u00b0</button>' : '')
+      +  '</div>';
+
+    h += holdDiagramHTML();
+
+    h += '<div class="hent">'
+      +    '<div class="e"><span class="k">Entry</span><span class="v" style="color:' + col + '">'
+      +      E.name + '</span></div>'
+      +    '<div class="e"><span class="k">Relative</span><span class="v">'
+      +      String(E.rel).padStart(3,'0') + '\u00b0</span></div>'
+      +  '</div>';
+
+    if (E.near){
+      h += '<div class="cnote" style="margin-top:9px;color:var(--accent)">Within 10\u00b0 of a sector '
+        +  'boundary \u2014 either entry is acceptable, take whichever needs less manoeuvring.</div>';
+    }
+
+    h += '<div class="cnote" style="margin-top:14px">Sectors are 180\u00b0 direct, 110\u00b0 parallel, '
+      +  '70\u00b0 teardrop, mirrored for left turns. Courses are whatever you type \u2014 magnetic in, '
+      +  'magnetic out \u2014 since only the difference decides the entry. A drawing aid: it does not '
+      +  'know where you are and does not draw on the map. Advisory only.</div>';
+    return h;
+  }
+
   function cloudHTML(){
     var base = cloudBase(), key = cloudKey();
     var nRt = FLIGHTS.filter(function(f){ return !f.rec; }).length;
@@ -12091,6 +12822,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       wireCloudBody(b);
     }
   }
+
+  function drawHold(){
+    var b = $('#holdBody');
+    if (b && viewCache.holds && viewCache.holds.classList.contains('on')){
+      b.innerHTML = holdHTML(); wireHoldBody(b);
+    }
+  }
+  function wireHoldBody(el){
+    var acts = {
+      dirin:  function(){ HOLD.dirIn = true; },
+      dirout: function(){ HOLD.dirIn = false; },
+      tl:     function(){ HOLD.turns = 'L'; },
+      tr:     function(){ HOLD.turns = 'R'; },
+      gps:    function(){ if (GPSFIX && GPSFIX.trk != null) HOLD.trk = Math.round(GPSFIX.trk) % 360; }
+    };
+    Array.prototype.slice.call(el.querySelectorAll('[data-h]')).forEach(function(b){
+      var k = b.getAttribute('data-h');
+      b.addEventListener('click', function(){
+        if (acts[k]){ acts[k](); saveHold(); drawHold(); return; }
+        openQk('hold:' + k);
+      });
+    });
+  }
+  function wireHold(el){ wireHoldBody(el); }
 
   function wireCloudBody(el){
     var bs = el.querySelector('#cldBase'), ks = el.querySelector('#cldKey');
@@ -12332,7 +13087,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
     var drawn = 0;
     var show = { field:LAYERS.fields, strip:LAYERS.strips, fix:LAYERS.fixes,
-                 mine:LAYERS.mine, navaid:LAYERS.navaid };
+                 enr:LAYERS.enroute, mine:LAYERS.mine, navaid:LAYERS.navaid };
 
     /* A point that is IN THE ROUTE always draws. Category toggles and the
        zoom rank gate decide what else is worth showing; they must never
@@ -12406,25 +13161,27 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function drawLayersPop(){
     var tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
              + 'stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>';
-    var l = '';
+    var l = '<div class="psec">Basemap</div>';
     BASES.forEach(function(b){
       l += '<div class="prow' + (LAYERS.base === b[0] ? ' sel' : '') + '" data-base="' + b[0] + '">'
-        +  b[1] + '</div>';
+        +  '<span class="ck">' + (LAYERS.base === b[0] ? tick : '') + '</span>'
+        +  '<span class="lb">' + b[1] + '</span></div>';
     });
-    l += '<div class="psec">Overlays</div>';
+    l += '<div class="psec">Map</div>';
     MAP_OVERLAYS.forEach(function(k){
       l += '<div class="prow" data-mov="' + k + '">'
         +  '<span class="ck">' + (layOn(k) ? tick : '') + '</span>'
-        +  LAYER_META[k].t + '</div>';
+        +  '<span class="lb">' + LAYER_META[k].t + '</span></div>';
     });
     $('#popL').innerHTML = l;
 
-    var r = '';
+    var r = '<div class="psec">Overlays</div>';
     OVERLAYS.forEach(function(o){
       var k = o[0], ok = o[1];
       r += '<div class="prow" data-ov="' + k + '"' + (ok ? '' : ' style="opacity:.4"') + '>'
-        +  '<span class="ck">' + (ok && layOn(k) ? tick : '') + '</span>' + LAYER_META[k].t
-        +  (ok ? '' : '<span style="margin-left:auto;font-size:var(--t-2xs);color:var(--text-fainter)">no data</span>')
+        +  '<span class="ck">' + (ok && layOn(k) ? tick : '') + '</span>'
+        +  '<span class="lb">' + LAYER_META[k].t + '</span>'
+        +  (ok ? '' : '<span class="nod">no data</span>')
         +  '</div>';
     });
     $('#popR').innerHTML = r;
@@ -12442,7 +13199,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         var k = el.getAttribute('data-ov');
         var ok = false;
         OVERLAYS.forEach(function(o){ if (o[0] === k) ok = o[1]; });
-        if (!ok){ toast('No data for this layer in the demo shell'); return; }
+        if (!ok){ toast('No data for this layer yet'); return; }
         layToggle(k);
         drawLayersPop(); renderMap(); syncRail();
       });
@@ -12706,7 +13463,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         b.addEventListener('click', function(){
           var k = b.getAttribute('data-hov'), ok = false;
           OVERLAYS.forEach(function(o){ if (o[0] === k) ok = o[1]; });
-          if (!ok){ toast('No data for this layer in the demo shell'); return; }
+          if (!ok){ toast('No data for this layer yet'); return; }
           layToggle(k); renderMap(); paintShip(); drawHudPanel();
         });
       });
@@ -13204,17 +13961,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     else if (TAB_MQ.addListener) TAB_MQ.addListener(onBp);
     window.addEventListener('orientationchange', function(){ setTimeout(onBp, 150); });
   })();
-
-  /* Compact radio shows the ACTIVE leg, so it has to follow toWpt - a
-     Direct To or passing a waypoint otherwise leaves it on the leg you
-     just left. Cheap: only redraws when the active point actually
-     changes. */
-  var radLastWpt = -1;
-  setInterval(function(){
-    if (radCompact && radDrop.classList.contains('on') && toWpt !== radLastWpt){
-      radLastWpt = toWpt; drawRad(); sizeRad();
-    }
-  }, 1000);
 
   /* Clocks and ETAs move whether or not a fix has arrived. */
   setInterval(function(){ drawActy(); }, 1000);
