@@ -16,6 +16,162 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v152 2026-08-01 The Frequencies field picker was hiding 535 of 575
+                       fields.
+
+                       items.slice(0, 40) with nothing on screen saying
+                       so, and the search that would reach the rest was
+                       behind a pull-down you had to know about. If you
+                       did not already know the identifier you were
+                       looking for, the other 93% did not exist.
+
+                       The cap is gone - all 575 render - and the note
+                       states the count and the ordering rather than
+                       leaving you to infer it.
+
+                       Second fault in the same function: it sorted
+                       twice. The first sort put the majors in rank
+                       order; the second, by frequency count then
+                       alphabetically, discarded that ordering entirely.
+                       So AYNZ and AYPY sat wherever the alphabet put
+                       them. One sort now - has frequencies, then rank,
+                       then name - and the list opens on AYNZ, AYPY,
+                       AYBK, AYDU, AYGA as it should.
+       v151 2026-08-01 Waypoint and pin action sheets rebuilt. Seven
+                       identical boxes made every action look equally
+                       weighted, including the one that destroys
+                       something.
+
+                       Grouped now: the primary action on its own in
+                       accent, then Route, then Waypoint, then delete
+                       apart from the rest and in red. Each row carries a
+                       line-art icon at the same stroke weight as the
+                       layer icons, so the two sets read as one family
+                       rather than two.
+
+                       Favourites use a star that is outlined when it is
+                       not one and FILLED when it is - the state is in
+                       the icon rather than only in the words, which is
+                       what you actually scan.
+
+                       Both sheets go through one actRow() builder, so
+                       the pin sheet and the waypoint sheet cannot drift
+                       into looking like two different things. Eight
+                       icons, all checked as valid SVG.
+       v150 2026-08-01 Calculator: reorderable tabs and a time converter.
+
+                       Tab order is yours now - long press a tab to move
+                       it left. Held in localStorage, and any tab added
+                       in a later version is appended rather than lost,
+                       so a saved order cannot hide a new tool.
+
+                       New full-width button under the tabs opens
+                       Minutes to decimal hours, the logbook conversion.
+                       The whole hour is laid out in two columns of
+                       thirty so you read across instead of computing -
+                       3 min is 0.05, 6 min is 0.10 - and either side can
+                       be set directly: minutes by the minute up to ten
+                       hours, or decimal by the hundredth.
+
+                       The two scales do not line up exactly. One minute
+                       is 0.0167 h and 0.01 h is 36 seconds, so each side
+                       is rounded to its own resolution and the note says
+                       so rather than implying an exact mapping.
+       v149 2026-08-01 Hold course: one wheel instead of two. Tens and
+                       units read the way a heading is spoken, but it
+                       meant picking one number in two places. Now a
+                       single wheel carries the whole course, with the
+                       quick buttons doing the coarse work and the wheel
+                       the last few degrees.
+
+                       Caught while rebuilding it: the wheel ran 0..359,
+                       so north came up 000. North is 360 on a compass
+                       card and in a clearance, and that wheel would have
+                       been the only place in the app disagreeing. Values
+                       are 1..360 now, through a norm360() that maps a
+                       zero back to 360 - used by the wheel, the quick
+                       buttons and the inbound/outbound flip, so 180
+                       reversed gives 360 rather than 000.
+
+                       The relative angle in the entry rule deliberately
+                       stays 0..359: there a zero difference really is
+                       zero, not a full turn.
+
+                       Also stubbed Element.scrollTo in the test harness.
+                       jsdom has no layout, so it lacks the method and
+                       the wheels threw when exercised - which means the
+                       boot test had never actually opened one.
+       v148 2026-08-01 Layers popover 320 -> 240. Measured this time
+                       instead of guessed: off a 3x screenshot the
+                       longest label, "PNG vector (offline)", is 125 pt
+                       of text, and the tick and left padding take 38.
+                       240 leaves 188 pt of room for something needing
+                       125.
+                       On the phone the menu was 308 pt - 82% of the
+                       screen for a list of short labels. It is 64% now,
+                       and 32% on an iPad in portrait. Third time this
+                       menu has been resized; the first two were numbers
+                       that were merely smaller than the last one.
+       v147 2026-08-01 Terrain profile could hang on "Loading terrain"
+                       forever. A real bug, and the longer the route the
+                       more likely it was.
+
+                       terrLoadTile marks a tile 'fail' when the image
+                       does not load. terrRouteReady only counted a tile
+                       as missing when it was undefined or 'load' - so a
+                       FAILED tile read as ready. buildProfile then got a
+                       null elevation, set profLoading, and registered no
+                       callback, because as far as the readiness check
+                       was concerned there was nothing left to wait for.
+                       Nothing would ever clear it.
+
+                       A 480 nm route needs 35 tiles at z11, all fired at
+                       once as Image loads. One failure out of 35 was
+                       enough to hang it permanently.
+
+                       Now: a failed tile is retried, twice, then counted
+                       as dead rather than pending. A gap leaves a hole in
+                       the profile instead of throwing the whole thing
+                       away, so you still get the terrain that did load.
+
+                       And lowest safe is WITHHELD when there are gaps
+                       rather than computed from partial ground. A missing
+                       high point can only make that figure too low, which
+                       is the dangerous direction, so it says unavailable
+                       and states how many sample points are missing.
+
+                       Also repaired the terrain note, which v145 had left
+                       reading "not survey data. build this reads the
+                       Terrarium tiles" - I replaced the first half of a
+                       two-line string and left the second half dangling.
+       v146 2026-08-01 MY WAYPOINTS, under More. Personal points were
+                       writable from three places and readable from none
+                       - you could make them but never see the list,
+                       rename one or throw one away.
+
+                       The list sorts by distance or by name, with
+                       favourites pinned to the top, and searches. Each
+                       one opens: direct to, add to end, insert as next,
+                       show on map, favourite, rename, delete. Coordinates
+                       tap to copy.
+
+                       Two things that needed care. Rename goes through
+                       renameMine(), which repoints the route, recents
+                       and favourites at the same point rather than at a
+                       name that no longer exists - and it refuses a name
+                       already in the database. Delete says how many
+                       times the point is used in the active route before
+                       it removes those legs too, instead of leaving
+                       route entries that no longer resolve.
+
+                       Favourites are new - there was no such system.
+                       Stored by identifier, and carried across a rename.
+
+                       Process: the edit script aborted twice on
+                       non-unique anchors, discarding the whole batch
+                       each time. It now PRE-FLIGHTS every anchor for
+                       uniqueness before writing anything, so a bad
+                       anchor costs a check rather than the batch.
        v145 2026-08-01 Terrain profile was blank in landscape.
 
                        drawHudPanel injected terrHTML() and stopped. The
@@ -3060,13 +3216,45 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pinnear u{flex:0 0 auto;text-decoration:none;font-family:var(--mono);
   font-size:var(--t-xs);color:var(--text-2)}
-.pinacts{display:grid;gap:var(--gut);padding:10px var(--edge) 0}
-.pinacts button{width:100%;height:var(--mod-b);border-radius:var(--radius);
-  background:var(--inset);border:1px solid var(--border-strong);
-  font-size:var(--t-sm);font-weight:600;color:var(--text);text-align:left;padding:0 14px}
-.pinacts button:first-child{background:var(--accent);border-color:var(--accent);
-  color:#0a0e13;font-weight:700}
-.pinacts button:active{background:var(--panel)}
+/* ---- Action rows ---------------------------------------------------
+   Grouped and iconed. Seven identical boxes made every action look
+   equally weighted, including the destructive one. */
+.asec{padding:14px var(--edge) 5px;font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--text-fainter)}
+.agrp{margin:0 var(--edge);border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--bg-2);overflow:hidden}
+.agrp + .agrp{margin-top:var(--gut)}
+.agrp.prim{margin-top:12px;border-color:var(--accent);background:var(--accent)}
+.agrp.danger{margin-top:14px}
+.arow{width:100%;display:flex;align-items:center;gap:12px;padding:0 13px;
+  height:var(--mod-b);background:none;text-align:left}
+.arow + .arow{border-top:1px solid var(--border)}
+.arow:active{background:var(--inset)}
+.arow .i{flex:0 0 20px;height:20px;color:var(--text-muted);display:block}
+.arow .i svg{width:20px;height:20px;display:block}
+.arow .l{flex:1 1 auto;min-width:0;font-size:var(--t-sm);font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arow .s{flex:0 0 auto;font-size:var(--t-2xs);color:var(--text-fainter)}
+.agrp.prim .arow{height:calc(var(--mod-b) + 4px)}
+.agrp.prim .arow .i,.agrp.prim .arow .l{color:#0a0e13}
+.agrp.prim .arow .l{font-weight:700}
+.agrp.prim .arow:active{background:rgba(0,0,0,.08)}
+.arow.on .i{color:var(--accent)}
+.agrp.danger .arow .i,.agrp.danger .arow .l{color:var(--bad)}
+
+/* ---- My waypoints ------------------------------------------------ */
+.mnlist{border-top:1px solid var(--border)}
+.mnrow{width:100%;display:flex;align-items:center;gap:10px;padding:11px 0;
+  border-bottom:1px solid var(--border);background:none;text-align:left}
+.mnrow .st{flex:0 0 30px;font-size:var(--t-md);color:var(--text-fainter);text-align:center;line-height:1}
+.mnrow .st.on{color:var(--accent)}
+.mnrow .tx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+.mnrow .tx b{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mnrow .tx i{font-style:normal;font-size:var(--t-2xs);color:var(--text-fainter);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mnrow .d{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);color:var(--text-2)}
+.mnrow .d u{text-decoration:none;font-size:var(--t-2xs);color:var(--text-fainter);margin-left:2px}
 
 .twon{display:flex;align-items:center;gap:10px;padding:12px var(--edge) 0}
 .twon span{flex:1 1 auto;font-size:var(--t-sm);color:var(--text-2)}
@@ -3531,6 +3719,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:var(--inset);border:1px solid var(--border-strong);border-radius:8px;padding:10px 12px}
 .trsafe .k{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:var(--text-muted)}
+.trsafe .v.gap{color:var(--text-fainter);font-size:var(--t-md)}
+.cnote.gapwarn{color:var(--accent)}
 .trsafe .v{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--good)}
 .trsafe .v.warn{color:var(--bad)}
 
@@ -3952,7 +4142,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                                            while a list filters */
 
   /* 3. anchored: a popover hung off a button should not span the screen */
-  .pop.pop{max-width:320px}
+  .pop.pop{max-width:240px}
   .gpswin{max-width:520px}
 
   /* this set the PILL to the icon's size, collapsing its padding to
@@ -4162,6 +4352,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:var(--bg-2);border:1px solid var(--border);
   font-size:var(--t-sm);font-weight:600;color:var(--text-muted)}
 .cseg button.on{background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13}
+
+/* ---- Time converter ---------------------------------------------- */
+.cvbtn{width:100%;height:var(--mod-b);margin:0 0 12px;border-radius:var(--radius);
+  background:var(--inset);border:1px solid var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-2)}
+.cvbtn:active{background:var(--panel)}
+.cvhead{display:flex;gap:var(--gut);padding:0 0 6px}
+.cvhead span{flex:1 1 0;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.cvcols{display:flex;gap:var(--gut)}
+.cvcol{flex:1 1 0;border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--bg-2);overflow:hidden}
+.cvr{display:flex;align-items:baseline;justify-content:space-between;
+  padding:5px 10px;font-family:var(--mono);font-size:var(--t-sm)}
+.cvr + .cvr{border-top:1px solid var(--border)}
+.cvr b{font-weight:700;color:var(--text-2)}
+.cvr i{font-style:normal;font-weight:700;color:var(--accent)}
+.cvpick{display:flex;gap:var(--gut);margin-top:12px}
+.cvpick .e{flex:1 1 0;padding:10px 12px;border-radius:var(--radius);background:var(--inset);
+  border:1px solid var(--border-strong)}
+.cvpick .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter);margin-bottom:4px}
+.cvpick .v{width:100%;text-align:left;background:none;font-family:var(--mono);
+  font-size:var(--t-lg);font-weight:700;color:var(--accent)}
 
 .calcout{background:var(--inset);border:1px solid var(--border-strong);
   border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;text-align:right}
@@ -4788,6 +5002,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 </div>
 
 <!-- Radio: frequencies in route order -->
+<!-- Actions for one personal waypoint -->
+<div class="gpsov" id="mineWin">
+  <div class="gpswin">
+    <div class="gpsh">
+      <span class="t"><b id="mineTtl">WAYPOINT</b></span>
+      <button class="gpsx" id="mineX" aria-label="Close">&times;</button>
+    </div>
+    <div class="qkbody" id="mineBody"></div>
+  </div>
+</div>
+
 <!-- Dropped pin: long press anywhere on the map -->
 <div class="gpsov" id="pinWin">
   <div class="gpswin">
@@ -5184,7 +5409,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v145';
+  var VERSION = 'v152';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -5195,7 +5420,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      at the top, with the other primitives. */
   var TAB_MQ = window.matchMedia('(min-width:600px)');
   /* read by closeAll, which runs long before their own code */
-  var fqWin = null, terrWin = null, pinWin = null;
+  var fqWin = null, terrWin = null, pinWin = null, mineWin = null;
 
   var $  = function(s){ return document.querySelector(s); };
   var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -5275,6 +5500,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (fqWin) fqWin.classList.remove('on');
     if (terrWin) terrWin.classList.remove('on');
     if (pinWin) pinWin.classList.remove('on');
+    if (mineWin) mineWin.classList.remove('on');
     if (fqEd) fqEd.classList.remove('on');
     if (shEd) shEd.classList.remove('on');
     if (actsEd) actsEd.classList.remove('on');
@@ -5299,12 +5525,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var btn = $('#tbLayers').getBoundingClientRect();
     var chrome = $('#chrome').getBoundingClientRect();
     // Panel: 19px from the left edge, 48px shy of the right (measured).
-    /* Capped so it stays a popover rather than a full-width bar. 420 was
-       an arbitrary number; the widest label - "PNG vector (offline)" -
-       needs about 190px with its tick and padding, and the phone gives
-       this menu 308px. Matching the phone keeps one popover size across
-       devices rather than two. */
-    var pw = Math.min(window.innerWidth - 19 - 48, 320);
+    /* Measured off a 3x screenshot rather than estimated: the longest
+       label, "PNG vector (offline)", is 125 pt of text, and the tick and
+       left padding take 38. So 240 leaves 188 pt of room for something
+       that needs 125. The old 308 pt was 82% of a phone screen for a
+       menu of short labels. */
+    var pw = Math.min(window.innerWidth - 19 - 48, 240);
     pop.style.left = '19px';
     pop.style.width = pw + 'px';
     pop.style.top = (chrome.bottom + 6.5) + 'px';
@@ -6394,9 +6620,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
   }
 
+  var terrFails = {};                 /* k -> attempts so far */
   function terrLoadTile(z, x, y){
     var k = z + ':' + x + ':' + y;
-    if (terrTiles[k]) return;
+    if (terrTiles[k] && terrTiles[k] !== 'fail') return;
+    if (terrTiles[k] === 'fail' && (terrFails[k] || 0) >= 2) return;   /* give up after 2 */
     terrTiles[k] = 'load';
     terrPending++;
     var img = new Image();
@@ -6416,7 +6644,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       } catch(_){ terrTiles[k] = 'fail'; }
       terrDone();
     };
-    img.onerror = function(){ terrTiles[k] = 'fail'; terrDone(); };
+    img.onerror = function(){
+      terrTiles[k] = 'fail';
+      terrFails[k] = (terrFails[k] || 0) + 1;
+      terrDone();
+    };
     img.src = terrUrl(z, x, y);
   }
   function terrDone(){
@@ -6451,11 +6683,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         need[tx + ':' + ty] = [tx, ty];
       }
     }
+    var dead = 0;
     for (var k in need){
       var kk = z + ':' + need[k][0] + ':' + need[k][1], t = terrTiles[kk];
       if (t === undefined){ terrLoadTile(z, need[k][0], need[k][1]); miss++; }
       else if (t === 'load') miss++;
+      else if (t === 'fail'){
+        /* A failed tile used to read as READY here, so buildProfile got a
+           null elevation, set profLoading and registered no callback -
+           permanently "Loading terrain". One bad tile out of the 35 a
+           480 nm route needs was enough. Retry it; once it has used up
+           its attempts, count it as dead rather than pending. */
+        if ((terrFails[kk] || 0) < 2){ terrLoadTile(z, need[k][0], need[k][1]); miss++; }
+        else dead++;
+      }
     }
+    terrRouteReady.dead = dead;
     if (miss && cb) terrOnReady = cb;
     return miss === 0;
   }
@@ -6563,9 +6806,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---- render: Profile ---- */
   var PROF_N = 180, profSamples = [], profScrub = 0, profLoading = false;
+  var profGaps = 0;
   function buildProfile(){
     var T = totals();
-    profSamples = []; profLoading = false;
+    profSamples = []; profLoading = false; profGaps = 0;
     if (!T.legs.length) return T;
     /* one pass to pull in the covering tiles, repaint when they land */
     if (!terrRouteReady(function(){ refreshProfile(); })){ profLoading = true; return T; }
@@ -6576,9 +6820,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       within = (target - acc) / T.legs[li].nm;
       var p = interp(T.legs[li].a, T.legs[li].b, Math.max(0, Math.min(1, within)));
       var pe = terrainAt(p.lat, p.lon);
-      if (pe == null){ profSamples = []; profLoading = true; break; }
-      profSamples.push({ d: target, e: pe });
+      /* A gap now leaves a hole instead of throwing the whole profile
+         away. profGaps drives an honest note, and suppresses lowest-safe
+         rather than quoting a figure computed from partial ground. */
+      if (pe == null) profGaps++;
+      else profSamples.push({ d: target, e: pe });
     }
+    if (!profSamples.length) profLoading = true;
     return T;
   }
   /* repaint whatever is currently showing the profile */
@@ -6941,8 +7189,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       +  '<div class="trsafe"><span class="k">Lowest safe for this route</span>'
       +    '<span class="v" id="terrSafe"></span></div>'
       +  '<div class="profstats" id="terrStats"></div>'
+      +  (profGaps > 0
+          ? '<div class="cnote gapwarn">Terrain data is missing for ' + profGaps + ' of '
+            + (PROF_N + 1) + ' sample points, so the profile has gaps and lowest safe is '
+            + 'withheld - a figure from partial ground could only read too low. Reopen when '
+            + 'you have a connection.</div>'
+          : '')
       +  '<div class="cnote">Terrain is Terrarium elevation data, not survey data. '
-      +  'build this reads the Terrarium tiles. Lowest safe is the highest point on track plus '
+      +  'Lowest safe is the highest point on track plus '
       +  'your clearance setting, rounded up to the next 500 ft, and takes no account of '
       +  'corridor width, obstacles or MSA. Advisory only.</div>';
   }
@@ -7017,8 +7271,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var safe = Math.ceil((hi + SET.clr) / 500) * 500;
     var sEl = $('#terrSafe');
     if (sEl){
-      sEl.textContent = safe.toLocaleString() + '\'';
-      sEl.classList.toggle('warn', AC.alt < safe);
+      /* A lowest-safe computed from ground that has holes in it can only
+         be too LOW, which is the dangerous direction. Withhold it rather
+         than quote a figure the samples do not support. */
+      if (profGaps > 0){
+        sEl.textContent = 'unavailable';
+        sEl.classList.remove('warn');
+        sEl.classList.add('gap');
+      } else {
+        sEl.textContent = safe.toLocaleString() + '\'';
+        sEl.classList.remove('gap');
+        sEl.classList.toggle('warn', AC.alt < safe);
+      }
     }
     var aEl = $('#terrAlt');
     if (aEl) aEl.textContent = AC.alt.toLocaleString() + '\'';
@@ -7259,6 +7523,221 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       b.addEventListener('click', function(){ copyText(b.getAttribute('data-f')); });
     });
   }
+  /* ---- My waypoints --------------------------------------------------
+     Personal points were writable from three places and readable from
+     none - you could make them but never see the list, rename one or
+     throw one away. They live in localStorage under nmp.iphone.marks and
+     sync with the desktop, so the list can be much longer than the three
+     that ship with the app. */
+  var FAV_KEY = 'nmp.iphone.favs';
+  var FAVS = (function(){
+    try { var a = JSON.parse(localStorage.getItem(FAV_KEY)); return Array.isArray(a) ? a : []; }
+    catch(_){ return []; }
+  })();
+  function isFav(id){ return FAVS.indexOf(id) >= 0; }
+  function toggleFav(id){
+    var i = FAVS.indexOf(id);
+    if (i >= 0) FAVS.splice(i, 1); else FAVS.push(id);
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(FAVS)); } catch(_){ }
+  }
+
+  var MINE_SEL = null, mineSort = 'dist', mineQuery = '';
+
+  function mineList(){
+    var out = DB.filter(function(p){ return p.cat === 'mine'; });
+    var q = mineQuery.trim().toUpperCase();
+    if (q) out = out.filter(function(p){
+      return ((p.lb || p.id || '').toUpperCase().indexOf(q) >= 0)
+          || ((p.nm || '').toUpperCase().indexOf(q) >= 0);
+    });
+    var from = GPSFIX;
+    out.forEach(function(p){ p._d = from ? nmBetween(from, p) : null; });
+    out.sort(function(a, b){
+      var fa = isFav(a.id) ? 0 : 1, fb = isFav(b.id) ? 0 : 1;
+      if (fa !== fb) return fa - fb;                 /* favourites first */
+      if (mineSort === 'dist' && a._d != null && b._d != null) return a._d - b._d;
+      return (a.lb || a.id) < (b.lb || b.id) ? -1 : 1;
+    });
+    return out;
+  }
+
+  function mineHTML(){
+    var all = DB.filter(function(p){ return p.cat === 'mine'; });
+    var list = mineList();
+    var h = '<div class="ntfld"><label for="mnQ">Search</label>'
+          + '<input id="mnQ" type="text" placeholder="Name or identifier\u2026" '
+          + 'autocapitalize="characters" autocorrect="off" spellcheck="false" value="'
+          + esc(mineQuery) + '"></div>';
+
+    h += '<div class="hseg" style="margin-bottom:12px"><span class="grp">'
+      +    '<button data-ms="dist"' + (mineSort === 'dist' ? ' class="on"' : '') + '>Nearest</button>'
+      +    '<button data-ms="name"' + (mineSort === 'name' ? ' class="on"' : '') + '>By name</button>'
+      +  '</span></div>';
+
+    if (!all.length){
+      return h + '<div class="cempty">No personal waypoints yet.<br>'
+               + 'Long press the map to drop one.</div>';
+    }
+    if (!list.length) return h + '<div class="cempty">No match</div>';
+
+    h += '<div class="mnlist">';
+    list.forEach(function(p){
+      h += '<button class="mnrow" data-mn="' + esc(p.id) + '">'
+        +    '<span class="st' + (isFav(p.id) ? ' on' : '') + '">'
+        +      (isFav(p.id) ? '\u2605' : '\u2606') + '</span>'
+        +    '<span class="tx"><b>' + esc(p.lb || p.id) + '</b>'
+        +      '<i>' + esc(p.nm || ddm(p.lat, true) + ' ' + ddm(p.lon, false)) + '</i></span>'
+        +    '<span class="d">' + (p._d == null ? '' : p._d.toFixed(0) + '<u>nm</u>') + '</span>'
+        +  '</button>';
+    });
+    h += '</div>';
+
+    h += '<div class="cnote" style="margin-top:14px">' + all.length + ' waypoint'
+      +  (all.length === 1 ? '' : 's') + ', held on this device and included in cloud sync. '
+      +  'Tap the star to keep one at the top of the list.</div>';
+    return h;
+  }
+
+  /* Action icons. Line art at the same weight as the layer icons so the
+     two sets read as one family. */
+  var ACT_IC = {
+    dct:    '<path d="M3.5 12.5l17-7.5-7.5 17-2-7z"/>',
+    add:    '<path d="M4 7h11"/><path d="M4 12h7"/><path d="M4 17h7"/>'
+          + '<path d="M17.5 11v8"/><path d="M13.5 15h8"/>',
+    next:   '<path d="M4 6h16"/><path d="M4 18h16"/>'
+          + '<path d="M12 9v6"/><path d="M9 12h6"/>',
+    show:   '<path d="M12 21s6.5-6 6.5-11a6.5 6.5 0 1 0-13 0C5.5 15 12 21 12 21z"/>'
+          + '<circle cx="12" cy="10" r="2.4"/>',
+    star:   '<path d="M12 3.6l2.6 5.6 6 .8-4.4 4.2 1.1 6.1L12 17.4 6.7 20.3l1.1-6.1'
+          + 'L3.4 10l6-.8z"/>',
+    rename: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M14.5 6.5l3 3"/>',
+    del:    '<path d="M4.5 7h15"/><path d="M9.5 7V4.8h5V7"/>'
+          + '<path d="M6.5 7l1 12.2h9L17 7"/><path d="M10.5 10.5v6"/><path d="M13.5 10.5v6"/>',
+    save:   '<path d="M5.5 4.5h9L18.5 8.5v11h-13z"/><path d="M8.5 4.5v5h6v-5"/>'
+          + '<path d="M8.5 19.5v-6h7v6"/>'
+  };
+  function actSvg(k, fill){
+    return '<svg viewBox="0 0 24 24" fill="' + (fill ? 'currentColor' : 'none')
+         + '" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" '
+         + 'stroke-linecap="round">' + (ACT_IC[k] || '') + '</svg>';
+  }
+  /* one row builder, so the pin sheet and the waypoint sheet cannot
+     drift into looking like two different things */
+  function actRow(attr, key, ico, label, opt){
+    opt = opt || {};
+    return '<button class="arow' + (opt.cls ? ' ' + opt.cls : '') + '" '
+         + attr + '="' + key + '">'
+         + '<span class="i">' + actSvg(ico, opt.fill) + '</span>'
+         + '<span class="l">' + label + '</span>'
+         + (opt.sub ? '<span class="s">' + opt.sub + '</span>' : '')
+         + '</button>';
+  }
+
+  function mineActHTML(p){
+    var h = '<div class="pinco" style="padding-top:12px">'
+          + '<button class="c" data-mnc="' + ddm(p.lat, true) + ' ' + ddm(p.lon, false) + '">'
+          +   ddm(p.lat, true) + '<span>&nbsp;</span>' + ddm(p.lon, false) + '</button>'
+          + '</div>';
+    if (GPSFIX){
+      h += '<div class="pinfacts"><div><span class="k">From you</span><span class="v">'
+        +  String(Math.round(trkBetween(GPSFIX, p))).padStart(3,'0') + '\u00b0 / '
+        +  nmBetween(GPSFIX, p).toFixed(1) + ' nm</span></div></div>';
+    }
+    /* Grouped rather than seven identical boxes: what it does to the
+       route, then what it does to the waypoint, then the one that
+       destroys something. */
+    h += '<div class="agrp prim">' + actRow('data-mna','dct','dct','Direct to here') + '</div>';
+    h += '<div class="asec">Route</div><div class="agrp">'
+      +    actRow('data-mna','add','add','Add to end')
+      +    actRow('data-mna','next','next','Insert as next')
+      +  '</div>';
+    h += '<div class="asec">Waypoint</div><div class="agrp">'
+      +    actRow('data-mna','show','show','Show on map')
+      +    actRow('data-mna','fav','star',
+               isFav(p.id) ? 'In favourites' : 'Add to favourites',
+               { fill:isFav(p.id), cls:isFav(p.id) ? 'on' : '' })
+      +    actRow('data-mna','rename','rename','Rename\u2026')
+      +  '</div>';
+    h += '<div class="agrp danger">' + actRow('data-mna','del','del','Delete') + '</div>';
+    return h;
+  }
+
+  function openMineWin(id){
+    var p = dbById(id); if (!p) return;
+    MINE_SEL = id;
+    mineWin = mineWin || $('#mineWin');
+    $('#mineTtl').textContent = (p.lb || p.id).toUpperCase();
+    var b = $('#mineBody');
+    b.innerHTML = mineActHTML(p);
+    Array.prototype.slice.call(b.querySelectorAll('[data-mnc]')).forEach(function(x){
+      x.addEventListener('click', function(){ copyText(x.getAttribute('data-mnc')); });
+    });
+    Array.prototype.slice.call(b.querySelectorAll('[data-mna]')).forEach(function(x){
+      x.addEventListener('click', function(){ mineAction(x.getAttribute('data-mna')); });
+    });
+    mineWin.classList.add('on');
+  }
+  function closeMineWin(){ if (mineWin) mineWin.classList.remove('on'); }
+
+  function mineAction(a){
+    var p = dbById(MINE_SEL); if (!p) return;
+    if (a === 'dct'){ directTo(p); closeMineWin(); return; }
+    if (a === 'add'){ ROUTE.push(p); }
+    else if (a === 'next'){ ROUTE.splice(Math.min(toWpt, ROUTE.length), 0, p); }
+    else if (a === 'show'){
+      closeMineWin(); goTo('map');
+      if (LMAP) LMAP.setView([p.lat, p.lon], Math.max(LMAP.getZoom(), 11));
+      return;
+    }
+    else if (a === 'fav'){ toggleFav(p.id); openMineWin(p.id); drawMine(); return; }
+    else if (a === 'rename'){ closeMineWin(); openQk('mine:name'); return; }
+    else if (a === 'del'){
+      /* a waypoint can be in the active route - say so rather than
+         leaving a point behind that no longer resolves */
+      var inRoute = ROUTE.filter(function(r){ return r.id === p.id; }).length;
+      if (!confirm('Delete ' + (p.lb || p.id) + '?'
+                   + (inRoute ? '\n\nIt is used ' + inRoute + ' time'
+                                + (inRoute === 1 ? '' : 's') + ' in the active route, and those '
+                                + 'points will be removed too.' : ''))) return;
+      ROUTE = ROUTE.filter(function(r){ return r.id !== p.id; });
+      if (toWpt >= ROUTE.length) toWpt = Math.max(1, ROUTE.length - 1);
+      var ix = DB.indexOf(p); if (ix >= 0) DB.splice(ix, 1);
+      if (isFav(p.id)) toggleFav(p.id);
+      saveMarks(); saveRoute();
+      closeMineWin(); drawMine(); drawFpl(); renderMap(); drawActy();
+      toast('Deleted');
+      return;
+    }
+    saveRoute(); drawFpl(); renderMap(); drawActy();
+    closeMineWin();
+    toast(a === 'add' ? 'Added to route' : 'Inserted as next');
+  }
+
+  function drawMine(){
+    var b = $('#mineListBody');
+    if (b && viewCache.mine && viewCache.mine.classList.contains('on')){
+      b.innerHTML = mineHTML(); wireMineBody(b);
+    }
+  }
+  function wireMineBody(el){
+    var q = el.querySelector('#mnQ');
+    if (q) q.addEventListener('input', function(){
+      mineQuery = q.value; drawMine();
+      var n = $('#mnQ'); if (n){ n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+    });
+    Array.prototype.slice.call(el.querySelectorAll('[data-ms]')).forEach(function(b2){
+      b2.addEventListener('click', function(){ mineSort = b2.getAttribute('data-ms'); drawMine(); });
+    });
+    Array.prototype.slice.call(el.querySelectorAll('[data-mn]')).forEach(function(b2){
+      b2.addEventListener('click', function(e){
+        var id = b2.getAttribute('data-mn');
+        if (e.target.classList.contains('st')){ toggleFav(id); drawMine(); return; }
+        openMineWin(id);
+      });
+    });
+  }
+  function wireMine(el){ wireMineBody(el); }
+
   /* ---- Dropped pin ---------------------------------------------------
      Long press the map and you get the place, not just a coordinate:
      where it is, how high the ground is there, what it is near, and how
@@ -7329,11 +7808,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +  'zoom, and reopen.</div>';
     }
 
-    h += '<div class="pinacts">'
-      +    '<button data-pina="add">Add to end of route</button>'
-      +    '<button data-pina="next">Insert as next point</button>'
-      +    '<button data-pina="dct">Direct to here</button>'
-      +    '<button data-pina="save">Save as my waypoint</button>'
+    h += '<div class="agrp prim">' + actRow('data-pina','add','add','Add to end of route') + '</div>';
+    h += '<div class="agrp">'
+      +    actRow('data-pina','next','next','Insert as next point')
+      +    actRow('data-pina','dct','dct','Direct to here')
+      +    actRow('data-pina','save','save','Save as my waypoint')
       +  '</div>';
 
     h += '<div class="cnote" style="padding:10px var(--edge) 0">A dropped pin is a position you '
@@ -7616,6 +8095,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   $('#fqWinX').addEventListener('click', closeFqWin);
   $('#terrWinX').addEventListener('click', closeTerrWin);
   $('#pinX').addEventListener('click', closePinWin);
+  $('#mineX').addEventListener('click', closeMineWin);
+  $('#mineWin').addEventListener('click', function(e){
+    if (e.target === $('#mineWin')) closeMineWin();
+  });
   $('#pinWin').addEventListener('click', function(e){
     if (e.target === $('#pinWin')) closePinWin();
   });
@@ -9993,6 +10476,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var IC = {
     /* cloud with an up/down pair - the library is two-way and explicit */
     /* a racetrack with an arrow entering it */
+    mine:     '<path d="M12 21s6.5-6 6.5-11a6.5 6.5 0 1 0-13 0C5.5 15 12 21 12 21z"/>'
+            + '<circle cx="12" cy="10" r="2.4"/>',
     holds:    '<path d="M9.6 5.4h4.8a4.5 4.5 0 0 1 0 9H9.6a4.5 4.5 0 0 1 0-9z"/>'
             + '<path d="M12 14.4V19.2"/><path d="M9.7 16.9L12 19.2l2.3-2.3"/>',
     cloud:    '<path d="M7 18.4h9.6a3.9 3.9 0 0 0 .5-7.8 5.4 5.4 0 0 0-10.5-1.2A3.9 3.9 0 0 0 7 18.4z"/>'
@@ -10026,6 +10511,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { k:'flights',  t:'Flights'  },
     { k:'cloud',    t:'Cloud'    },
     { k:'holds',    t:'Holds'    },
+    { k:'mine',     t:'My waypoints' },
     { k:'notes',    t:'Notes'    },
     { k:'downloads',t:'Downloads' }
   ];
@@ -10402,9 +10888,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function qkPaintVal(){
     var el = $('#qkVal'); if (!el) return;
+    if (qkWhat && qkWhat.indexOf('conv:') === 0){
+      var cv = qkWheelVals.conv;
+      if (cv == null){ el.textContent = '\u2014'; return; }
+      el.textContent = (qkWhat === 'conv:min')
+        ? cv + ' min \u00b7 ' + (cv / 60).toFixed(2) + ' h'
+        : cv.toFixed(2) + ' h \u00b7 ' + Math.round(cv * 60) + ' min';
+      return;
+    }
     if (qkWhat && qkWhat.indexOf('hold:') === 0){
-      var dg = (qkWheelVals.t == null || qkWheelVals.u == null)
-             ? null : qkWheelVals.t * 10 + qkWheelVals.u;
+      var dg = (qkWheelVals.deg == null) ? null : qkWheelVals.deg;
       el.textContent = (dg == null ? '\u2014' : String(dg).padStart(3, '0')) + '\u00b0';
     } else if (qkWhat === 'alt'){
       el.textContent = (qkWheelVals.ft == null ? '' : qkWheelVals.ft.toLocaleString()) + ' ft';
@@ -10514,38 +11007,64 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if ($('#qkSeg')) $('#qkSeg').style.display = 'none';
     var refs = {};
 
-    if (what.indexOf('hold:') === 0){
-      /* Two wheels, tens and units, the way a heading is read aloud:
-         "two three four" is 23 and 4. Each wheel stays short - 36 rows
-         and 10 - where one 360-row wheel would be a very long spin. */
-      var cur = (what === 'hold:crs') ? HOLD.inb : HOLD.trk;
-      var tens = [], units = [], i2;
-      for (i2 = 0; i2 < 36; i2++) tens.push(i2);
-      for (i2 = 0; i2 < 10; i2++) units.push(i2);
-      /* no captions: the big readout above already says 234 degrees */
-      var T = buildWheel('t', tens, Math.floor(cur / 10) % 36, '',
-                         function(v){ return (v < 10 ? '0' : '') + v; });
-      var Uw = buildWheel('u', units, cur % 10, '', function(v){ return String(v); });
-      wheels.appendChild(T.wrap); wheels.appendChild(Uw.wrap);
-      refs.t = T.w; refs.u = Uw.w;
+    if (what.indexOf('conv:') === 0){
+      /* Minutes 1..600 by the minute, or decimal 0.01..10.00 by the
+         hundredth - whichever side you think in. */
+      var byMin = (what === 'conv:min'), vals = [], i3;
+      if (byMin){ for (i3 = 1; i3 <= 600; i3++) vals.push(i3); }
+      else       { for (i3 = 1; i3 <= 1000; i3++) vals.push(i3 / 100); }
+      var selIx = byMin
+        ? Math.max(0, Math.min(599, CONV_MIN - 1))
+        : Math.max(0, Math.min(999, Math.round(CONV_MIN / 60 * 100) - 1));
+      var CW = buildWheel('conv', vals, selIx, '',
+        byMin ? function(v){ return String(v); }
+              : function(v){ return v.toFixed(2); });
+      wheels.appendChild(CW.wrap);
+      refs.conv = CW.w;
+      [['\u2212 10', -10], ['+ 10', 10], ['+ 60', 60]].forEach(function(q){
+        var b = document.createElement('button');
+        b.type = 'button'; b.textContent = byMin ? q[0] : q[0].replace(/\d+/, function(n){
+          return (n / 60).toFixed(2);
+        });
+        b.addEventListener('click', function(){
+          var step = byMin ? q[1] : q[1] / 60;
+          var cur = qkWheelVals.conv + step;
+          refs.conv.__goto(byMin ? Math.round(cur) - 1
+                                 : Math.round(cur * 100) - 1, true);
+        });
+        quick.appendChild(b);
+      });
+      requestAnimationFrame(function(){ refs.conv.__goto(refs.conv.__idx, false); });
+      return;
+    }
 
-      function setDeg(d){
-        d = ((d % 360) + 360) % 360;
-        refs.t.__goto(Math.floor(d / 10), true);
-        refs.u.__goto(d % 10, true);
-      }
+    if (what.indexOf('hold:') === 0){
+      /* One wheel carrying the whole heading. It was two - tens and
+         units - which reads like a heading is spoken but means picking a
+         number in two places. 360 rows is a long spin on its own, so the
+         quick buttons do the coarse work and the wheel does the last few
+         degrees. */
+      /* Values run 1..360, not 0..359: north is 360 on a compass card
+         and in a clearance, and a wheel that offers 000 for north would
+         be the only place in the app that disagrees. Index is value-1. */
+      var cur = norm360((what === 'hold:crs') ? HOLD.inb : HOLD.trk);
+      var degs = [], i2;
+      for (i2 = 1; i2 <= 360; i2++) degs.push(i2);
+      var W1 = buildWheel('deg', degs, cur - 1, '',
+                          function(v){ return String(v).padStart(3, '0'); });
+      wheels.appendChild(W1.wrap);
+      refs.deg = W1.w;
+
       [['\u2212 10', -10], ['+ 10', 10], ['Reverse', 180]].forEach(function(q){
         var b = document.createElement('button');
         b.type = 'button'; b.textContent = q[0];
         b.addEventListener('click', function(){
-          setDeg(qkWheelVals.t * 10 + qkWheelVals.u + q[1]);
+          refs.deg.__goto(norm360(qkWheelVals.deg + q[1]) - 1, true);
         });
         quick.appendChild(b);
       });
 
-      requestAnimationFrame(function(){
-        refs.t.__goto(refs.t.__idx, false); refs.u.__goto(refs.u.__idx, false);
-      });
+      requestAnimationFrame(function(){ refs.deg.__goto(refs.deg.__idx, false); });
       return;
     }
 
@@ -10615,13 +11134,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       etd:  ['ETD', 'UTC, as HHMM', (ETD_MIN == null ? '' : clock(0).replace(':', ''))],
       /* no hint line: the wheel has no format to explain, and the
          readout above it already shows the value in degrees */
+      'conv:min': ['Minutes', '', String(CONV_MIN)],
+      'conv:dec': ['Decimal hours', '', (CONV_MIN / 60).toFixed(2)],
+      'mine:name': ['Rename waypoint', 'a short identifier',
+                    (function(){ var p = dbById(MINE_SEL); return p ? (p.lb || p.id) : ''; })()],
       'hold:crs': ['Holding course', '', String(HOLD.inb)],
       'hold:trk': ['Track to the fix', '', String(HOLD.trk)]
     }[what];
     $('#qkTtl').textContent = cfg[0].toUpperCase();   /* the window header is mono caps */
     /* a heading is continuous, so it gets a wheel like the ETD rather
        than a keyboard - 234 is quicker to dial than to type in flight */
-    var dial = (what === 'alt' || what === 'etd' || what.indexOf('hold:') === 0);
+    var dial = (what === 'alt' || what === 'etd'
+                || what.indexOf('hold:') === 0 || what.indexOf('conv:') === 0);
     $('#qkText').classList.toggle('off', dial);
     $('#qkDial').classList.toggle('on', dial);
     if (dial){
@@ -10657,9 +11181,35 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       toast('Saved');
       return;
     }
+    if (qkWhat && qkWhat.indexOf('conv:') === 0){
+      CONV_MIN = (qkWhat === 'conv:min')
+        ? Math.round(qkWheelVals.conv)
+        : Math.max(1, Math.round(qkWheelVals.conv * 60));
+      qkEd.classList.remove('on');
+      if (viewCache.calc) redrawCalc(viewCache.calc);
+      return;
+    }
+    if (qkWhat === 'mine:name'){
+      var nv = $('#qkIn').value.trim().toUpperCase();
+      if (!nv){ toast('Enter a name'); return; }
+      if (nv !== MINE_SEL && dbById(nv)){ toast('That name is taken'); return; }
+      var mp = dbById(MINE_SEL);
+      if (mp){
+        /* renameMine keeps the route, recents and favourites pointing at
+           the same point rather than at a name that no longer exists */
+        renameMine(MINE_SEL, nv);
+        mp.id = nv; mp.lb = nv;
+        if (isFav(MINE_SEL)){ toggleFav(MINE_SEL); toggleFav(nv); }
+        MINE_SEL = nv;
+        saveMarks();
+      }
+      qkEd.classList.remove('on');
+      drawMine(); drawFpl(); renderMap(); toast('Renamed');
+      return;
+    }
     if (qkWhat && qkWhat.indexOf('hold:') === 0){
-      /* wheels only hold legal values, so there is nothing to reject */
-      var c = (qkWheelVals.t * 10 + qkWheelVals.u) % 360;
+      /* the wheel only holds legal values, so there is nothing to reject */
+      var c = norm360(qkWheelVals.deg);
       if (qkWhat === 'hold:crs') HOLD.inb = c; else HOLD.trk = c;
       saveHold(); qkEd.classList.remove('on'); drawHold();
       return;
@@ -10973,13 +11523,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         return (p.id && p.id.toUpperCase().indexOf(q) >= 0)
             || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
       });
-      /* fields that already have something come first */
+      /* One sort, not two. The second used to discard the rank order
+         the first had just applied, so the majors lost their place.
+         Fields that have frequencies first, then by rank, then by name. */
       items.sort(function(a, b){
-        var an = allFreqFor(a.id).length, bn = allFreqFor(b.id).length;
-        if (an !== bn) return bn - an;
-        return a.id < b.id ? -1 : 1;
+        var an = allFreqFor(a.id).length ? 0 : 1, bn = allFreqFor(b.id).length ? 0 : 1;
+        if (an !== bn) return an - bn;
+        var d = (a.rk == null ? 2 : a.rk) - (b.rk == null ? 2 : b.rk);
+        return d || (a.id < b.id ? -1 : 1);
       });
-      if (!q) items = items.slice(0, 40);
+      /* No slice. This was capped at 40 of 575 with nothing on screen
+         saying so, and the search that reaches the rest was behind a
+         pull-down you had to know about. */
+      var total = items.length;
 
       var h = '<div class="apsearch' + (fqShow ? ' show' : '') + '" id="fqSearch">'
             + '<div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -10989,8 +11545,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
             +   'autocapitalize="characters" autocorrect="off" spellcheck="false">'
             + '<button class="x' + (fqQuery ? ' on' : '') + '" id="fqQX" aria-label="Clear">&times;</button>'
             + '</div></div>'
-            + '<div class="cnote" style="margin-bottom:10px">Pull down to search every field. '
-            + 'Tap one to see and edit its frequencies.</div>';
+            + '<div class="cnote" style="margin-bottom:10px">' + total + ' field'
+            + (total === 1 ? '' : 's')
+            + (q ? ' matching' : ', those with frequencies first')
+            + '. Pull down to search. Tap one to see and edit its frequencies.</div>';
 
       if (!items.length) return h + '<div class="cempty">No match</div>';
       items.forEach(function(p){
@@ -11146,14 +11704,65 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      ============================================================ */
   var calcTab = 'pad';
   var calcAcc = null, calcOp = null, calcCur = '0', calcFresh = true;
+  var CONV_MIN = 6;
+
+  /* Tab order is yours - the one you reach for should not be the one
+     that scrolled off the right. Held in localStorage; any tab added in
+     a later version is appended rather than lost. */
+  var CALC_SEGS = { pad:'Calc', wind:'Wind', alt:'Altitude', cloud:'Cloud',
+                    as:'Airspeed', conv:'Time' };
+  var CALC_ORDER = (function(){
+    var all = Object.keys(CALC_SEGS), out = [];
+    try {
+      var a = JSON.parse(localStorage.getItem('nmp.iphone.calcorder'));
+      if (Array.isArray(a)) a.forEach(function(k){
+        if (CALC_SEGS[k] && out.indexOf(k) < 0) out.push(k);
+      });
+    } catch(_){ }
+    all.forEach(function(k){ if (out.indexOf(k) < 0) out.push(k); });
+    return out;
+  })();
+  function saveCalcOrder(){
+    try { localStorage.setItem('nmp.iphone.calcorder', JSON.stringify(CALC_ORDER)); } catch(_){ }
+  }
 
   function calcHTML(){
-    var segs = [['pad','Calc'],['wind','Wind'],['alt','Altitude'],
-                ['cloud','Cloud'],['as','Airspeed']];
-    var h = '<div class="cseg">' + segs.map(function(s){
-      return '<button data-cg="' + s[0] + '"' + (calcTab === s[0] ? ' class="on"' : '') + '>'
-           + s[1] + '</button>';
+    var h = '<div class="cseg">' + CALC_ORDER.map(function(k){
+      return '<button data-cg="' + k + '"' + (calcTab === k ? ' class="on"' : '') + '>'
+           + CALC_SEGS[k] + '</button>';
     }).join('') + '</div>';
+
+    /* full width, under the tabs, above whichever tool is showing */
+    h += '<button class="cvbtn" data-cg="conv">Minutes \u2194 decimal hours</button>';
+
+    if (calcTab === 'conv'){
+      /* Minutes to decimal hours, the logbook conversion. Both columns
+         run the whole hour so you read across rather than compute:
+         3 min is 0.05, 6 min is 0.10. The two scales do not line up
+         exactly - one minute is 0.0167 h - so each side is rounded to
+         its own resolution and the note says so. */
+      h += '<div class="cvhead"><span>Minutes</span><span>Decimal</span></div>'
+        +  '<div class="cvcols">';
+      var cA = '', cB = '';
+      for (var m = 1; m <= 30; m++){
+        cA += '<div class="cvr"><b>' + m + '</b><i>' + (m / 60).toFixed(2) + '</i></div>';
+      }
+      for (var m2 = 31; m2 <= 60; m2++){
+        cB += '<div class="cvr"><b>' + m2 + '</b><i>' + (m2 / 60).toFixed(2) + '</i></div>';
+      }
+      h += '<div class="cvcol">' + cA + '</div><div class="cvcol">' + cB + '</div></div>';
+
+      h += '<div class="cvpick">'
+        +    '<div class="e"><span class="k">Minutes</span>'
+        +      '<button class="v" data-cvp="min">' + CONV_MIN + '</button></div>'
+        +    '<div class="e"><span class="k">Decimal hours</span>'
+        +      '<button class="v" data-cvp="dec">' + (CONV_MIN / 60).toFixed(2) + '</button></div>'
+        +  '</div>';
+      h += '<div class="cnote" style="padding:10px 0 0">Rounded each way \u2014 a minute is '
+        +  '0.0167 h, so 0.01 h is 36 seconds and the two scales never line up exactly. '
+        +  'Set either side and the other follows.</div>';
+      return h;
+    }
 
     if (calcTab === 'pad'){
       var expr = (calcAcc === null) ? '' : (fmtNum(calcAcc) + ' ' + (calcOp || ''));
@@ -11347,6 +11956,31 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function wireCalc(el){
     var body = el.querySelector('.vbody');
+    /* long press a tab to move it left - the reorder needs no extra
+       chrome, and a stray long press does nothing harmful */
+    Array.prototype.forEach.call(body.querySelectorAll('.cseg [data-cg]'), function(b){
+      var t0 = null;
+      function cancel(){ if (t0){ clearTimeout(t0); t0 = null; } }
+      b.addEventListener('touchstart', function(){
+        cancel();
+        t0 = setTimeout(function(){
+          t0 = null;
+          var k = b.getAttribute('data-cg'), i = CALC_ORDER.indexOf(k);
+          if (i > 0){
+            CALC_ORDER.splice(i - 1, 0, CALC_ORDER.splice(i, 1)[0]);
+            saveCalcOrder();
+            if (navigator.vibrate) navigator.vibrate(8);
+            redrawCalc(el);
+          }
+        }, 450);
+      }, { passive:true });
+      ['touchend','touchmove','touchcancel'].forEach(function(ev){
+        b.addEventListener(ev, cancel, { passive:true });
+      });
+    });
+    Array.prototype.forEach.call(body.querySelectorAll('[data-cvp]'), function(b){
+      b.addEventListener('click', function(){ openQk('conv:' + b.getAttribute('data-cvp')); });
+    });
     Array.prototype.forEach.call(body.querySelectorAll('[data-cg]'), function(b){
       b.addEventListener('click', function(){ calcTab = b.getAttribute('data-cg'); redrawCalc(el); });
     });
@@ -12253,6 +12887,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                  : (k === 'downloads')? '<div class="vhead"><b>Downloads</b>'
                      + '<span class="sub">offline data</span></div>'
                      + '<div class="vbody">' + downloadsHTML() + '</div>'
+                 : (k === 'mine')     ? '<div class="vhead"><b>My waypoints</b>'
+                     + '<span class="sub">points you made</span></div>'
+                     + '<div class="vbody" id="mineListBody">' + mineHTML() + '</div>'
                  : (k === 'holds')    ? '<div class="vhead"><b>Holds</b>'
                      + '<span class="sub">instrument holding</span></div>'
                      + '<div class="vbody" id="holdBody">' + holdHTML() + '</div>'
@@ -12271,6 +12908,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (k === 'downloads') wireDownloads(el);
     if (k === 'cloud') wireCloud(el);
     if (k === 'holds') wireHold(el);
+    if (k === 'mine') wireMine(el);
     if (k === 'calc') wireCalc(el);
     return el;
   }
@@ -12358,7 +12996,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     map:'var(--accent-2)', airports:'var(--good)', fuel:'var(--route)',
     charts:'var(--accent-2)', wb:'var(--navaid)', freq:'var(--magenta)',
     flights:'var(--good)', notes:'var(--route)', gps:'var(--accent)',
-    cloud:'var(--accent-2)', holds:'var(--navaid)'
+    cloud:'var(--accent-2)', holds:'var(--navaid)', mine:'var(--accent)'
   };
   /* anything with a tile at the top of the sheet is not repeated below */
   var MORE_TILES = ['downloads'];
@@ -13517,7 +14155,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function saveHold(){
     try { localStorage.setItem('nmp.iphone.hold', JSON.stringify(HOLD)); } catch(_){ }
   }
-  function holdInbound(){ return HOLD.dirIn ? HOLD.inb : (HOLD.inb + 180) % 360; }
+  /* 1..360 rather than 0..359 - north is 360 on a compass card */
+  function norm360(v){ v = ((Math.round(v) % 360) + 360) % 360; return v === 0 ? 360 : v; }
+  function holdInbound(){ return norm360(HOLD.dirIn ? HOLD.inb : HOLD.inb + 180); }
 
   /* which side of the fix the pattern lies on, in words */
   function holdQuadrant(){
@@ -13533,6 +14173,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      and parallel for left - so they are written out longhand. */
   function holdEntry(){
     var ic = holdInbound();
+    /* relative angle stays 0..359 - a zero difference is zero, not 360 */
     var r = ((HOLD.trk - ic) % 360 + 360) % 360;
     var R_ = (HOLD.turns === 'R'), name;
     if (R_) name = (r > 110 && r <= 180) ? 'Teardrop'
