@@ -16,6 +16,188 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v156 2026-08-01 The saved-waypoint window was a degraded copy of
+                       the dropped-pin window. Now they share one head.
+
+                       Both are the same object - a position with actions
+                       under it - and the pin window had the better head
+                       by some distance: the coordinate in DDM AND in
+                       decimal, both tap-to-copy, a facts grid with ground
+                       elevation, and the nearest known point with its
+                       bearing and distance.
+
+                       The waypoint window had one coordinate line inside
+                       a box built for two, which is why it read as a tall
+                       empty field, and had been patched with an inline
+                       padding-top rather than fixed. Its facts row
+                       appeared only when there was a GPS fix and vanished
+                       entirely without one - so on the ground, most of
+                       the time, the window was a name, a coordinate and
+                       six buttons.
+
+                       ptHead() now builds the head for both. Two things
+                       improved for both hosts on the way: "From you"
+                       falls back to the active waypoint and renames
+                       itself to say so, rather than printing a dash; and
+                       pinNearest takes an id to skip, because a saved
+                       waypoint is otherwise its own nearest point at 0.0
+                       nm.
+
+                       The header reads WAYPOINT + name, the same shape as
+                       POINT + dropped pin, instead of the name sitting
+                       where the type belongs. And the window now carries
+                       the advisory line the pin window has always had.
+
+                       Note the coordinate in the screenshot that prompted
+                       this - S06 44.0 E146 60.0 - is the ddm() carry bug
+                       fixed in v153. There is no such coordinate; it is
+                       E147 00.0. That device is still on a pre-v153 build.
+       v155 2026-08-01 ADD POINT gets the four scopes: Nearest, All,
+                       Favourites, Recent.
+
+                       Same words, same order and the same .npseg buttons
+                       as the Airports view, so Nearest means one thing in
+                       both places. The segment is a SCOPE, not a sort:
+                       typing in Favourites searches your favourites and
+                       nothing else, and the search box keeps its caret
+                       when you switch, because list() rebuilds the list
+                       and not the head.
+
+                       All is the whole database, grouped by category and
+                       uncapped, with the count on the header. Nearest is
+                       20 from the GPS fix, else the active waypoint, else
+                       the map centre, and the header says which. Recent
+                       stays in recency order rather than being grouped,
+                       since recency is the only thing it is sorted on -
+                       and adding a point from this sheet now feeds that
+                       list, which it never did before, so Recent was
+                       usually empty.
+
+                       Two bugs found while in there.
+
+                       CAT_ORDER had no 'navaid'. Both search surfaces and
+                       this sheet group their output by CAT_ORDER, so the
+                       32 navaids in DB were unreachable from all three -
+                       you could see a navaid on the map and not add it to
+                       a route. The row colour .wrow.k-navaid was already
+                       in the stylesheet waiting for it.
+
+                       And cardFav - the star on an airfield card - was a
+                       bare object, never written to storage and never
+                       read back. Every favourite was lost on reload, and
+                       the Airports Favourites segment read that same
+                       volatile object while My waypoints used a properly
+                       persisted set. There is now one store: FAVS under
+                       nmp.iphone.favs, with removeFav (idempotent, so a
+                       delete path cannot create a favourite by running
+                       twice) and renameFav. A star set on the card also
+                       refreshes the Airports list, which matters on a
+                       tablet where both are on screen at once.
+
+                       The typed-search rows were also built by a second
+                       row builder that omitted the category colour bar.
+                       One builder now, every scope.
+       v154 2026-08-01 The minutes / decimal-hours boxes take typing.
+
+                       Both were buttons onto the wheel picker. The rule
+                       that put them there - a wheel beats a keyboard in
+                       flight - is right for a heading or a level and
+                       wrong for this one: it is a logbook conversion,
+                       done on the ground, and spinning a 600-row wheel
+                       to 47 when you already know it is 47 is the slow
+                       way round. They are now text fields on the
+                       decimal keypad, each writing the other on every
+                       keystroke, and only ever the other one - writing
+                       the field under the cursor fights the caret,
+                       which is the trap the Airports search hit.
+
+                       Tapping a field selects its contents, so the next
+                       digit replaces rather than appends. A comma still
+                       reads as a decimal point. Minutes show a tenth
+                       where there is one: 0.73 h is 43.8 minutes, and
+                       rounding that to 44 on screen would drop 12
+                       seconds without saying so.
+
+                       The conv branches of the wheel picker are gone
+                       rather than left unreachable - openQk's config,
+                       the dial condition, the save branch and the
+                       600-row builder.
+       v153 2026-08-01 FREQUENCIES ON EVERY LANDING SITE, not just the
+                       ones that already had some.
+
+                       The Frequencies section on an airfield card was
+                       drawn only where FIELD_INFO had an entry or where
+                       you had already added something yourself. Six
+                       fields have a FIELD_INFO entry. So on the other
+                       569 - every bush strip, every heliport, every
+                       village pad, which is precisely where the AIP
+                       carries nothing and your own note is the only
+                       source there will ever be - the card offered no
+                       way in. The Freqs view could reach them, but only
+                       if you knew to go there and search for the
+                       identifier.
+
+                       Now any point in the airfield pack (cat field or
+                       strip: 21 + 554) carries the section whether or
+                       not anything is on file, an empty one says None
+                       and says why, and the button reads Add a
+                       frequency instead of Edit frequencies. It opens
+                       the same editor over the same store, so an entry
+                       made here shows on the card, in the Radio panel
+                       and in the frequency window exactly as before.
+
+                       Four bugs found while in there.
+
+                       `var REC_KEY` was declared twice in the same
+                       scope: the flight recorder's storage key at line
+                       8937 and the recent-searches key at 13531. The
+                       second wins at load, so every removeItem(REC_KEY)
+                       the recorder runs - on stop, on discard, on
+                       migrate - was deleting the recent-searches list,
+                       and the no-IndexedDB fallback wrote the track
+                       over it. Nothing threw; recents just went empty
+                       after each recording. Renamed to SRCH_KEY.
+                       checkorder.js found it on its first run.
+
+                       cardRwy read fi.rwy where it meant rws. fi is
+                       null outside the six FIELD_INFO fields, so the
+                       Runway tab threw a TypeError on 371 of the 377
+                       fields that have runway data, blanking the card.
+                       It shipped in v152 because the boot test never
+                       opened a card for a field outside the six. It
+                       does now - the harness searches the Airports list
+                       for named identifiers and clicks every card tab
+                       on each. Verified FAILING on v152.
+
+                       Lengths on pack rows now show a dash rather than
+                       NaN, which is what the note under the list has
+                       always said would happen: only FIELD_INFO rows
+                       carry surveyed threshold coordinates.
+
+                       cardIdentity printed the category twice. Line two
+                       fell back to CAT_LABEL and line three fell back
+                       to CAT_LABEL, so every non-major read "Strip /
+                       village" over "Strip / village". Line two now
+                       takes the town from the pack's `mu`, but only
+                       where that is not simply the field name again -
+                       155 of the 203 records with a town repeat the
+                       name - and line three is dropped rather than
+                       rendered empty.
+
+                       ddm() had no minute carry, so Lae Heliport at
+                       146.99973E rendered E146 60.0. dmsStr and ddmStr
+                       have carried correctly for versions; ddm is the
+                       one the card, the copy button and every label
+                       use. Now carries too.
+
+                       And hasAnyFreq - declared in v132, never called -
+                       still had the v132 bug in it: FIELD_INFO or mine,
+                       missing the nine fields whose published
+                       frequencies sit on the pack record. It now asks
+                       allFreqFor, and both the card and the Radio panel
+                       use it, so they can no longer disagree. AYWK has
+                       three published frequencies and the Radio panel
+                       was calling it unpublished.
        v152 2026-08-01 The Frequencies field picker was hiding 535 of 575
                        fields.
 
@@ -3755,6 +3937,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---- waypoint entry sheet ---- */
+/* the segment reuses .npseg from the Airports view rather than growing a
+   second set of buttons - only the host padding differs */
+.wsegwrap{padding:0 12px 10px}
+.wsegwrap .npseg{padding:0}
 .wsearch{padding:12px 12px 8px}
 .wsearch input{
   width:100%;height:var(--mod-b);
@@ -4375,7 +4561,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .cvpick .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:var(--text-fainter);margin-bottom:4px}
 .cvpick .v{width:100%;text-align:left;background:none;font-family:var(--mono);
-  font-size:var(--t-lg);font-weight:700;color:var(--accent)}
+  font-size:var(--t-lg);font-weight:700;color:var(--accent);
+  /* input reset: an <input> brings its own border, padding and font, and
+     without this the two boxes stop matching every other value in the app */
+  border:0;padding:0;margin:0;display:block;line-height:1.2;
+  -webkit-appearance:none;appearance:none;border-radius:0;
+  caret-color:var(--accent)}
+.cvpick .v:focus{outline:none}
+.cvpick .e:focus-within{border-color:var(--accent)}
 
 .calcout{background:var(--inset);border:1px solid var(--border-strong);
   border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;text-align:right}
@@ -5006,7 +5199,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <div class="gpsov" id="mineWin">
   <div class="gpswin">
     <div class="gpsh">
-      <span class="t"><b id="mineTtl">WAYPOINT</b></span>
+      <span class="t"><b>WAYPOINT</b> &middot; <span id="mineTtl">&nbsp;</span></span>
       <button class="gpsx" id="mineX" aria-label="Close">&times;</button>
     </div>
     <div class="qkbody" id="mineBody"></div>
@@ -5409,7 +5602,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v152';
+  var VERSION = 'v156';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -6472,8 +6665,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var DB = DB_EXTRA.filter(function(p){ return p.cat === 'mine'; })
             .concat(AF, NAVAIDS, PROCFIX, ENROUTE,
                     DB_EXTRA.filter(function(p){ return p.cat !== 'mine'; }));
-  var CAT_NM = { field:'Fields', fix:'Procedure fixes', enr:'Enroute fixes',
-                 strip:'Strips &amp; villages', mine:'My waypoints' };
+  var CAT_NM = { field:'Fields', navaid:'Navaids', fix:'Procedure fixes',
+                 enr:'Enroute fixes', strip:'Strips &amp; villages',
+                 mine:'My waypoints' };
 
 
   /* Storage owns the whole personal-waypoint set once it exists, so a
@@ -6501,7 +6695,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       recents = recents.map(function(x){ return x === oldId ? newId : x; });
       try{ localStorage.setItem('nmp.iphone.recents', JSON.stringify(recents)); }catch(e){}
     }
-    if (cardFav[oldId]){ delete cardFav[oldId]; cardFav[newId] = true; }
+    renameFav(oldId, newId);
   }
   function deleteMine(id){
     for (var i = DB.length - 1; i >= 0; i--) if (DB[i].id === id && DB[i].cat === 'mine') DB.splice(i, 1);
@@ -6511,10 +6705,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       recents = recents.filter(function(x){ return x !== id; });
       try{ localStorage.setItem('nmp.iphone.recents', JSON.stringify(recents)); }catch(e){}
     }
-    delete cardFav[id];
+    removeFav(id);
     saveMarks();
   }
-  var CAT_ORDER = ['field','fix','enr','strip','mine'];
+  /* navaid was missing from here, so the 32 navaids in DB could not be
+     added to a route or found in either search surface - both group their
+     output by CAT_ORDER and simply dropped the category. The row colour
+     (.wrow.k-navaid) and the map layer were already built for them. */
+  var CAT_ORDER = ['field','navaid','fix','enr','strip','mine'];
 
   var ROUTE_KEY = 'nmp.iphone.route';
   var ROUTE_SEED = [
@@ -6741,7 +6939,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function ddm(v, isLat){
     var h = isLat ? (v < 0 ? 'S' : 'N') : (v < 0 ? 'W' : 'E');
     var a = Math.abs(v), d = Math.floor(a), m = (a - d) * 60;
-    return h + String(d).padStart(isLat ? 2 : 3, '0') + ' ' + m.toFixed(1);
+    /* 59.98' rounds to 60.0' and E146 60.0 is not a coordinate. Carry it,
+       the same way dmsStr and ddmStr already do. */
+    if (m >= 59.95){ m = 0; d += 1; }
+    /* minutes padded to two digits, as ddmStr already does and as DDM is
+       written everywhere else - E147 00.0, not E147 0.0 */
+    return h + String(d).padStart(isLat ? 2 : 3, '0')
+         + ' ' + (m < 10 ? '0' : '') + m.toFixed(1);
   }
   function label(p){ return p.id || (ddm(p.lat, true) + ' ' + ddm(p.lon, false)); }
 
@@ -7464,7 +7668,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       h += '<div class="fqp' + (i === toWpt ? ' act' : '') + '">'
         +  '<div class="fqh"><span class="ix">' + (i + 1) + '</span>'
         +  '<b>' + label(p) + '</b><span>' + role + '</span></div>';
-      if (fi || (p.id && myFreqFor(p.id).length)){
+      /* same predicate as the card, or the two disagree: AYWK carries
+         three published frequencies on its pack record and this panel
+         said "no published frequency" for it. */
+      if (p.id && hasAnyFreq(p.id)){
         fqAllPairs(p.id).sort(function(a, b){ return fqRank(a[0]) - fqRank(b[0]); })
           .forEach(function(r){
             h += '<button class="fqr' + (fqPrimary(r[0]) ? ' pri' : '') + '" data-f="' + r[1] + '">'
@@ -7535,10 +7742,23 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     catch(_){ return []; }
   })();
   function isFav(id){ return FAVS.indexOf(id) >= 0; }
+  function saveFavs(){
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(FAVS)); } catch(_){ }
+  }
   function toggleFav(id){
     var i = FAVS.indexOf(id);
     if (i >= 0) FAVS.splice(i, 1); else FAVS.push(id);
-    try { localStorage.setItem(FAV_KEY, JSON.stringify(FAVS)); } catch(_){ }
+    saveFavs();
+  }
+  /* idempotent, unlike toggle - a delete path must not be able to CREATE
+     a favourite by running twice */
+  function removeFav(id){
+    var i = FAVS.indexOf(id);
+    if (i >= 0){ FAVS.splice(i, 1); saveFavs(); }
+  }
+  function renameFav(oldId, newId){
+    var i = FAVS.indexOf(oldId);
+    if (i >= 0){ FAVS[i] = newId; saveFavs(); }
   }
 
   var MINE_SEL = null, mineSort = 'dist', mineQuery = '';
@@ -7634,15 +7854,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   function mineActHTML(p){
-    var h = '<div class="pinco" style="padding-top:12px">'
-          + '<button class="c" data-mnc="' + ddm(p.lat, true) + ' ' + ddm(p.lon, false) + '">'
-          +   ddm(p.lat, true) + '<span>&nbsp;</span>' + ddm(p.lon, false) + '</button>'
-          + '</div>';
-    if (GPSFIX){
-      h += '<div class="pinfacts"><div><span class="k">From you</span><span class="v">'
-        +  String(Math.round(trkBetween(GPSFIX, p))).padStart(3,'0') + '\u00b0 / '
-        +  nmBetween(GPSFIX, p).toFixed(1) + ' nm</span></div></div>';
-    }
+    var h = ptHead(p);
     /* Grouped rather than seven identical boxes: what it does to the
        route, then what it does to the waypoint, then the one that
        destroys something. */
@@ -7659,6 +7871,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       +    actRow('data-mna','rename','rename','Rename\u2026')
       +  '</div>';
     h += '<div class="agrp danger">' + actRow('data-mna','del','del','Delete') + '</div>';
+    h += '<div class="cnote" style="padding:10px var(--edge) 0">A personal waypoint is a '
+      +  'position you saved, not a surveyed point. Advisory only.</div>';
     return h;
   }
 
@@ -7666,11 +7880,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var p = dbById(id); if (!p) return;
     MINE_SEL = id;
     mineWin = mineWin || $('#mineWin');
-    $('#mineTtl').textContent = (p.lb || p.id).toUpperCase();
+    /* type first, then which one - the same header shape the pin window
+       uses, instead of the name alone in the type's place */
+    $('#mineTtl').textContent = (p.lb || p.id);
     var b = $('#mineBody');
     b.innerHTML = mineActHTML(p);
-    Array.prototype.slice.call(b.querySelectorAll('[data-mnc]')).forEach(function(x){
-      x.addEventListener('click', function(){ copyText(x.getAttribute('data-mnc')); });
+    Array.prototype.slice.call(b.querySelectorAll('[data-ptc]')).forEach(function(x){
+      x.addEventListener('click', function(){ copyText(x.getAttribute('data-ptc')); });
     });
     Array.prototype.slice.call(b.querySelectorAll('[data-mna]')).forEach(function(x){
       x.addEventListener('click', function(){ mineAction(x.getAttribute('data-mna')); });
@@ -7702,7 +7918,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       ROUTE = ROUTE.filter(function(r){ return r.id !== p.id; });
       if (toWpt >= ROUTE.length) toWpt = Math.max(1, ROUTE.length - 1);
       var ix = DB.indexOf(p); if (ix >= 0) DB.splice(ix, 1);
-      if (isFav(p.id)) toggleFav(p.id);
+      removeFav(p.id);
       saveMarks(); saveRoute();
       closeMineWin(); drawMine(); drawFpl(); renderMap(); drawActy();
       toast('Deleted');
@@ -7765,34 +7981,54 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return null;
   }
 
-  function pinNearest(lat, lon){
+  function pinNearest(lat, lon, skipId){
     var best = null, bd = 1e9, from = { lat:lat, lon:lon };
     DB.forEach(function(p){
       if (typeof p.lat !== 'number') return;
+      /* a saved waypoint is its own nearest point at 0.0 nm, which tells
+         you nothing - the caller passes its id to skip it */
+      if (skipId && p.id === skipId) return;
       var d = nmBetween(from, p);
       if (d < bd){ bd = d; best = p; }
     });
     return best ? { p:best, nm:bd, brg:trkBetween(from, best) } : null;
   }
 
-  function pinHTML(){
-    if (!PIN) return '';
-    var lat = PIN.lat, lon = PIN.lon;
-    var el = pinElev(lat, lon), near = pinNearest(lat, lon);
+  /* ONE head for both point windows.
+     The dropped-pin window had the coordinate in two formats, a facts
+     grid and the nearest known point. The saved-waypoint window had one
+     coordinate line, a facts row that appeared only when there was a GPS
+     fix, no nearest, and an inline padding patch to cover the hole the
+     missing second line left in a two-line box. Same object, same head. */
+  function ptHead(p){
+    var lat = p.lat, lon = p.lon;
+    var el = pinElev(lat, lon), near = pinNearest(lat, lon, p.id || null);
+
+    /* "From you" needs a you. With no fix, measure from the active
+       waypoint and say which one - printing a dash loses a useful number,
+       and printing a distance from something unnamed is worse. */
+    var from = null, fromK = 'From you';
+    if (GPSFIX){ from = { lat:GPSFIX.lat, lon:GPSFIX.lon }; }
+    else if (ROUTE && ROUTE.length){
+      var w0 = ROUTE[Math.min(Math.max(toWpt, 0), ROUTE.length - 1)];
+      if (w0 && w0.id !== p.id){
+        from = { lat:w0.lat, lon:w0.lon }; fromK = 'From ' + label(w0);
+      }
+    }
 
     var h = '<div class="pinco">'
-          + '<button class="c" data-pinc="' + ddm(lat, true) + ' ' + ddm(lon, false) + '">'
+          + '<button class="c" data-ptc="' + ddm(lat, true) + ' ' + ddm(lon, false) + '">'
           +   ddm(lat, true) + '<span>&nbsp;</span>' + ddm(lon, false) + '</button>'
-          + '<button class="d" data-pinc="' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '">'
+          + '<button class="d" data-ptc="' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '">'
           +   lat.toFixed(5) + ', ' + lon.toFixed(5) + '</button>'
           + '</div>';
 
     h += '<div class="pinfacts">'
       +    '<div><span class="k">Ground</span><span class="v">'
       +      (el == null ? '\u2014' : el.toLocaleString() + '\'') + '</span></div>'
-      +    '<div><span class="k">From you</span><span class="v">'
-      +      (GPSFIX ? Math.round(trkBetween(GPSFIX, PIN)) + '\u00b0 / '
-                       + nmBetween(GPSFIX, PIN).toFixed(1) + ' nm' : '\u2014') + '</span></div>'
+      +    '<div><span class="k">' + esc(fromK) + '</span><span class="v">'
+      +      (from ? String(Math.round(trkBetween(from, p))).padStart(3, '0') + '\u00b0 / '
+                     + nmBetween(from, p).toFixed(1) + ' nm' : '\u2014') + '</span></div>'
       +  '</div>';
 
     if (near){
@@ -7807,6 +8043,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +  'terrain tile for this spot to be loaded. Turn terrain on, or pan here at a closer '
         +  'zoom, and reopen.</div>';
     }
+    return h;
+  }
+
+  function pinHTML(){
+    if (!PIN) return '';
+    var h = ptHead({ lat:PIN.lat, lon:PIN.lon, id:null, nm:'Dropped pin' });
 
     h += '<div class="agrp prim">' + actRow('data-pina','add','add','Add to end of route') + '</div>';
     h += '<div class="agrp">'
@@ -7831,8 +8073,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (!pinWin || !pinWin.classList.contains('on') || !PIN) return;
     var b = $('#pinBody');
     b.innerHTML = pinHTML();
-    Array.prototype.slice.call(b.querySelectorAll('[data-pinc]')).forEach(function(x){
-      x.addEventListener('click', function(){ copyText(x.getAttribute('data-pinc')); });
+    Array.prototype.slice.call(b.querySelectorAll('[data-ptc]')).forEach(function(x){
+      x.addEventListener('click', function(){ copyText(x.getAttribute('data-ptc')); });
     });
     Array.prototype.slice.call(b.querySelectorAll('[data-pina]')).forEach(function(x){
       x.addEventListener('click', function(){ pinAction(x.getAttribute('data-pina')); });
@@ -8156,6 +8398,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      WAYPOINT SHEET - chip actions and point entry
      ============================================================ */
   var wpt = $('#wptSheet'), wptW = wpt.querySelector('.tedw');
+  /* Same four scopes as the Airports view, same words, same order - one
+     taxonomy, so Nearest means the same thing in both places. */
+  var WPT_MODES = [['near','Nearest'],['all','All'],['fav','Favourites'],['rec','Recent']];
+  var wptMode = 'near';
   function closeWpt(){ wpt.classList.remove('on'); wptW.classList.remove('tall'); }
   $('#wptClose').addEventListener('click', closeWpt);
   wpt.addEventListener('click', function(e){ if (e.target === wpt) closeWpt(); });
@@ -8198,10 +8444,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#wptTop').innerHTML =
         '<div class="wsearch"><input id="wq" type="text" '
       + 'placeholder="Name, fix, village, or paste coordinates" '
-      + 'autocapitalize="characters" autocorrect="off" spellcheck="false"></div>';
+      + 'autocapitalize="characters" autocorrect="off" spellcheck="false"></div>'
+      + '<div class="wsegwrap"><div class="npseg" id="wptSeg">'
+      + WPT_MODES.map(function(m){
+          return '<button data-wm="' + m[0] + '"'
+               + (wptMode === m[0] ? ' class="on"' : '') + '>' + m[1] + '</button>';
+        }).join('')
+      + '</div></div>';
 
     function addPoint(p){
       ROUTE.splice(at, 0, { id:p.id, nm:p.nm, cat:p.cat, lat:p.lat, lon:p.lon });
+      /* Recent is a scope in this sheet now, so adding from here has to
+         feed it - it used to fill only from the on-map search bar, which
+         is why the Recent block was usually empty. */
+      if (p.id) pushRec(p.id);
       closeWpt(); drawFpl();
     }
 
@@ -8210,7 +8466,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       var h = '';
 
       /* a query that parses as a coordinate (decimal, DDM/DMS or a
-         Google plus code) is offered directly */
+         Google plus code) is offered directly, whatever the scope */
       var cc = parseAnyCoord((qRaw || '').trim());
       if (cc){
         h += '<div class="wsec">Coordinate</div>'
@@ -8220,95 +8476,115 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
            + '<span class="cat">Add</span></button>';
       }
 
-      var hits = DB.filter(function(p){
-        if (!q) return true;
-        return (p.id && p.id.toUpperCase().indexOf(q) >= 0)
-            || (p.ia && p.ia.toUpperCase().indexOf(q) === 0)
-            || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
-      });
-      /* With nothing typed, an alphabetical slice of 659 is useless -
-         what you want to add is almost always somewhere near you or
-         somewhere you used recently. So: Recent, then Nearest. Typing
-         switches to ranked matching. */
-      var HIT_CAP = 30, hitTotal = hits.length, addNear = null, addRecent = null;
-      if (!q){
-        var from, fromLabel;
-        if (GPSFIX){ from = { lat:GPSFIX.lat, lon:GPSFIX.lon }; fromLabel = 'your position'; }
-        else if (ROUTE && ROUTE.length){
-          var w0 = ROUTE[Math.min(Math.max(toWpt, 0), ROUTE.length - 1)];
-          from = { lat:w0.lat, lon:w0.lon }; fromLabel = label(w0);
-        } else if (typeof VIEW !== 'undefined' && VIEW){
-          from = { lat:(VIEW.n + VIEW.s) / 2, lon:(VIEW.w + VIEW.e) / 2 };
-          fromLabel = 'map centre';
-        }
-        var inRoute = {};
-        (ROUTE || []).forEach(function(p){ if (p.id) inRoute[p.id] = 1; });
-
-        addRecent = (typeof recents !== 'undefined' && recents ? recents : [])
-          .map(dbById).filter(function(p){ return p && !inRoute[p.id]; }).slice(0, 5);
-
-        if (from){
-          var seenR = {};
-          addRecent.forEach(function(p){ seenR[p.id] = 1; });
-          addNear = hits.filter(function(p){ return !seenR[p.id]; })
-            .map(function(p){ return { p:p, d:nmBetween(from, p) }; })
-            .sort(function(a, b){ return a.d - b.d; })
-            .slice(0, 20);
-        }
-        hits = [];
-      } else {
-        /* Most important first, and an exact id match always on top. */
-        hits.sort(function(a, b){
-          var ax = (a.id.toUpperCase() === q) ? -1 : 0;
-          var bx = (b.id.toUpperCase() === q) ? -1 : 0;
-          if (ax !== bx) return ax - bx;
-          return (a.rk == null ? 2 : a.rk) - (b.rk == null ? 2 : b.rk);
-        });
-        if (hits.length > HIT_CAP) hits = hits.slice(0, HIT_CAP);
+      /* Where "nearest" is measured from: the GPS fix, else the active
+         waypoint, else the map centre - and the header says which, so the
+         list is never silently relative to something unexpected. */
+      var from = null, fromLabel = '';
+      if (GPSFIX){ from = { lat:GPSFIX.lat, lon:GPSFIX.lon }; fromLabel = 'your position'; }
+      else if (ROUTE && ROUTE.length){
+        var w0 = ROUTE[Math.min(Math.max(toWpt, 0), ROUTE.length - 1)];
+        from = { lat:w0.lat, lon:w0.lon }; fromLabel = label(w0);
+      } else if (typeof VIEW !== 'undefined' && VIEW){
+        from = { lat:(VIEW.n + VIEW.s) / 2, lon:(VIEW.w + VIEW.e) / 2 };
+        fromLabel = 'map centre';
       }
 
-      /* Each row carries a colour bar in its category's own colour, so
-         an aerodrome, a strip and an enroute fix are told apart at a
-         glance rather than by reading the identifier. */
-      function wrow(p, extra){
+      /* SCOPE first, then the query filters inside it. The segment is not
+         a sort order - it decides which points are on the table at all,
+         so typing in Favourites searches your favourites and nothing
+         else. */
+      var pool;
+      if (wptMode === 'fav'){
+        pool = DB.filter(function(p){ return p.id && isFav(p.id); });
+      } else if (wptMode === 'rec'){
+        var seenR = {};
+        pool = (typeof recents !== 'undefined' && recents ? recents : [])
+          .map(dbById)
+          .filter(function(p){
+            if (!p || seenR[p.id]) return false;
+            seenR[p.id] = 1; return true;
+          });
+      } else {
+        pool = DB.slice();
+      }
+      if (q){
+        pool = pool.filter(function(p){
+          return (p.id && p.id.toUpperCase().indexOf(q) >= 0)
+              || (p.ia && p.ia.toUpperCase().indexOf(q) === 0)
+              || (p.nm && p.nm.toUpperCase().indexOf(q) >= 0);
+        });
+      }
+
+      var total = pool.length, HIT_CAP = 30, shown = total;
+      var rows = pool.map(function(p){
+        return { p:p, d:from ? nmBetween(from, p) : null };
+      });
+
+      if (wptMode === 'near'){
+        if (from) rows.sort(function(a, b){ return a.d - b.d; });
+        var LIM = q ? HIT_CAP : 20;
+        if (rows.length > LIM){ rows = rows.slice(0, LIM); shown = LIM; }
+      } else if (wptMode === 'rec'){
+        /* recency IS the order here - grouping it by category would throw
+           away the only thing the list is sorted on */
+      } else {
+        rows.sort(function(a, b){
+          if (q){
+            var ax = (a.p.id.toUpperCase() === q) ? -1 : 0;
+            var bx = (b.p.id.toUpperCase() === q) ? -1 : 0;
+            if (ax !== bx) return ax - bx;
+          }
+          return a.p.id < b.p.id ? -1 : 1;
+        });
+        if (q && rows.length > HIT_CAP){ rows = rows.slice(0, HIT_CAP); shown = HIT_CAP; }
+      }
+
+      /* Each row carries a colour bar in its category's own colour, so an
+         aerodrome, a strip and an enroute fix are told apart at a glance
+         rather than by reading the identifier. One builder for every
+         scope - the typed-search rows used to be built separately and
+         came out without the bar. */
+      function wrow(x){
+        var p = x.p;
+        var right = (x.d != null) ? x.d.toFixed(0) + ' nm' : (p.ia || '');
         return '<button class="wrow k-' + (p.cat || 'mine') + '" data-id="' + p.id + '">'
              + '<span class="id">' + (p.lb || p.id) + '</span>'
              + '<span class="nm2">' + esc(p.nm || '') + '</span>'
-             + '<span class="cat">' + (extra || p.ia || '') + '</span></button>';
+             + '<span class="cat">' + right + '</span></button>';
       }
-      if (addRecent && addRecent.length){
-        h += '<div class="wsec">Recent</div>';
-        addRecent.forEach(function(p){ h += wrow(p); });
-      }
-      if (addNear && addNear.length){
-        /* One flat list of everything nearby was unreadable - aerodromes,
-           strips, procedure fixes and navaids interleaved by distance.
-           Grouped by category, nearest first inside each. */
-        h += '<div class="wsec">Nearest \u2014 from ' + fromLabel + '</div>';
-        CAT_ORDER.forEach(function(c){
-          var inCat = addNear.filter(function(x){ return x.p.cat === c; });
-          if (!inCat.length) return;
-          h += '<div class="wsub">' + CAT_NM[c] + '</div>';
-          inCat.forEach(function(x){ h += wrow(x.p, x.d.toFixed(0) + ' nm'); });
-        });
-      }
-      if (hitTotal > HIT_CAP && q){
-        h += '<div class="wsec">Showing ' + HIT_CAP + ' of ' + hitTotal
-          +  ' \u2014 keep typing to narrow</div>';
-      }
-      CAT_ORDER.forEach(function(c){
-        var inCat = hits.filter(function(p){ return p.cat === c; });
-        if (!inCat.length) return;
-        h += '<div class="wsec">' + CAT_NM[c] + '</div>';
-        inCat.forEach(function(p){
-          h += '<button class="wrow" data-id="' + p.id + '">'
-             + '<span class="id">' + p.id + '</span>'
-             + '<span class="nm2">' + p.nm + '</span>'
-             + (p.ia ? '<span class="cat">' + p.ia + '</span>' : '') + '</button>';
-        });
-      });
 
-      if (!h) h = '<div class="chipempty">No match</div>';
+      var HEAD = {
+        near: 'Nearest' + (fromLabel ? ' \u2014 from ' + fromLabel : ''),
+        all:  'All points',
+        fav:  'Favourites',
+        rec:  'Recently used'
+      };
+
+      if (rows.length){
+        h += '<div class="wsec">' + HEAD[wptMode]
+          +  (wptMode === 'all' && !q ? ' \u2014 ' + total : '') + '</div>';
+        if (wptMode === 'rec'){
+          rows.forEach(function(x){ h += wrow(x); });
+        } else {
+          CAT_ORDER.forEach(function(c){
+            var inCat = rows.filter(function(x){ return x.p.cat === c; });
+            if (!inCat.length) return;
+            h += '<div class="wsub">' + CAT_NM[c] + '</div>';
+            inCat.forEach(function(x){ h += wrow(x); });
+          });
+        }
+        if (shown < total){
+          h += '<div class="wsec">Showing ' + shown + ' of ' + total
+            +  (q ? ' \u2014 keep typing to narrow' : ' \u2014 search or switch to All') + '</div>';
+        }
+      }
+
+      if (!h){
+        h = '<div class="chipempty">'
+          + (wptMode === 'fav' ? 'No favourites yet \u2014 star a point on its card'
+           : wptMode === 'rec' ? 'Nothing used yet'
+           : 'No match') + '</div>';
+      }
       h += '<div class="wnote">Airfields are OurAirports-derived, not AIP. Procedure fixes '
          + 'are ENR 4.3; navaids from the v262 pack. Personal waypoints are your own. '
          + 'Advisory only \u2014 cross-check before use.</div>';
@@ -8331,6 +8607,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
     list('');
     $('#wq').addEventListener('input', function(e){ list(e.target.value); });
+    /* the segment is wired once - list() rebuilds the list only, so the
+       search box keeps its value and its caret when you switch scope */
+    $$('#wptSeg button').forEach(function(b){
+      b.addEventListener('click', function(){
+        wptMode = b.getAttribute('data-wm');
+        $$('#wptSeg button').forEach(function(x){ x.classList.toggle('on', x === b); });
+        var box = $('#wq');
+        list(box ? box.value : '');
+      });
+    });
     closeAllSheetsButFpl();
     wpt.classList.add('on');
   }
@@ -9258,7 +9544,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   })();
   function saveActs(){ try{ localStorage.setItem(ACTS_KEY, JSON.stringify(CARD_CFG)); }catch(e){} }
 
-  var cardId = null, cardTab = 'info', cardSub = 'metar', cardFav = {};
+  /* cardFav was a bare object, never saved and never loaded, so every
+     star set on a card was gone on the next reload - and the Airports
+     Favourites segment read that same volatile object. Favourites are now
+     the persisted FAVS set that My waypoints already used. One store. */
+  var cardId = null, cardTab = 'info', cardSub = 'metar';
   var CARD_TABS = [['info','Info'],['wx','Weather'],['rwy','Runway'],['proc','Procedure'],['ntm','NOTAM']];
   var WX_SUBS   = [['metar','METAR'],['taf','TAF'],['wind','Winds']];
 
@@ -9409,12 +9699,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var light = tw
       ? 'First light ' + hhmmLocal(tw[0], 600) + ' \u00b7 Last light ' + hhmmLocal(tw[1], 600)
       : '';
+    /* Line 2 is where it is, line 3 is what it is. Both used to fall back
+       to CAT_LABEL, so every point outside the six FIELD_INFO majors
+       printed its category twice - "Strip / village" over "Strip /
+       village". The pack carries a town as `mu`, but for 155 of the 203
+       records that have one it is the same word as the field name, so it
+       is only worth a line where it says something the name did not. */
+    var town = fi ? fi.town
+             : (f.mu && f.mu.trim().toUpperCase() !== (f.nm || '').trim().toUpperCase()
+                  ? f.mu : '');
+    var l2 = town || CAT_LABEL[f.cat] || 'Waypoint';
+    var l3 = fi ? 'Elevation ' + fi.elev.toLocaleString() + '\''
+                  + (fi.iata ? ' &middot; ' + fi.iata : '')
+                : (town ? (CAT_LABEL[f.cat] || '') : '');
     return '<div class="cinfo"><div class="cthumb">' + (CAT_SHORT[f.cat] || 'WPT') + '</div>'
       + '<div class="m"><b>' + f.nm + '</b>'
-      + '<span>' + (fi ? fi.town : (CAT_LABEL[f.cat] || 'Waypoint')) + '</span>'
+      + '<span>' + l2 + '</span>'
       + (f.awy ? '<span class="awy">' + esc(f.awy) + '</span>' : '')
-      + '<span>' + (fi ? 'Elevation ' + fi.elev.toLocaleString() + '\'' + (fi.iata ? ' &middot; ' + fi.iata : '')
-                       : (CAT_LABEL[f.cat] || '')) + '</span>'
+      + (l3 ? '<span>' + l3 + '</span>' : '')
       + (light ? '<span class="lt">' + light + '</span>' : '')
       + '</div></div>';
   }
@@ -9434,7 +9736,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       }
     }
 
-    if (f.id && (fi || myFreqFor(f.id).length)){
+    /* Every landing site gets this section, published or not. It used to
+       appear only where something was already on file, which meant the
+       553 strips and heliports - exactly the places the AIP does not
+       carry a frequency for, and exactly where your own note matters -
+       had no way in from the card at all. An empty list says so; a
+       missing section reads as "nothing to add here". */
+    var isSite = (f.cat === 'field' || f.cat === 'strip');
+    if (f.id && (isSite || hasAnyFreq(f.id))){
       var frows = allFreqFor(f.id);
       h += '<div class="csec">Frequencies</div>';
       frows.forEach(function(r){
@@ -9443,10 +9752,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           +            'letter-spacing:.08em">MINE</span>' : '')
           +  '</span><span class="v acc">' + esc(r.vl) + '</span></div>';
       });
+      if (!frows.length){
+        h += '<div class="kv"><span class="k">On file</span><span class="v">None</span></div>'
+          +  '<div class="cnote" style="margin-top:6px">Nothing published for ' + f.id
+          +  ' in the pack. Anything you add is stored on this device and shows here, '
+          +  'in the Radio panel and in the frequency window.</div>';
+      }
       h += '<button class="add" data-fqgo="' + f.id + '" style="width:100%;height:var(--mod-a);'
         +  'margin-top:10px;border-radius:var(--radius);background:var(--bg);'
         +  'border:1px dashed var(--border-strong);font-size:var(--t-sm);font-weight:600;'
-        +  'color:var(--text-muted)">Edit frequencies</button>';
+        +  'color:var(--text-muted)">' + (frows.length ? 'Edit frequencies' : 'Add a frequency')
+        +  '</button>';
     }
 
     if (f.cat === 'mine'){
@@ -9999,13 +10315,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         + 'on a strip belong under My notes on the Info tab.</div>';
     }
     var w = metarWind(wxRaw(f.id)), h = '';   /* runway wind from the live report */
-    fi.rwy.forEach(function(r){
-      var m = rwyLenM(r);
+    /* This read fi.rwy, not rws. fi is null for every field outside the
+       six in FIELD_INFO, so opening the Runway tab threw a TypeError on
+       371 of the 377 fields that have runway data - the tab went blank
+       and took the rest of the card render with it. rwyFor() already
+       returns the right list for both cases; use it.
+       Only FIELD_INFO rows carry surveyed threshold coordinates (`e`),
+       so a length is computed only where those exist and the pack rows
+       show a dash, which is what the note under this list has always
+       claimed happens. */
+    rws.forEach(function(r){
+      var surveyed = !!(r.e && r.e.length === 4);
+      var m = surveyed ? rwyLenM(r) : null;
       h += '<div class="rwyc"><div class="rh"><b>' + r.l + '/' + r.h + '</b>'
         + '<span>' + r.b.toFixed(0) + '\u00b0 true</span></div>'
         + '<div class="rwyg">'
-        + '<div><span class="k">Length</span><span class="v">' + m.toLocaleString() + ' m</span></div>'
-        + '<div><span class="k">Feet</span><span class="v">' + Math.round(m * 3.28084).toLocaleString() + '</span></div>'
+        + '<div><span class="k">Length</span><span class="v">'
+        + (surveyed ? m.toLocaleString() + ' m' : '\u2014') + '</span></div>'
+        + '<div><span class="k">Feet</span><span class="v">'
+        + (surveyed ? Math.round(m * 3.28084).toLocaleString() : '\u2014') + '</span></div>'
         + '<div><span class="k">Bearing</span><span class="v">' + r.b.toFixed(0) + '\u00b0</span></div>'
         + '</div>';
       if (w && w.dir !== null){
@@ -10100,7 +10428,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var twEl = $('#cardTwr');
     twEl.textContent = tw ? ('TWR ' + tw) : '';
     twEl.classList.toggle('on', !!tw);
-    $('#cardStar').classList.toggle('on', !!(f.id && cardFav[f.id]));
+    $('#cardStar').classList.toggle('on', !!(f.id && isFav(f.id)));
 
     var inRoute = ROUTE.some(function(p){ return p.id === f.id; });
     $('#cardAct').innerHTML = CARD_CFG.filter(function(k){
@@ -10461,8 +10789,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   });
   $('#cardStar').addEventListener('click', function(){
     if (!cardId) return;
-    cardFav[cardId] = !cardFav[cardId];
-    $('#cardStar').classList.toggle('on', !!cardFav[cardId]);
+    toggleFav(cardId);
+    $('#cardStar').classList.toggle('on', isFav(cardId));
+    /* on a tablet the Airports list and the card are on screen together,
+       so a star has to reach the list too */
+    if (viewCache.airports) rerenderAirports(viewCache.airports);
   });
   window.addEventListener('resize', function(){ if (card.classList.contains('on')) sizeCard(); });
 
@@ -10888,14 +11219,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function qkPaintVal(){
     var el = $('#qkVal'); if (!el) return;
-    if (qkWhat && qkWhat.indexOf('conv:') === 0){
-      var cv = qkWheelVals.conv;
-      if (cv == null){ el.textContent = '\u2014'; return; }
-      el.textContent = (qkWhat === 'conv:min')
-        ? cv + ' min \u00b7 ' + (cv / 60).toFixed(2) + ' h'
-        : cv.toFixed(2) + ' h \u00b7 ' + Math.round(cv * 60) + ' min';
-      return;
-    }
     if (qkWhat && qkWhat.indexOf('hold:') === 0){
       var dg = (qkWheelVals.deg == null) ? null : qkWheelVals.deg;
       el.textContent = (dg == null ? '\u2014' : String(dg).padStart(3, '0')) + '\u00b0';
@@ -11007,37 +11330,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if ($('#qkSeg')) $('#qkSeg').style.display = 'none';
     var refs = {};
 
-    if (what.indexOf('conv:') === 0){
-      /* Minutes 1..600 by the minute, or decimal 0.01..10.00 by the
-         hundredth - whichever side you think in. */
-      var byMin = (what === 'conv:min'), vals = [], i3;
-      if (byMin){ for (i3 = 1; i3 <= 600; i3++) vals.push(i3); }
-      else       { for (i3 = 1; i3 <= 1000; i3++) vals.push(i3 / 100); }
-      var selIx = byMin
-        ? Math.max(0, Math.min(599, CONV_MIN - 1))
-        : Math.max(0, Math.min(999, Math.round(CONV_MIN / 60 * 100) - 1));
-      var CW = buildWheel('conv', vals, selIx, '',
-        byMin ? function(v){ return String(v); }
-              : function(v){ return v.toFixed(2); });
-      wheels.appendChild(CW.wrap);
-      refs.conv = CW.w;
-      [['\u2212 10', -10], ['+ 10', 10], ['+ 60', 60]].forEach(function(q){
-        var b = document.createElement('button');
-        b.type = 'button'; b.textContent = byMin ? q[0] : q[0].replace(/\d+/, function(n){
-          return (n / 60).toFixed(2);
-        });
-        b.addEventListener('click', function(){
-          var step = byMin ? q[1] : q[1] / 60;
-          var cur = qkWheelVals.conv + step;
-          refs.conv.__goto(byMin ? Math.round(cur) - 1
-                                 : Math.round(cur * 100) - 1, true);
-        });
-        quick.appendChild(b);
-      });
-      requestAnimationFrame(function(){ refs.conv.__goto(refs.conv.__idx, false); });
-      return;
-    }
-
     if (what.indexOf('hold:') === 0){
       /* One wheel carrying the whole heading. It was two - tens and
          units - which reads like a heading is spoken but means picking a
@@ -11134,8 +11426,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       etd:  ['ETD', 'UTC, as HHMM', (ETD_MIN == null ? '' : clock(0).replace(':', ''))],
       /* no hint line: the wheel has no format to explain, and the
          readout above it already shows the value in degrees */
-      'conv:min': ['Minutes', '', String(CONV_MIN)],
-      'conv:dec': ['Decimal hours', '', (CONV_MIN / 60).toFixed(2)],
       'mine:name': ['Rename waypoint', 'a short identifier',
                     (function(){ var p = dbById(MINE_SEL); return p ? (p.lb || p.id) : ''; })()],
       'hold:crs': ['Holding course', '', String(HOLD.inb)],
@@ -11144,8 +11434,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#qkTtl').textContent = cfg[0].toUpperCase();   /* the window header is mono caps */
     /* a heading is continuous, so it gets a wheel like the ETD rather
        than a keyboard - 234 is quicker to dial than to type in flight */
-    var dial = (what === 'alt' || what === 'etd'
-                || what.indexOf('hold:') === 0 || what.indexOf('conv:') === 0);
+    var dial = (what === 'alt' || what === 'etd' || what.indexOf('hold:') === 0);
     $('#qkText').classList.toggle('off', dial);
     $('#qkDial').classList.toggle('on', dial);
     if (dial){
@@ -11181,14 +11470,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       toast('Saved');
       return;
     }
-    if (qkWhat && qkWhat.indexOf('conv:') === 0){
-      CONV_MIN = (qkWhat === 'conv:min')
-        ? Math.round(qkWheelVals.conv)
-        : Math.max(1, Math.round(qkWheelVals.conv * 60));
-      qkEd.classList.remove('on');
-      if (viewCache.calc) redrawCalc(viewCache.calc);
-      return;
-    }
     if (qkWhat === 'mine:name'){
       var nv = $('#qkIn').value.trim().toUpperCase();
       if (!nv){ toast('Enter a name'); return; }
@@ -11199,7 +11480,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
            the same point rather than at a name that no longer exists */
         renameMine(MINE_SEL, nv);
         mp.id = nv; mp.lb = nv;
-        if (isFav(MINE_SEL)){ toggleFav(MINE_SEL); toggleFav(nv); }
         MINE_SEL = nv;
         saveMarks();
       }
@@ -11486,8 +11766,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     try{ localStorage.setItem(FREQ_KEY, JSON.stringify(MYFREQ)); }catch(e){}
   }
   function myFreqFor(id){ return MYFREQ[id] || []; }
-  /* true if a point has any frequency at all, published or the pilot's */
-  function hasAnyFreq(id){ return !!(id && (FIELD_INFO[id] || myFreqFor(id).length)); }
+  /* true if a point has any frequency at all, published or the pilot's.
+     Was FIELD_INFO || mine, which is the v132 bug again: it misses the
+     nine fields whose published frequencies live on the airfield pack
+     record rather than in FIELD_INFO. allFreqFor already merges all
+     three sources, so ask it. */
+  function hasAnyFreq(id){ return allFreqFor(id).length > 0; }
   /* published + mine, tagged, in the usual radio order */
   function allFreqFor(id){
     var fi = FIELD_INFO[id];
@@ -11705,6 +11989,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var calcTab = 'pad';
   var calcAcc = null, calcOp = null, calcCur = '0', calcFresh = true;
   var CONV_MIN = 6;
+  /* Minutes are whole in the table, but typing 0.73 h gives 43.8, and
+     rounding that to 44 silently loses 12 seconds. Show the tenth where
+     there is one rather than pretend the answer is round. */
+  function cvMinStr(m){
+    return (Math.abs(m - Math.round(m)) < 0.05) ? String(Math.round(m)) : m.toFixed(1);
+  }
 
   /* Tab order is yours - the one you reach for should not be the one
      that scrolled off the right. Held in localStorage; any tab added in
@@ -11752,15 +12042,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       }
       h += '<div class="cvcol">' + cA + '</div><div class="cvcol">' + cB + '</div></div>';
 
+      /* Type into either box. These were buttons onto the wheel picker,
+         on the principle that a wheel beats a keyboard in flight - true
+         for a heading or a level, wrong here: this is a logbook
+         conversion done on the ground, and spinning to 47 minutes when
+         you know it is 47 minutes is the slow way round. */
       h += '<div class="cvpick">'
         +    '<div class="e"><span class="k">Minutes</span>'
-        +      '<button class="v" data-cvp="min">' + CONV_MIN + '</button></div>'
+        +      '<input class="v" id="cvMin" type="text" inputmode="decimal" '
+        +        'enterkeyhint="done" autocorrect="off" spellcheck="false" '
+        +        'aria-label="Minutes" value="' + cvMinStr(CONV_MIN) + '"></div>'
         +    '<div class="e"><span class="k">Decimal hours</span>'
-        +      '<button class="v" data-cvp="dec">' + (CONV_MIN / 60).toFixed(2) + '</button></div>'
+        +      '<input class="v" id="cvDec" type="text" inputmode="decimal" '
+        +        'enterkeyhint="done" autocorrect="off" spellcheck="false" '
+        +        'aria-label="Decimal hours" value="' + (CONV_MIN / 60).toFixed(2) + '"></div>'
         +  '</div>';
       h += '<div class="cnote" style="padding:10px 0 0">Rounded each way \u2014 a minute is '
         +  '0.0167 h, so 0.01 h is 36 seconds and the two scales never line up exactly. '
-        +  'Set either side and the other follows.</div>';
+        +  'Type into either side and the other follows.</div>';
       return h;
     }
 
@@ -11978,9 +12277,43 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         b.addEventListener(ev, cancel, { passive:true });
       });
     });
-    Array.prototype.forEach.call(body.querySelectorAll('[data-cvp]'), function(b){
-      b.addEventListener('click', function(){ openQk('conv:' + b.getAttribute('data-cvp')); });
-    });
+    /* Minutes <-> decimal hours, both directions, live on every keystroke.
+       Only the OTHER field is written while you type - rewriting the one
+       under the cursor would fight the caret, which is the same trap the
+       Airports search hit. */
+    var cvM = body.querySelector('#cvMin'), cvD = body.querySelector('#cvDec');
+    if (cvM && cvD){
+      var cvNum = function(v){
+        v = String(v).trim().replace(',', '.');       /* a comma decimal still means a decimal */
+        if (!v) return null;
+        var n = parseFloat(v);
+        return (isNaN(n) || n < 0) ? null : n;
+      };
+      cvM.addEventListener('input', function(){
+        var n = cvNum(cvM.value);
+        if (n === null){ cvD.value = ''; return; }
+        if (n > 5999) { n = 5999; cvM.value = cvMinStr(n); }
+        CONV_MIN = n;
+        cvD.value = (n / 60).toFixed(2);
+      });
+      cvD.addEventListener('input', function(){
+        var n = cvNum(cvD.value);
+        if (n === null){ cvM.value = ''; return; }
+        if (n > 99.98){ n = 99.98; cvD.value = n.toFixed(2); }
+        CONV_MIN = n * 60;
+        cvM.value = cvMinStr(CONV_MIN);
+      });
+      /* tapping a field selects it, so the next digit replaces rather than
+         appends - you are almost always converting a new number */
+      [cvM, cvD].forEach(function(f){
+        f.addEventListener('focus', function(){ try{ f.select(); }catch(e){} });
+        f.addEventListener('blur', function(){
+          /* normalise whatever was left behind, both sides */
+          cvM.value = cvMinStr(CONV_MIN);
+          cvD.value = (CONV_MIN / 60).toFixed(2);
+        });
+      });
+    }
     Array.prototype.forEach.call(body.querySelectorAll('[data-cg]'), function(b){
       b.addEventListener('click', function(){ calcTab = b.getAttribute('data-cg'); redrawCalc(el); });
     });
@@ -12740,7 +13073,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                 && FIELD_INFO[p.id].iata.toUpperCase().indexOf(aq) === 0);
       });
     }
-    if (npMode === 'fav') items = items.filter(function(p){ return cardFav[p.id]; });
+    if (npMode === 'fav') items = items.filter(function(p){ return isFav(p.id); });
     if (npMode === 'rec') items = rec.map(dbById).filter(function(p){
       return p && (p.cat === 'field' || p.cat === 'strip');
     });
@@ -13412,15 +13745,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      exactly like an aerodrome.
      ============================================================ */
   var sPanel = $('#searchPanel'), sIn = $('#searchIn'), sBox = $('#search');
-  var REC_KEY = 'nmp.iphone.recents';
+  /* SRCH_KEY, not REC_KEY. This was a second `var REC_KEY` in the same
+     IIFE scope as the flight recorder's, 4,600 lines below it, so the
+     recents key overwrote the recorder's at load and every
+     removeItem(REC_KEY) in the recorder - stop, discard, migrate - was
+     deleting this list instead. */
+  var SRCH_KEY = 'nmp.iphone.recents';
   function loadRec(){
-    try{ var a = JSON.parse(localStorage.getItem(REC_KEY)); if (a && a.length) return a; }catch(e){}
+    try{ var a = JSON.parse(localStorage.getItem(SRCH_KEY)); if (a && a.length) return a; }catch(e){}
     return [];
   }
   var recents = loadRec();
   function pushRec(id){
     recents = [id].concat(recents.filter(function(x){ return x !== id; })).slice(0, 8);
-    try{ localStorage.setItem(REC_KEY, JSON.stringify(recents)); }catch(e){}
+    try{ localStorage.setItem(SRCH_KEY, JSON.stringify(recents)); }catch(e){}
   }
 
   function sizeSearch(){
