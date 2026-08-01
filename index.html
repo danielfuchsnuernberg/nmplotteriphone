@@ -16,6 +16,32 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v133 2026-08-01 v132 was broken on load. Two faults, both mine,
+                       both the same class.
+
+                       ENROUTE was declared at line 5568 but mergeEnr
+                       consumed it at 5544 - I had inserted the dataset
+                       after CAT_NM without checking that CAT_NM sits
+                       AFTER the database build, not before. `var` hoists
+                       the declaration and not the value, so ENROUTE.length
+                       threw and killed the entire script. Moved above its
+                       consumer.
+
+                       And the frequency-window markup was never in the
+                       file at all. That edit reported ok inside a script
+                       that later aborted, so its write never ran - the
+                       exact failure I wrote up in v128 and then repeated.
+                       $('#fqWinX').addEventListener on null then threw a
+                       second time.
+
+                       Added boot_test.js: loads the real file in jsdom,
+                       reports anything that throws on load, then clicks
+                       every bottom tab, every chrome control and every
+                       view, and reports again. node --check only ever
+                       saw syntax; three runtime faults have now shipped
+                       past it - TAB_MQ, ENROUTE, and this one. Verified
+                       the harness FAILS on the shipped v132 and PASSES
+                       here, so it is testing something real.
        v132 2026-08-01 FREQUENCY WINDOW, replacing the compact panel.
 
                        Floats over the map, fixed top right, so the map
@@ -4320,6 +4346,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 </div>
 
 <!-- Radio: frequencies in route order -->
+<!-- Frequency window: floats over the map, fixed top right -->
+<div class="fqwin" id="fqWin">
+  <div class="h"><span class="t">FREQUENCIES</span>
+    <button class="x" id="fqWinX" aria-label="Close">&times;</button></div>
+  <div class="b" id="fqWinBody"></div>
+</div>
+
 <div class="drop" id="dropRad">
   <div class="dbody" id="radBody"></div>
   <div class="dgrip" id="radGrip" aria-label="Resize panel"><span></span></div>
@@ -4687,7 +4720,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v132';
+  var VERSION = 'v133';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -5541,21 +5574,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      point to the metre. Two records would put two markers on one spot,
      so the enroute entry is folded into the procedure fix, which keeps
      its terminal context and gains the airway list. */
-  (function mergeEnr(){
-    var byId = {};
-    PROCFIX.forEach(function(p){ byId[p.id] = p; });
-    for (var i = ENROUTE.length - 1; i >= 0; i--){
-      var e = ENROUTE[i], p = byId[e.id];
-      if (p){ if (e.awy && !p.awy) p.awy = e.awy; ENROUTE.splice(i, 1); }
-    }
-  })();
-
-  var DB = DB_EXTRA.filter(function(p){ return p.cat === 'mine'; })
-            .concat(AF, NAVAIDS, PROCFIX, ENROUTE,
-                    DB_EXTRA.filter(function(p){ return p.cat !== 'mine'; }));
-  var CAT_NM = { field:'Fields', fix:'Procedure fixes', enr:'Enroute fixes',
-                 strip:'Strips &amp; villages', mine:'My waypoints' };
-
   /* ---- Enroute significant points ---------------------------------
      Lifted from v262's PNG_ENROUTE: 170 five-letter fixes, each with
      the airways it serves. These are the ENR 4.4 points - distinct
@@ -5737,6 +5755,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     {id:'YABAL',lat:-5.94897,lon:144.8071,cat:'enr',awy:'H409, H784'},
     {id:'YALOL',lat:-6.99746,lon:151.68131,cat:'enr',awy:'H422'}
   ];
+
+  (function mergeEnr(){
+    var byId = {};
+    PROCFIX.forEach(function(p){ byId[p.id] = p; });
+    for (var i = ENROUTE.length - 1; i >= 0; i--){
+      var e = ENROUTE[i], p = byId[e.id];
+      if (p){ if (e.awy && !p.awy) p.awy = e.awy; ENROUTE.splice(i, 1); }
+    }
+  })();
+
+  var DB = DB_EXTRA.filter(function(p){ return p.cat === 'mine'; })
+            .concat(AF, NAVAIDS, PROCFIX, ENROUTE,
+                    DB_EXTRA.filter(function(p){ return p.cat !== 'mine'; }));
+  var CAT_NM = { field:'Fields', fix:'Procedure fixes', enr:'Enroute fixes',
+                 strip:'Strips &amp; villages', mine:'My waypoints' };
+
 
   /* Storage owns the whole personal-waypoint set once it exists, so a
      rename or a delete cannot leave a seeded copy behind. */
