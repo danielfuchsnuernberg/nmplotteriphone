@@ -16,6 +16,45 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v124 2026-08-01 Phone tab pill back to 38x26; the tablet keeps the
+                       larger 58x38, which is where it was needed.
+
+                       Calculator gains three things.
+
+                       QNH switches between hPa and inHg. Switching
+                       CONVERTS what is already typed rather than leaving
+                       1013 sitting under an inHg label, and the solver
+                       always works in hPa internally. Choice remembered.
+
+                       Cloud base by the spread method: 400 ft per degC,
+                       which is the dry adiabatic 3 degC/1000 ft against a
+                       dewpoint lapse of 0.5, converging at 2.5. Gives
+                       AGL and MSL, pulls temperature and dewpoint
+                       straight out of the nearest live METAR, and warns
+                       when the spread is 2 degC or less. Labelled plainly
+                       as a rule of thumb for CONVECTIVE cloud - it says
+                       nothing about layered or orographic cloud, which
+                       matters in these valleys.
+
+                       Airspeed: CAS, OAT and pressure altitude in; TAS,
+                       Mach, TAT and density out. TAS comes from real air
+                       density rather than a per-thousand rule, since
+                       density altitude runs high here - CAS 120 at
+                       PA 5,388 and 24 degC is TAS 135, not the 132 the
+                       2%-rule gives. It can take the pressure altitude
+                       straight from the Altitude tab.
+
+                       Wind correction already existed under Wind and
+                       covers every field asked for - WSpd, WDir, TCrs,
+                       TAS in; THdg, GS, WCA out, plus crosswind and
+                       head/tailwind components. Left alone rather than
+                       duplicated.
+
+                       Five tabs will not fit across a phone, so the
+                       segment strip scrolls and keeps full labels.
+                       Solvers verified before wiring: standard QNH gives
+                       PA = elevation, ISA sea level gives TAS = CAS, and
+                       a direct 20 kt headwind on TAS 120 gives GS 100.
        v123 2026-08-01 Tab bar pills enlarged. The active pill is the
                        target you see, and at 38x26 around a 21px icon it
                        had 2.5px above and below - it read as a cramped
@@ -2601,12 +2640,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   color:var(--text-muted);
 }
-/* The pill is the active-state target, so it needs real padding around
-   the glyph - at 38x26 around a 21px icon it had 2.5px top and bottom
-   and read as a cramped badge rather than a button. The ICON size is
-   unchanged; only the box around it grows. */
+/* Phone keeps the original tight pill - at 4 slots it reads fine and
+   Danny prefers it. The tablet enlarges it in the 600px band, where 7
+   slots and a taller bar leave the small pill looking lost. */
 .tab .ic{
-  width:48px;height:32px;border-radius:9px;
+  width:38px;height:26px;border-radius:var(--radius-sm);
   display:flex;align-items:center;justify-content:center;
 }
 .tab svg{width:21px;height:21px;display:block}
@@ -3379,8 +3417,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .shsave.done{background:var(--good)}
 
 /* ---- Calculator -------------------------------------------- */
-.cseg{display:flex;gap:var(--gut);padding-bottom:14px}
-.cseg button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+/* Five tabs will not fit five-across on a phone - at 4 gaps that is 63px
+   each and the labels clip. The strip scrolls instead: buttons keep their
+   natural width, still grow to fill on a tablet where there is room. */
+.cseg{display:flex;gap:var(--gut);padding-bottom:14px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.cseg::-webkit-scrollbar{display:none}
+.cseg button{flex:1 0 auto;height:var(--mod-a);padding:0 14px;
+  border-radius:var(--radius);white-space:nowrap;
   background:var(--bg-2);border:1px solid var(--border);
   font-size:var(--t-sm);font-weight:600;color:var(--text-muted)}
 .cseg button.on{background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13}
@@ -4378,7 +4422,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v123';
+  var VERSION = 'v124';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -9661,7 +9705,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var calcAcc = null, calcOp = null, calcCur = '0', calcFresh = true;
 
   function calcHTML(){
-    var segs = [['pad','Calculator'],['wind','Wind'],['alt','Altitude']];
+    var segs = [['pad','Calc'],['wind','Wind'],['alt','Altitude'],
+                ['cloud','Cloud'],['as','Airspeed']];
     var h = '<div class="cseg">' + segs.map(function(s){
       return '<button data-cg="' + s[0] + '"' + (calcTab === s[0] ? ' class="on"' : '') + '>'
            + s[1] + '</button>';
@@ -9696,13 +9741,47 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         + 'the right. Advisory only.</div></div>';
     }
 
+    if (calcTab === 'cloud'){
+      return h + '<div class="e6">'
+        + '<div class="row">'
+        +   '<div><label>Temp \u00b0C</label><input id="e6ct" inputmode="numeric" placeholder="30"></div>'
+        +   '<div><label>Dewpoint \u00b0C</label><input id="e6ctd" inputmode="numeric" placeholder="22"></div>'
+        +   '<div><label>Elevation ft</label><input id="e6cel" inputmode="numeric" placeholder="239"></div>'
+        + '</div>'
+        + '<button class="e6btn" id="e6cloudfld">Use next field</button>'
+        + '<div class="e6res" id="e6cloudOut"></div>'
+        + '<div class="cnote">Spread method: 400 ft per \u00b0C of temperature/dewpoint spread. '
+        + 'A rule of thumb for convective cloud base \u2014 not a forecast, and it says nothing '
+        + 'about layered or orographic cloud. Advisory only.</div></div>';
+    }
+
+    if (calcTab === 'as'){
+      return h + '<div class="e6">'
+        + '<div class="row">'
+        +   '<div><label>CAS kt</label><input id="e6cas" inputmode="numeric" placeholder="120"></div>'
+        +   '<div><label>OAT \u00b0C</label><input id="e6aoat" inputmode="numeric" placeholder="24"></div>'
+        +   '<div><label>Press alt ft</label><input id="e6apa" inputmode="numeric" placeholder="5388"></div>'
+        + '</div>'
+        + '<button class="e6btn" id="e6asfromalt">Use pressure altitude from Altitude</button>'
+        + '<div class="e6res" id="e6asOut"></div>'
+        + '<div class="cnote">TAS from true air density rather than a per-thousand rule. '
+        + 'CAS is taken as equal to EAS, which holds at these speeds. TAT assumes full '
+        + 'temperature recovery. Advisory only.</div></div>';
+    }
+
     /* altitude */
+    var qLab = (qnhUnit === 'in') ? 'QNH inHg' : 'QNH hPa';
+    var qPh  = (qnhUnit === 'in') ? '29.92' : '1013';
     return h + '<div class="e6">'
       + '<div class="row">'
       +   '<div><label>Elevation ft</label><input id="e6el" inputmode="numeric" placeholder="5388"></div>'
-      +   '<div><label>QNH hPa</label><input id="e6qnh" inputmode="numeric" placeholder="1013"></div>'
+      +   '<div><label>' + qLab + '</label><input id="e6qnh" inputmode="decimal" placeholder="' + qPh + '"></div>'
       +   '<div><label>OAT \u00b0C</label><input id="e6oat" inputmode="numeric" placeholder="24"></div>'
       + '</div>'
+      + '<div class="qkseg" style="padding:0 0 10px"><span class="grp">'
+      +   '<button data-qu="hpa"' + (qnhUnit === 'hpa' ? ' class="on"' : '') + '>hPa</button>'
+      +   '<button data-qu="in"'  + (qnhUnit === 'in'  ? ' class="on"' : '') + '>inHg</button>'
+      + '</span></div>'
       + '<button class="e6btn" id="e6fromfld">Use next field</button>'
       + '<div class="e6res" id="e6altOut"></div>'
       + '<div class="cnote">Pressure altitude uses 30 ft per hPa; density altitude uses 120 ft '
@@ -9767,6 +9846,47 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return { wca:wca, hd:(tc + wca + 360) % 360, gs:gs, xw:xw, hw:hw };
   }
   /* pressure and density altitude */
+  /* ---- Additional solvers -------------------------------------------
+     Verified against reference cases before wiring: standard QNH gives
+     PA = elevation, ISA sea level gives TAS = CAS, and a direct 20 kt
+     headwind on TAS 120 gives GS 100. */
+  var HPA_PER_INHG = 33.8639;
+  /* what the Altitude tab last computed, so Airspeed can take it without
+     you retyping. Declared here, above every reader. */
+  var calcPA = NaN, calcOAT = NaN;
+  var qnhUnit = (function(){
+    try { return localStorage.getItem('nmp.iphone.qnhu') === 'in' ? 'in' : 'hpa'; }
+    catch(_){ return 'hpa'; }
+  })();
+
+  /* Cloud base by the spread method: dry adiabatic 3 degC/1000 ft against
+     a dewpoint lapse of 0.5, converging at 2.5 - so 400 ft per degC.
+     A rule of thumb for convective cloud, not a forecast. */
+  function cloudSolve(t, td, el){
+    if (!isFinite(t) || !isFinite(td)) return null;
+    var spread = t - td;
+    var o = { spread:spread };
+    if (spread < 0) return o;
+    o.agl = spread * 400;
+    if (isFinite(el)) o.msl = el + o.agl;
+    return o;
+  }
+
+  /* CAS -> TAS through real density rather than the 2%-per-1000ft rule,
+     since density altitude here runs high. Mach and TAT come free. */
+  function asSolve(cas, oat, pa){
+    if (!isFinite(cas) || !isFinite(oat) || !isFinite(pa)) return null;
+    var Tk = oat + 273.15;
+    if (Tk <= 0) return null;
+    var P   = 1013.25 * Math.pow(1 - 6.87535e-6 * pa, 5.2559);
+    var rho = (P * 100) / (287.05 * Tk);
+    if (!(rho > 0)) return null;
+    var tas = cas * Math.sqrt(1.225 / rho);
+    var a   = 38.9679 * Math.sqrt(Tk);
+    var M   = tas / a;
+    return { tas:tas, mach:M, tat:(Tk * (1 + 0.2 * M * M)) - 273.15, rho:rho };
+  }
+
   function altSolve(el, qnh, oat){
     if (!isFinite(el) || !isFinite(qnh)) return null;
     var pa = el + (1013.25 - qnh) * 30;
@@ -9825,11 +9945,95 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       solveWind();
     }
 
+    if (calcTab === 'cloud'){
+      var cout = body.querySelector('#e6cloudOut');
+      function solveCloud(){
+        var r = cloudSolve(num('e6ct'), num('e6ctd'), num('e6cel'));
+        if (!r){ cout.innerHTML = '<div class="r"><span class="k">Enter temp and dewpoint</span></div>'; return; }
+        if (r.spread < 0){
+          cout.innerHTML = '<div class="r"><span class="k">Dewpoint above temperature</span>'
+            + '<span class="v warn">check inputs</span></div>';
+          return;
+        }
+        var ch = '<div class="r"><span class="k">Spread</span><span class="v">'
+               + r.spread.toFixed(1) + ' \u00b0C</span></div>'
+               + '<div class="r"><span class="k">Base AGL</span><span class="v big">'
+               + Math.round(r.agl).toLocaleString() + ' ft</span></div>';
+        if (r.msl !== undefined){
+          ch += '<div class="r"><span class="k">Base MSL</span><span class="v big">'
+             +  Math.round(r.msl).toLocaleString() + ' ft</span></div>';
+        }
+        if (r.spread <= 2){
+          ch += '<div class="r"><span class="k">Saturated air</span>'
+             +  '<span class="v warn">fog or very low cloud likely</span></div>';
+        }
+        cout.innerHTML = ch;
+      }
+      ['e6ct','e6ctd','e6cel'].forEach(function(id){
+        var i = body.querySelector('#' + id);
+        if (i) i.addEventListener('input', solveCloud);
+      });
+      var cf = body.querySelector('#e6cloudfld');
+      if (cf) cf.addEventListener('click', function(){
+        var t = null;
+        for (var i = 0; i < ROUTE.length; i++){ if (wxRaw(ROUTE[i].id)) { t = ROUTE[i]; break; } }
+        if (!t){ toast('No reporting field in the plan'); return; }
+        var mr = wxRaw(t.id);
+        var tp = mr && mr.match(/\s(M?\d{2})\/(M?\d{2})\s/);
+        if (!tp){ toast('No temperature in ' + t.id + ' report'); return; }
+        body.querySelector('#e6ct').value  = tp[1].replace('M', '-');
+        body.querySelector('#e6ctd').value = tp[2].replace('M', '-');
+        var fi = FIELD_INFO[t.id];
+        if (fi) body.querySelector('#e6cel').value = fi.elev;
+        solveCloud();
+        toast('From ' + t.id);
+      });
+      solveCloud();
+    }
+
+    if (calcTab === 'as'){
+      var sout = body.querySelector('#e6asOut');
+      function solveAs(){
+        var r = asSolve(num('e6cas'), num('e6aoat'), num('e6apa'));
+        if (!r){ sout.innerHTML = '<div class="r"><span class="k">Enter CAS, OAT and pressure altitude</span></div>'; return; }
+        sout.innerHTML =
+            '<div class="r"><span class="k">TAS</span><span class="v big">'
+          +   Math.round(r.tas) + ' kt</span></div>'
+          + '<div class="r"><span class="k">Mach</span><span class="v">'
+          +   r.mach.toFixed(3) + '</span></div>'
+          + '<div class="r"><span class="k">TAT</span><span class="v">'
+          +   r.tat.toFixed(1) + ' \u00b0C</span></div>'
+          + '<div class="r"><span class="k">Density</span><span class="v">'
+          +   r.rho.toFixed(3) + ' kg/m\u00b3</span></div>';
+      }
+      ['e6cas','e6aoat','e6apa'].forEach(function(id){
+        var i = body.querySelector('#' + id);
+        if (i) i.addEventListener('input', solveAs);
+      });
+      var af = body.querySelector('#e6asfromalt');
+      if (af) af.addEventListener('click', function(){
+        /* whatever the Altitude tab last worked out, rather than making
+           you retype it */
+        if (!isFinite(calcPA)){ toast('Work out a pressure altitude first'); return; }
+        body.querySelector('#e6apa').value = Math.round(calcPA);
+        if (isFinite(calcOAT)) body.querySelector('#e6aoat').value = calcOAT;
+        solveAs();
+      });
+      solveAs();
+    }
+
     if (calcTab === 'alt'){
       var aout = body.querySelector('#e6altOut');
+      function qnhHpa(){
+        var v = num('e6qnh');
+        if (!isFinite(v)) return NaN;
+        /* the solver works in hPa; inHg is converted on the way in */
+        return (qnhUnit === 'in') ? v * HPA_PER_INHG : v;
+      }
       function solveAlt(){
-        var r = altSolve(num('e6el'), num('e6qnh'), num('e6oat'));
+        var r = altSolve(num('e6el'), qnhHpa(), num('e6oat'));
         if (!r){ aout.innerHTML = '<div class="r"><span class="k">Enter elevation and QNH</span></div>'; return; }
+        calcPA = r.pa; calcOAT = num('e6oat');
         var h = '<div class="r"><span class="k">Pressure altitude</span><span class="v">'
               + Math.round(r.pa).toLocaleString() + ' ft</span></div>';
         if (r.da !== undefined){
@@ -9844,6 +10048,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       ['e6el','e6qnh','e6oat'].forEach(function(id){
         var i = body.querySelector('#' + id);
         if (i) i.addEventListener('input', solveAlt);
+      });
+      /* switching unit converts what is already typed rather than
+         leaving 1013 sitting under an inHg label */
+      Array.prototype.slice.call(body.querySelectorAll('[data-qu]')).forEach(function(b){
+        b.addEventListener('click', function(){
+          var u = b.getAttribute('data-qu');
+          if (u === qnhUnit) return;
+          var f = body.querySelector('#e6qnh'), v = parseFloat(f && f.value);
+          qnhUnit = u;
+          try { localStorage.setItem('nmp.iphone.qnhu', u); } catch(_){ }
+          if (isFinite(v) && f){
+            f.value = (u === 'in') ? (v / HPA_PER_INHG).toFixed(2)
+                                   : String(Math.round(v * HPA_PER_INHG));
+          }
+          redrawCalc(el);
+        });
       });
       var ff = body.querySelector('#e6fromfld');
       if (ff) ff.addEventListener('click', function(){
