@@ -16,6 +16,174 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v140 2026-08-01 The modal rule now actually works, because .ted is
+                       made to MIRROR .gpsov property for property rather
+                       than being patched from outside.
+
+                       v136 changed align-items on .ted and stopped
+                       there. But .gpsov also carries padding:16px, and
+                       .ted carries none - so a centred card had no inset
+                       to centre INTO and still ran off the bottom edge.
+                       Changing one property of a component to make it
+                       behave like another is how you get two things that
+                       look alike and diverge; the tablet band now sets
+                       every property .gpsov sets, each one commented
+                       with its counterpart.
+
+                       Added mirror.py to the gate: it parses both rule
+                       sets and reports any property the modal shell has
+                       that the sheet shell lacks. Zero mismatches now,
+                       and it would have caught v136's missing padding.
+
+                       And sheets.js enumerates every overlay in the
+                       markup so coverage is proved rather than assumed:
+                       19 overlays - 13 modal cards (.ted x9 including
+                       the Bottom bar editor, .gpsov x4), 2 side panels,
+                       4 anchored panels. All 13 share one shell.
+       v139 2026-08-01 Profile axis labels were stretched, not squashed -
+                       "4k", "2k", "PPOS", "AYNZ" all rendered wide.
+
+                       Both profile SVGs carried a fixed viewBox of 340
+                       units while rendering at width:100%, with
+                       preserveAspectRatio="none". On a phone the box is
+                       347px so the scale was 1.02x and nobody noticed;
+                       on an iPad in portrait it is 716px, so everything
+                       stretched 2.11x horizontally against 1x vertically
+                       - and in landscape 3.25x. Text stretches with the
+                       coordinate space, which is exactly what you were
+                       looking at.
+
+                       The coordinate width is now measured from the box,
+                       so the scale is 1.00x at every size and glyphs
+                       render at their real proportions. Aspect ratio set
+                       to xMidYMid meet, which now costs nothing because
+                       the viewBox matches the box. Redraws on resize,
+                       since a rotation or a Split View change moves the
+                       width the coordinates were built for.
+       v138 2026-08-01 TERRAIN WINDOW. The rail's terrain button now opens
+                       a control rather than being a bare switch - it is
+                       the one layer with something to adjust, and the
+                       switch lives inside the window.
+
+                       The real fault underneath: shading was referenced
+                       to AC.alt, your planned CRUISE. Sitting at 1,500 ft
+                       with 9,500 filed, everything below 8,500 read clear
+                       when almost all of it was above you. The reference
+                       is now its own value, seeded from cruise and set
+                       here - with one tap to take the GPS altitude, or to
+                       go back to following cruise.
+
+                       Also in the window: the amber margin as 500 / 1,000
+                       / 2,000, a legend saying what each colour means at
+                       the current numbers, and the highest ground in
+                       view, flagged when it is inside the margin. That
+                       last one costs nothing - the shading layer already
+                       caches decoded elevations per tile, so it reads the
+                       cache rather than fetching.
+
+                       Margin and reference both persist. The note says
+                       plainly that this is terrain shape only: no towers,
+                       no wires, no trees.
+       v137 2026-08-01 Layers popover narrowed from 420 to 320. The 420
+                       in v136 was an arbitrary cap - I picked a number
+                       that was smaller rather than one that was right.
+                       Measured instead: the widest label, "PNG vector
+                       (offline)", needs about 190px with its tick and
+                       padding, and the phone already gives this menu
+                       308px. 320 matches the phone, so it is one popover
+                       size across every device rather than two, with
+                       270px of label room against the 190 needed.
+       v136 2026-08-01 OVERLAY RULE, written into the stylesheet so new
+                       overlays follow it instead of each getting a
+                       bespoke fix. Every overlay on a tablet is one of
+                       three shapes:
+
+                       1. MODAL CARD - a transient decision that owns the
+                          screen. Centred both ways, rounded on all four
+                          corners, capped width, no bottom safe-area
+                          padding since it is not at the bottom, and no
+                          forced full height.  .ted (9 sheets), .gpsov (3)
+
+                       2. SIDE PANEL - consulted WHILE looking at the
+                          map, so the map stays live beside it. Right
+                          edge, 38-43%.  .card, .sheet, .fqwin, .hud-panel
+
+                       3. ANCHORED PANEL - attached to a chrome control
+                          and stays attached. Full width where the
+                          content is tabular, capped where it is a list.
+                          .drop (3), .pop
+
+                       Gaps this closed: .tedw still carried the phone's
+                       top-only corner radius, its bottom safe-area
+                       padding and a forced 82% height while centred, and
+                       the layers popover sized itself to the viewport -
+                       677px on an iPad, which is a bar, not a popover.
+                       Capped at 420.
+
+                       And the cascade-order check is now part of
+                       checkorder.py rather than something I remembered
+                       to run: it walks every selector in every media
+                       band and flags any defeated by a later base rule
+                       of equal specificity. Verified by reintroducing
+                       the v134 fault - it reports 1 defeated, and 0 once
+                       fixed.
+       v135 2026-08-01 Three faults in the Add point sheet, two of them
+                       mine from earlier versions.
+
+                       All 170 enroute fixes rendered "undefined". v128
+                       lifted them as {id, lat, lon, cat, awy} and never
+                       set a name. The airways a fix serves ARE its
+                       useful descriptor, so they double as the name
+                       rather than being carried twice.
+
+                       The nearest list was one flat run of everything
+                       within range - aerodromes, strips, procedure
+                       fixes and navaids interleaved by distance, which
+                       is unreadable. Grouped by category with
+                       sub-headings, nearest first inside each, and every
+                       row carries a colour bar in its category's own map
+                       colour so the type is read before the text is.
+
+                       And the identifier column was pinned at 52px, so
+                       "ANGAU PAD" wrapped to two lines and "LAE
+                       HELIPORT" clipped mid-word. Now sized to content
+                       between 64 and 110px, single line, ellipsis.
+
+                       The tablet fault underneath it: the 600px band is
+                       declared ~38,000 characters BEFORE the base .ted
+                       and .tedw rules. At equal specificity the later
+                       rule wins, so the tablet's sheet width lost to the
+                       phone's 420px - every sheet has been rendering at
+                       phone width on the tablet since v116. This is
+                       cascade-ordering, failure mode two in the notes,
+                       and I walked into it. Checked all ten selectors in
+                       the band: exactly these two were affected, both
+                       fixed, and the check now reports none.
+       v134 2026-08-01 Landscape HUD panel: narrower, and no longer
+                       showing a made-up frequency.
+
+                       The panel was 430px, which is over half a
+                       landscape phone. Now 38% - about 321px on a 14
+                       Pro - with a 300px floor. The floor is set by the
+                       rule that the layer labels have to stay readable,
+                       not by taste: at 320px a single column leaves
+                       269px of label width against the ~122px
+                       "Controlled airspace" needs. Two columns would
+                       give each about 140px, so the layers panel is one
+                       column here now, as it already is on the phone.
+
+                       Bigger find: hudFreqHTML carried
+                       var area = '124.1' and a frozen HF list. That is
+                       fabricated data presented as the area frequency -
+                       the same fault the old METAR strings had, in a
+                       panel built two versions ago. The 124.1 in the
+                       screenshot was not computed from anything.
+
+                       Both hosts now render one fqBodyHTML(), which
+                       resolves the zone from the GPS fix through
+                       ctafAt(). Same lesson as Direct To and the locate
+                       control: two views of one thing drift, and here
+                       the drift was into invented numbers.
        v133 2026-08-01 v132 was broken on load. Two faults, both mine,
                        both the same class.
 
@@ -2745,6 +2913,41 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    fixed centre band, plus large jump buttons either side. No
    keyboard, and every target clears the 44px minimum. */
 /* the quick-edit window: same shell as the GPS readout */
+/* ---- Terrain window --------------------------------------------- */
+.twon{display:flex;align-items:center;gap:10px;padding:12px var(--edge) 0}
+.twon span{flex:1 1 auto;font-size:var(--t-sm);color:var(--text-2)}
+.twon button{flex:0 0 auto;height:var(--mod-a);padding:0 16px;border-radius:var(--radius);
+  background:var(--inset);border:1px solid var(--border-strong);
+  font-size:var(--t-xs);font-weight:700;letter-spacing:.04em;color:var(--text-muted)}
+.twon button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.twval{padding:10px var(--edge) 0;text-align:center;font-family:var(--mono);
+  font-size:var(--t-disp);font-weight:700;color:var(--accent);line-height:1.05}
+.twval u{text-decoration:none;font-size:var(--t-sm);color:var(--text-fainter);margin-left:5px}
+.twsrc{padding:2px var(--edge) 12px;text-align:center;font-size:var(--t-2xs);
+  color:var(--text-fainter);letter-spacing:.03em}
+.twrow,.twrow2{display:flex;gap:var(--gut);padding:0 var(--edge) 8px}
+.twrow button,.twrow2 button{flex:1 1 0;height:var(--mod-b);border-radius:var(--radius);
+  background:var(--inset);border:1px solid var(--border-strong);color:var(--text-2);
+  font-size:var(--t-sm);font-weight:600;white-space:nowrap}
+.twrow button:active,.twrow2 button:active{background:var(--panel)}
+.twsec{padding:8px var(--edge) 6px;font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--text-fainter)}
+.twseg{display:flex;gap:var(--gut);padding:0 var(--edge) 12px}
+.twseg button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg);border:1px solid var(--border-strong);
+  font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--text-muted)}
+.twseg button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.twleg{display:flex;gap:16px;justify-content:center;padding:0 var(--edge) 10px;
+  font-size:var(--t-2xs);color:var(--text-fainter)}
+.twleg i{display:inline-block;width:10px;height:10px;border-radius:2px;
+  margin-right:5px;vertical-align:-1px}
+.twhi{display:flex;align-items:baseline;justify-content:space-between;
+  margin:0 var(--edge);padding:10px 0;border-top:1px solid var(--border)}
+.twhi .k{font-size:var(--t-sm);color:var(--text-2)}
+.twhi .v{font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text)}
+.twhi .v.warn{color:var(--bad)}
+#terrWinBody .cnote{padding-left:var(--edge);padding-right:var(--edge)}
+
 .qkbody{padding:4px 0 0}
 /* the text field carried the old bottom-sheet's 12px gutter; in the
    window it should sit on the same --edge as everything else */
@@ -3210,12 +3413,29 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   text-align:left;font-size:var(--t-md);color:var(--text)}
 .wrow + .wrow{border-top:1px solid var(--border)}
 .wrow:active{background:var(--inset)}
+/* 52px could not hold "ANGAU PAD" or "LAE HELIPORT", so identifiers
+   wrapped onto two lines or clipped mid-word. */
 .wrow .id{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
-  color:var(--accent-2);flex:0 0 52px}
+  color:var(--accent-2);flex:0 0 auto;min-width:64px;max-width:110px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wrow .nm2{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text-2);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wrow .cat{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:var(--text-fainter)}
+/* A colour bar in each category's own colour, matching the map markers,
+   so the type is read before the text is. */
+.wrow{position:relative}
+.wrow::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;
+  border-radius:0 2px 2px 0;background:transparent}
+.wrow.k-field::before{background:var(--accent-2)}
+.wrow.k-strip::before{background:var(--text-muted)}
+.wrow.k-fix::before{background:#8de84a}
+.wrow.k-enr::before{background:var(--navaid)}
+.wrow.k-navaid::before{background:var(--navaid)}
+.wrow.k-mine::before{background:var(--accent)}
+.wsub{padding:9px 14px 4px;font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--text-fainter)}
+
 .wnote{padding:8px 14px 10px;font-size:var(--t-2xs);color:var(--text-fainter);
   line-height:1.5;border-top:1px solid var(--border)}
 .wrow.danger{color:var(--bad)}
@@ -3515,9 +3735,53 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* readable measure; the map and its overlays are exempt */
   .vbody > *{max-width:760px;margin-left:auto;margin-right:auto}
 
-  /* sheets centre rather than clinging to the bottom edge */
-  .ted{align-items:center}
-  .tedw{max-width:520px;border-radius:12px}
+  /* ---- OVERLAY RULE ------------------------------------------------
+     Every overlay on a tablet is one of three shapes. New overlays pick
+     one; nothing gets a bespoke treatment.
+
+       1. MODAL CARD - a transient decision that owns the screen while
+          it is up. Centred both ways, rounded all four corners, capped
+          width, no bottom safe-area padding because it is not at the
+          bottom.  .ted  .gpsov
+
+       2. SIDE PANEL - something consulted WHILE looking at the map, so
+          the map stays live beside it. Right edge, 38-43%.
+          .card  .sheet  .fqwin  .hud-panel
+
+       3. ANCHORED PANEL - attached to a chrome control, so it stays
+          attached. Full width where the content is tabular, capped
+          where it is a list.  .drop  .pop
+
+     The doubled selectors are deliberate: the base .ted / .tedw rules
+     are declared ~38,000 characters LATER in the file, and at equal
+     specificity the later rule wins. Every sheet rendered at phone
+     width on the tablet from v116 to v134 because of it. */
+
+  /* 1. MODAL CARD - .ted is made to MIRROR .gpsov property for property,
+     because two components that only look alike is how they drift. The
+     previous attempt changed align-items but left .ted with no padding,
+     so a centred card had no inset to centre into and still ran off the
+     bottom edge. Every property below has a .gpsov counterpart. */
+  .ted.ted{
+    align-items:center;                 /* .gpsov: center            */
+    justify-content:center;             /* .gpsov: center            */
+    padding:20px;                       /* .gpsov: 16px - the missing one */
+    background:rgba(3,5,8,.72);         /* .gpsov: same              */
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+  }
+  .tedw.tedw{
+    max-width:560px;                    /* .gpswin: 400, wider for lists */
+    max-height:100%;                    /* fits the padded box       */
+    border:1px solid var(--border-strong);   /* .gpswin: all sides   */
+    border-radius:12px;                 /* .gpswin: 12px            */
+    box-shadow:0 18px 46px rgba(0,0,0,.7);   /* .gpswin: same        */
+    padding-bottom:0;                   /* not at the bottom edge   */
+  }
+  .tedw.tedw.tall{height:72%}           /* still fixed so it cannot jump
+                                           while a list filters */
+
+  /* 3. anchored: a popover hung off a button should not span the screen */
+  .pop.pop{max-width:320px}
   .gpswin{max-width:520px}
 
   /* this set the PILL to the icon's size, collapsing its padding to
@@ -3617,7 +3881,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .hud-bar button.on{background:var(--accent);color:#0a0e13}
 /* slide-out landscape panel opened by the strip */
 .hud-panel{position:absolute;top:calc(var(--ht) + var(--pedge));bottom:calc(var(--hb) + var(--pedge));
-  right:calc(var(--mod-b) + 10px);width:430px;max-width:calc(100% - var(--mod-b) - 20px);
+  /* Was 430px, which is over half a landscape phone. 38% keeps the map
+     the majority of the screen; the floor stops it collapsing so far
+     that the layer labels stop being readable, which is the constraint
+     that decides the minimum. */
+  right:calc(var(--mod-b) + 10px);width:38%;min-width:300px;max-width:360px;
   z-index:2;
   /* Was full-height with square right corners 8px clear of the toolbar -
      a squared edge only reads right when it is flush against something.
@@ -3647,11 +3915,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .hud-panel .ptabs button.on{background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13}
 .hud-panel .pb .prow{width:100%;text-align:left;display:flex;align-items:center;gap:10px;
   padding:8px 0;border-bottom:1px solid var(--border);font-size:var(--t-sm);color:var(--text-2)}
-/* Landscape has width to spare and not much height. Two columns turn a
-   scrolling list into one readable screen: what the map looks like on
-   the left, what is drawn on it on the right. */
-.hud-panel .pb.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;align-items:start}
+/* Two columns needed 430px. At 38% of a landscape phone that is ~320px,
+   which gives each column about 140px - not enough for "Controlled
+   airspace". One column, full width, scrolling: the labels stay
+   readable, which is the rule that matters here. */
+.hud-panel .pb.cols{display:block}
 .hud-panel .pb.cols .pl:first-child{margin-top:0}
+.hud-panel .pb .col + .col{margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--border);border-left:0;padding-left:0}
 .hud-panel .pb .pl{margin:0 0 4px}
 .hud-panel .pb .col + .col{border-left:1px solid var(--border);padding-left:18px}
 /* a hint that there is more below, rather than a row sliced in half */
@@ -4346,6 +4617,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 </div>
 
 <!-- Radio: frequencies in route order -->
+<!-- Terrain window: shading reference altitude and margin -->
+<div class="gpsov" id="terrWin">
+  <div class="gpswin">
+    <div class="gpsh">
+      <span class="t"><b>TERRAIN</b> &middot; Shading</span>
+      <button class="gpsx" id="terrWinX" aria-label="Close">&times;</button>
+    </div>
+    <div class="qkbody" id="terrWinBody"></div>
+  </div>
+</div>
+
 <!-- Frequency window: floats over the map, fixed top right -->
 <div class="fqwin" id="fqWin">
   <div class="h"><span class="t">FREQUENCIES</span>
@@ -4720,7 +5002,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v133';
+  var VERSION = 'v140';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -4730,8 +5012,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      at first use and the TypeError killed the whole script. It belongs
      at the top, with the other primitives. */
   var TAB_MQ = window.matchMedia('(min-width:600px)');
-  /* read by closeAll, which runs long before the frequency-window code */
-  var fqWin = null;
+  /* read by closeAll, which runs long before their own code */
+  var fqWin = null, terrWin = null;
 
   var $  = function(s){ return document.querySelector(s); };
   var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -4809,6 +5091,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (flEd) flEd.classList.remove('on');
     if (chView) chView.classList.remove('on');
     if (fqWin) fqWin.classList.remove('on');
+    if (terrWin) terrWin.classList.remove('on');
     if (fqEd) fqEd.classList.remove('on');
     if (shEd) shEd.classList.remove('on');
     if (actsEd) actsEd.classList.remove('on');
@@ -4833,8 +5116,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var btn = $('#tbLayers').getBoundingClientRect();
     var chrome = $('#chrome').getBoundingClientRect();
     // Panel: 19px from the left edge, 48px shy of the right (measured).
+    /* Capped so it stays a popover rather than a full-width bar. 420 was
+       an arbitrary number; the widest label - "PNG vector (offline)" -
+       needs about 190px with its tick and padding, and the phone gives
+       this menu 308px. Matching the phone keeps one popover size across
+       devices rather than two. */
+    var pw = Math.min(window.innerWidth - 19 - 48, 320);
     pop.style.left = '19px';
-    pop.style.width = (window.innerWidth - 19 - 48) + 'px';
+    pop.style.width = pw + 'px';
     pop.style.top = (chrome.bottom + 6.5) + 'px';
     caret.style.left = (btn.left + btn.width/2 - 19 - 6) + 'px';
     drawLayersPop();
@@ -5756,6 +6045,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     {id:'YALOL',lat:-6.99746,lon:151.68131,cat:'enr',awy:'H422'}
   ];
 
+  /* Every enroute record was lifted without a display name, so all 170
+     rendered as "undefined" anywhere a name is shown. The airways it
+     serves ARE the useful descriptor for an enroute fix, so they double
+     as the name rather than being carried twice. */
+  ENROUTE.forEach(function(e){ if (!e.nm) e.nm = e.awy || 'Enroute fix'; });
+
   (function mergeEnr(){
     var byId = {};
     PROCFIX.forEach(function(p){ byId[p.id] = p; });
@@ -6092,7 +6387,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function profPaint(){
     var box = $('#profBox'); if (!box) return;
     var T = totals();
-    var W = 340, H = 190, PAD = 26;
+    /* The viewBox was a fixed 340 wide while the SVG renders at 100%, so
+       on a tablet it stretched ~2.1x horizontally and 1x vertically -
+       and preserveAspectRatio="none" stretched the TEXT with it, which
+       is why the axis labels looked squashed. Measure the box and use
+       that as the coordinate width, so the scale is 1:1 and glyphs
+       render at their real proportions. */
+    var W = Math.max(280, Math.round(box.clientWidth || 340)), H = 190, PAD = 26;
     var maxE = Math.max(AC.alt + 1500,
                 Math.max.apply(null, profSamples.map(function(s){ return s.e; })) + 900);
     var x = function(d){ return PAD + (d / T.nm) * (W - PAD - 6); };
@@ -6118,7 +6419,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var sx = x(profScrub * T.nm);
     var se = profSamples[Math.round(profScrub * PROF_N)] || profSamples[0];
 
-    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">'
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">'
       + '<path d="' + d + '" fill="rgba(127,179,213,.16)" stroke="#7fb3d5" stroke-width="1.2"/>'
       + ticks
       + '<line x1="' + PAD + '" y1="' + y(AC.alt).toFixed(1) + '" x2="' + (W-6) + '" y2="' + y(AC.alt).toFixed(1)
@@ -6416,8 +6717,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function terrPaint(){
     var box = $('#terrBox'); if (!box) return;
+    /* width is measured now, so a rotation or a Split View resize has to
+       redraw or the coordinate space no longer matches the box */
+    if (!terrPaint._wired){
+      terrPaint._wired = 1;
+      window.addEventListener('resize', function(){
+        if ($('#terrBox')) terrPaint();
+        if ($('#profBox')) try { profPaint(); } catch(_){ }
+      });
+    }
     var T = totals();
-    var W = 340, H = 250, PADL = 30, PADR = 8, TOP = 12, BOT = 20;
+    var W = Math.max(280, Math.round(box.clientWidth || 340)), H = 250,
+        PADL = 30, PADR = 8, TOP = 12, BOT = 20;
     var maxE = Math.max(AC.alt + 2000,
                 Math.max.apply(null, profSamples.map(function(s){ return s.e; })) + 1200);
     var x = function(d){ return PADL + (d / T.nm) * (W - PADL - PADR); };
@@ -6455,7 +6766,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var sx = x(profScrub * T.nm);
     var se = profSamples[Math.round(profScrub * PROF_N)] || profSamples[0];
 
-    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">'
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">'
       + '<defs><clipPath id="tclip"><path d="' + d + '"/></clipPath></defs>'
       + grid
       + '<path d="' + d + '" fill="rgba(127,179,213,.30)" stroke="#7fb3d5" stroke-width="1.2"/>'
@@ -6710,6 +7021,97 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       b.addEventListener('click', function(){ copyText(b.getAttribute('data-f')); });
     });
   }
+  /* ---- Terrain window ----------------------------------------------
+     Red is at or above your reference, amber within the margin below it.
+     The reference is yours to set, because the terrain you care about is
+     the level you are at now, not the one you filed. */
+  var TERR_STEPS = [500, 1000, 2000];
+  (function(){
+    try { var m = parseInt(localStorage.getItem('nmp.iphone.terrmargin'), 10);
+          if (TERR_STEPS.indexOf(m) >= 0) TERR_SHADE.margin = m; } catch(_){ }
+  })();
+
+  function terrWinHTML(){
+    var ref = terrRefAlt(), hi = terrHighestInView();
+    var following = (TERR_REF == null);
+    var h = '<div class="twon"><span>Shading</span>'
+          + '<button data-tw="off" class="' + (layOn('terrain') ? 'on' : '') + '">'
+          +   (layOn('terrain') ? 'On' : 'Off') + '</button></div>'
+          + '<div class="twval">' + ref.toLocaleString() + '<u>ft</u></div>'
+          + '<div class="twsrc">' + (following
+              ? 'following cruise altitude'
+              : 'set here \u00b7 cruise is ' + AC.alt.toLocaleString() + '\'') + '</div>';
+
+    h += '<div class="twrow">'
+      +    '<button data-tw="-1000">\u2212 1,000</button>'
+      +    '<button data-tw="-500">\u2212 500</button>'
+      +    '<button data-tw="500">+ 500</button>'
+      +    '<button data-tw="1000">+ 1,000</button>'
+      +  '</div>';
+
+    h += '<div class="twrow2">'
+      +    (GPSFIX && GPSFIX.alt != null
+            ? '<button data-tw="gps">GPS \u00b7 ' + Math.round(GPSFIX.alt).toLocaleString() + '\'</button>'
+            : '')
+      +    (following ? '' : '<button data-tw="cruise">Follow cruise</button>')
+      +  '</div>';
+
+    h += '<div class="twsec">Amber margin below</div><div class="twseg">';
+    TERR_STEPS.forEach(function(m){
+      h += '<button data-twm="' + m + '"' + (TERR_SHADE.margin === m ? ' class="on"' : '') + '>'
+        +  m.toLocaleString() + '</button>';
+    });
+    h += '</div>';
+
+    h += '<div class="twleg">'
+      +    '<span><i style="background:#f03c3c"></i>at or above ' + ref.toLocaleString() + '\'</span>'
+      +    '<span><i style="background:#ffb020"></i>within ' + TERR_SHADE.margin.toLocaleString() + '\'</span>'
+      +  '</div>';
+
+    h += '<div class="twhi"><span class="k">Highest in view</span><span class="v'
+      +  (hi != null && hi >= ref - TERR_SHADE.margin ? ' warn' : '') + '">'
+      +  (hi == null ? '\u2014' : hi.toLocaleString() + '\'') + '</span></div>';
+
+    h += '<div class="cnote" style="padding:12px 0 0">Terrain shape only \u2014 excludes towers, '
+      +  'wires and trees, and says nothing about obstacles. Cross-check the chart and the '
+      +  'Garmin. Advisory only.</div>';
+    return h;
+  }
+
+  function drawTerrWin(){
+    if (!terrWin || !terrWin.classList.contains('on')) return;
+    var b = $('#terrWinBody');
+    b.innerHTML = terrWinHTML();
+    Array.prototype.slice.call(b.querySelectorAll('[data-tw]')).forEach(function(x){
+      x.addEventListener('click', function(){
+        var v = x.getAttribute('data-tw');
+        if (v === 'gps'){ if (GPSFIX && GPSFIX.alt != null) setTerrRef(Math.round(GPSFIX.alt / 100) * 100); return; }
+        if (v === 'cruise'){ setTerrRef(null); return; }
+        if (v === 'off'){
+          layToggle('terrain'); syncRail(); renderMap();
+          if (typeof drawLayersPop === 'function') drawLayersPop();
+          drawTerrWin(); return;
+        }
+        setTerrRef(Math.max(500, Math.min(25000, terrRefAlt() + parseInt(v, 10))));
+      });
+    });
+    Array.prototype.slice.call(b.querySelectorAll('[data-twm]')).forEach(function(x){
+      x.addEventListener('click', function(){
+        TERR_SHADE.margin = parseInt(x.getAttribute('data-twm'), 10);
+        try { localStorage.setItem('nmp.iphone.terrmargin', String(TERR_SHADE.margin)); } catch(_){ }
+        if (terrLayer && terrLayer.repaintAll) terrLayer.repaintAll();
+        drawTerrWin();
+      });
+    });
+  }
+  function openTerrWin(){
+    closeAll();
+    terrWin = terrWin || $('#terrWin');
+    terrWin.classList.add('on');
+    drawTerrWin();
+  }
+  function closeTerrWin(){ if (terrWin) terrWin.classList.remove('on'); }
+
   /* ---- Frequency window -------------------------------------------
      Two questions, answered at a glance: which area frequency am I on
      NOW, and what do I dial next. The full route-order list stays a tap
@@ -6731,8 +7133,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return null;
   }
 
-  function drawFqWin(){
-    if (!fqWin.classList.contains('on')) return;
+  /* One builder, two hosts: the portrait window and the landscape HUD
+     panel. The landscape one used to carry a hardcoded '124.1' and a
+     frozen HF list, which is fabricated data presented as an area
+     frequency - the same fault the old METAR strings had. */
+  function fqBodyHTML(){
     var h = '';
 
     var z = GPSFIX ? ctafAt(GPSFIX) : null;
@@ -6767,14 +7172,26 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
     h += '</div>';
 
-    h += '<div class="fqwfoot">Tap a frequency to copy \u00b7 advisory only<br>'
-      +  '<button data-fqfull="1">Full route list</button></div>';
+    h += '<div class="fqwfoot">Tap a frequency to copy \u00b7 advisory only</div>';
+    return h;
+  }
 
-    $('#fqWinBody').innerHTML = h;
-    $$('#fqWinBody [data-fqc]').forEach(function(b){
-      b.addEventListener('click', function(){ copyText(b.getAttribute('data-fqc')); });
+  function wireFqBody(root){
+    Array.prototype.slice.call(root.querySelectorAll('[data-fqc]')).forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        copyText(b.getAttribute('data-fqc'));
+      });
     });
-    var fl = $('#fqWinBody [data-fqfull]');
+  }
+
+  function drawFqWin(){
+    if (!fqWin.classList.contains('on')) return;
+    var b = $('#fqWinBody');
+    b.innerHTML = fqBodyHTML()
+      + '<div class="fqwfoot" style="margin-top:0"><button data-fqfull="1">Full route list</button></div>';
+    wireFqBody(b);
+    var fl = b.querySelector('[data-fqfull]');
     if (fl) fl.addEventListener('click', function(){ closeFqWin(); openRad(); });
   }
 
@@ -6793,6 +7210,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#tbRad').classList.remove('on');
   }
   $('#fqWinX').addEventListener('click', closeFqWin);
+  $('#terrWinX').addEventListener('click', closeTerrWin);
+  $('#terrWin').addEventListener('click', function(e){
+    if (e.target === $('#terrWin')) closeTerrWin();
+  });
 
   /* it shows live values, so it refreshes with the clock */
   setInterval(function(){ drawFqWin(); }, 2000);
@@ -6955,10 +7376,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         if (hits.length > HIT_CAP) hits = hits.slice(0, HIT_CAP);
       }
 
+      /* Each row carries a colour bar in its category's own colour, so
+         an aerodrome, a strip and an enroute fix are told apart at a
+         glance rather than by reading the identifier. */
       function wrow(p, extra){
-        return '<button class="wrow" data-id="' + p.id + '">'
+        return '<button class="wrow k-' + (p.cat || 'mine') + '" data-id="' + p.id + '">'
              + '<span class="id">' + (p.lb || p.id) + '</span>'
-             + '<span class="nm2">' + p.nm + '</span>'
+             + '<span class="nm2">' + esc(p.nm || '') + '</span>'
              + '<span class="cat">' + (extra || p.ia || '') + '</span></button>';
       }
       if (addRecent && addRecent.length){
@@ -6966,8 +7390,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         addRecent.forEach(function(p){ h += wrow(p); });
       }
       if (addNear && addNear.length){
+        /* One flat list of everything nearby was unreadable - aerodromes,
+           strips, procedure fixes and navaids interleaved by distance.
+           Grouped by category, nearest first inside each. */
         h += '<div class="wsec">Nearest \u2014 from ' + fromLabel + '</div>';
-        addNear.forEach(function(x){ h += wrow(x.p, x.d.toFixed(0) + ' nm'); });
+        CAT_ORDER.forEach(function(c){
+          var inCat = addNear.filter(function(x){ return x.p.cat === c; });
+          if (!inCat.length) return;
+          h += '<div class="wsub">' + CAT_NM[c] + '</div>';
+          inCat.forEach(function(x){ h += wrow(x.p, x.d.toFixed(0) + ' nm'); });
+        });
       }
       if (hitTotal > HIT_CAP && q){
         h += '<div class="wsec">Showing ' + HIT_CAP + ' of ' + hitTotal
@@ -7486,6 +7918,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       b.addEventListener('click', function(e){
         e.stopPropagation();
         var k = b.getAttribute('data-lyr');
+        /* Terrain is the one layer with something to adjust, so its
+           button opens the control instead of being a bare switch. The
+           switch lives inside the window. */
+        if (k === 'terrain'){
+          if (!layOn('terrain')){ layToggle('terrain'); syncRail(); renderMap(); }
+          openTerrWin();
+          return;
+        }
         layToggle(k);
         syncRail(); renderMap();
         if (typeof drawLayersPop === 'function') drawLayersPop();
@@ -13346,37 +13786,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + '<div class="c"><span class="k">ETE</span><span class="v' + (ete === D ? ' dash' : '') + '">' + ete + '</span></div>';
   }
 
-  function hudFreqHTML(){
-    if (!ROUTE.length) return '<div class="note">No route</div>';
-    /* area CTAF: nearest enroute band; next field: the next aerodrome ahead */
-    var area = '124.1', hf = 'HF 3419 \u00b7 6622 \u00b7 8837';
-    var nextField = null;
-    var from = Math.max(0, toWpt - 1);
-    for (var i = from + 1; i < ROUTE.length; i++){
-      if (hasAnyFreq(ROUTE[i].id)){ nextField = ROUTE[i]; break; }
-    }
-    if (!nextField){ for (var j = ROUTE.length - 1; j >= 0; j--){ if (hasAnyFreq(ROUTE[j].id)){ nextField = ROUTE[j]; break; } } }
-
-    var h = '<div class="area"><div class="row1"><span class="k">Area CTAF</span>'
-          + '<span class="f">' + area + '</span></div><div class="hf">' + hf + '</div></div>';
-
-    if (nextField){
-      var d = GPSFIX ? nmBetween(GPSFIX, nextField) : null;
-      h += '<div class="nx">Next frequency</div>'
-        +  '<div class="fldhdr"><b>' + nextField.id + '</b>'
-        +    '<span class="nmm">' + nextField.nm + '</span>'
-        +    '<span class="d">' + (d == null ? '- - -' : d.toFixed(0) + ' NM') + '</span></div>'
-        +  '<div class="grid">'
-        +  fqAllPairs(nextField.id).sort(function(a,b){ return fqRank(a[0]) - fqRank(b[0]); })
-             .slice(0, 4).map(function(r){
-               return '<div class="row"><span class="t">' + r[0] + '</span>'
-                    + '<span class="v">' + r[1] + '</span></div>';
-             }).join('')
-        +  '</div>';
-    }
-    h += '<div class="note">Advisory \u00b7 not for navigation</div>';
-    return h;
-  }
+  /* the landscape panel shows exactly what the portrait window does -
+     it used to carry its own hardcoded area frequency */
+  function hudFreqHTML(){ return fqBodyHTML(); }
 
   function drawHud(){
     $('#hudAct').innerHTML = hudActHTML();
@@ -14013,7 +14425,41 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      Tiles already cached are skipped, so a cancelled download resumes
      where it stopped.
      ================================================================ */
+  /* The shading reference used to be AC.alt - your planned CRUISE, which
+     is not what you are at while you are looking at the terrain. It is
+     its own value now, seeded from cruise and adjustable in the terrain
+     window. */
   var TERR_SHADE = { above:[240,60,60], near:[255,176,32], margin:1000, opacity:0.82 };
+  var TERR_REF = (function(){
+    try { var v = parseFloat(localStorage.getItem('nmp.iphone.terrref'));
+          if (isFinite(v) && v > 0) return v; } catch(_){ }
+    return null;                       /* null = follow cruise altitude */
+  })();
+  function terrRefAlt(){ return TERR_REF == null ? AC.alt : TERR_REF; }
+  function setTerrRef(v){
+    TERR_REF = v;
+    try {
+      if (v == null) localStorage.removeItem('nmp.iphone.terrref');
+      else localStorage.setItem('nmp.iphone.terrref', String(v));
+    } catch(_){ }
+    if (terrLayer && terrLayer.repaintAll) terrLayer.repaintAll();
+    drawTerrWin();
+  }
+  /* highest ground in the visible tiles - the shading layer already
+     caches decoded elevations, so this costs nothing extra */
+  function terrHighestInView(){
+    if (!terrLayer || !terrLayer._tc || !LMAP) return null;
+    var b = LMAP.getBounds(), z = Math.round(LMAP.getZoom()), best = null;
+    for (var k in terrLayer._tc){
+      var parts = k.split(':'), tz = +parts[2];
+      if (Math.abs(tz - z) > 1) continue;
+      var el = terrLayer._tc[k].el;
+      for (var i = 0; i < el.length; i += 7){
+        if (best == null || el[i] > best) best = el[i];
+      }
+    }
+    return best == null ? null : Math.round(best * M2FT);
+  }
   var terrLayer = null;
 
   function terrBuildLayer(){
@@ -14055,7 +14501,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       _paint: function(cv, el){
         var ctx = cv.getContext('2d', { willReadFrequently:true });
         var im = ctx.createImageData(cv.width, cv.height), d = im.data;
-        var alt = AC.alt, lo = alt - TERR_SHADE.margin;
+        var alt = terrRefAlt(), lo = alt - TERR_SHADE.margin;
         var A = TERR_SHADE.above, N = TERR_SHADE.near;
         for (var i = 0; i < el.length; i++){
           var ft = el[i] * M2FT, o = i * 4;
