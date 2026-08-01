@@ -16,6 +16,78 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v121 2026-08-01 Cloud view spacing. .csec carries a bottom rule and
+                       no bottom margin, so WORKER URL sat hard against
+                       the LIBRARY line with nothing between them. The two
+                       fields are ONE setting, so they now group into a
+                       card - background, border, real padding - with the
+                       helper text inside it under its own rule rather
+                       than floating loose underneath. Sections that
+                       follow a card get 24px, labels 8px above their
+                       input, fields 18px apart, and the fields are mono
+                       since a URL and a key are strings you check
+                       character by character.
+       v120 2026-08-01 Reorder in Fuel froze the app. refreshFuel calls
+                       initFuel, and initFuel attached a click listener to
+                       the Reorder button - but that button lives in
+                       .vhead, which refreshFuel does NOT replace. So the
+                       same node collected a new handler on every rebuild:
+                       1, 2, 4, 8, 16... Each tap toggled fuelEdit that
+                       many times, so from the second tap it landed back
+                       where it started and Done looked dead, and the
+                       exponential growth is what eventually locked
+                       everything up.
+                       Both header buttons are _wired-guarded now.
+                       Checked the rest: useroute is emitted inside
+                       fuelBodyHTML, which the rebuild replaces wholesale,
+                       so it is a fresh node each time and correctly
+                       unguarded - and refreshFuel is the only
+                       rebuild-then-reinit pair in the app.
+                       This was reported in the v109 notes and left alone
+                       as "pre-existing, not mine to change". That was the
+                       wrong call: it was a real fault, it was known, and
+                       it cost a frozen app in the aircraft. Added a
+                       listener-stacking check to the validator so a
+                       handler on a surviving node has to be guarded.
+       v119 2026-08-01 Text field in the quick-edit window kept the old
+                       bottom-sheet's 12px gutter instead of --edge, and
+                       sat at body size. Now on the window's own edge, at
+                       mod-b height in mono - a registration and a type
+                       are codes, and read better as codes.
+                       Note on the previous report: Registration and
+                       Aircraft type share the same #qkEd element as
+                       Cruise altitude and ETD, so v118 converted all
+                       four at once. The stray "Save" floating over the
+                       map was the old amber-text #qkSave rendering
+                       orphaned from its sheet - it went with the
+                       rebuild, since that element no longer exists.
+       v118 2026-08-01 Cruise altitude and ETD moved out of the bottom
+                       sheet into the same centred window the GPS readout
+                       uses - one dialog shape across the app, phone and
+                       tablet alike.
+
+                       Cruise altitude is no longer a wheel. VFR levels
+                       are DISCRETE, so spinning through 100 ft steps to
+                       reach 9,500 was the wrong control for the job. It
+                       is now a list of the levels that are actually
+                       legal, with VFR/IFR and East/West/All filters.
+
+                       ICAO semicircular rule, which is what PNG uses:
+                       magnetic track 000-179 takes the easterly set
+                       (1500, 3500, 5500...), 180-359 the westerly (2500,
+                       4500, 6500...); IFR is the same pattern without
+                       the 500. Where a route exists the app knows its
+                       track, so the applicable direction is preselected
+                       and the matching levels are marked "your track" -
+                       AYNZ to AYGA runs 285M, which is westerly, so
+                       9,500 is on the wrong side of the rule for it.
+                       Every level stays reachable regardless: the rule
+                       has exceptions and this app does not get to decide
+                       which one you are flying.
+
+                       ETD keeps its wheels - a time is continuous and a
+                       wheel is right for it - and keeps Now / plus or
+                       minus 10 / plus 30.
        v117 2026-08-01 v116 was dead on every device, and the cause is
                        one I have written down before and still walked
                        into. TAB_MQ was assigned next to the tab-bar code
@@ -2318,7 +2390,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .flc.rec{border-left:2px solid var(--good,#8de84a)}
 .flc.rec .rt{color:var(--good,#8de84a);opacity:.8}
 /* Cloud view */
-.cldrow{display:flex;gap:var(--gut);margin-bottom:8px}
+/* a section that follows a card needs room, or the rule crowds it */
+.cldsec{margin-top:24px}
+.cldrow{display:flex;gap:var(--gut);margin-top:12px;margin-bottom:8px}
 .cldrow button{flex:1 1 0;height:var(--mod-b);border-radius:var(--radius);
   background:var(--inset);border:1px solid var(--border-strong);color:var(--text-2);
   font-size:var(--t-sm);font-weight:600}
@@ -2334,6 +2408,42 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    wrong interaction. Wheels: 44px rows, scroll-snapped, with a
    fixed centre band, plus large jump buttons either side. No
    keyboard, and every target clears the 44px minimum. */
+/* the quick-edit window: same shell as the GPS readout */
+.qkbody{padding:4px 0 0}
+/* the text field carried the old bottom-sheet's 12px gutter; in the
+   window it should sit on the same --edge as everything else */
+.qkbody .tedpage{padding:18px var(--edge) 14px}
+.qkbody .ntfld input{height:var(--mod-b);font-size:var(--t-lg);
+  font-family:var(--mono);letter-spacing:.02em}
+.qksave{width:100%;height:var(--mod-b);border-top:1px solid var(--border);
+  background:none;color:var(--accent);font-size:var(--t-md);font-weight:700;
+  letter-spacing:.02em}
+.qksave:active{background:var(--inset)}
+
+/* Cruise levels: VFR levels ARE discrete, so a list of the legal ones
+   beats spinning a wheel through 100 ft steps to reach 9,500. */
+.qklv{display:none;max-height:300px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-top:4px}
+.qklv.on{display:block}
+.qklvr{width:100%;display:flex;align-items:center;gap:10px;
+  height:var(--mod-b);padding:0 var(--edge);
+  border-bottom:1px solid var(--border);background:none;text-align:left}
+.qklvr:last-child{border-bottom:0}
+.qklvr .ft{flex:0 0 auto;min-width:5.5ch;font-family:var(--mono);font-size:var(--t-md);
+  font-weight:700;color:var(--text);text-align:right}
+.qklvr .dir{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.qklvr .tick{flex:0 0 auto;width:18px;height:18px;color:var(--accent);opacity:0}
+.qklvr.sel .ft{color:var(--accent)}
+.qklvr.sel .tick{opacity:1}
+.qklvr.rec .dir{color:var(--good)}
+.qkseg{display:flex;gap:var(--gut);padding:12px var(--edge) 4px}
+.qkseg .grp{display:flex;flex:1 1 0;border:1px solid var(--border-strong);
+  border-radius:var(--radius);overflow:hidden}
+.qkseg button{flex:1 1 0;height:var(--mod-a);background:var(--bg);
+  font-size:var(--t-xs);font-weight:700;letter-spacing:.04em;color:var(--text-muted)}
+.qkseg button.on{background:var(--accent);color:#0a0e13}
+
 .qkdial{display:none;padding:10px var(--edge) 4px}
 .qkdial.on{display:block}
 #qkText.off{display:none}
@@ -3956,20 +4066,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 </div>
 
 <!-- Quick edit: aircraft / altitude / ETD -->
-<div class="ted" id="qkEd">
-  <div class="tedw">
-    <div class="tedh"><b id="qkTtl">Edit</b>
-      <button class="x" id="qkClose" aria-label="Close">&times;</button></div>
-    <div class="tedpage" id="qkText">
-      <div class="ntfld" style="margin:0"><label id="qkLab" for="qkIn">Value</label>
-        <input id="qkIn" type="text"></div>
+<div class="gpsov" id="qkEd">
+  <div class="gpswin">
+    <div class="gpsh">
+      <span class="t"><b id="qkTtl">EDIT</b></span>
+      <button class="gpsx" id="qkClose" aria-label="Close">&times;</button>
     </div>
-    <div class="qkdial" id="qkDial">
-      <div class="qkval" id="qkVal">&nbsp;</div>
-      <div class="qkwheels" id="qkWheels"></div>
-      <div class="qkquick" id="qkQuick"></div>
+    <div class="qkbody">
+      <div class="tedpage" id="qkText">
+        <div class="ntfld" style="margin:0"><label id="qkLab" for="qkIn">Value</label>
+          <input id="qkIn" type="text"></div>
+      </div>
+      <div class="qkdial" id="qkDial">
+        <div class="qkval" id="qkVal">&nbsp;</div>
+        <div class="qkwheels" id="qkWheels"></div>
+        <div class="qklv" id="qkLevels"></div>
+        <div class="qkquick" id="qkQuick"></div>
+      </div>
     </div>
-    <div class="tedlist"><button class="tedrow" id="qkSave" style="color:var(--accent)">Save</button></div>
+    <button class="qksave" id="qkSave">Save</button>
   </div>
 </div>
 
@@ -4201,7 +4316,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v117';
+  var VERSION = 'v121';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -8733,24 +8848,120 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
   }
 
+  /* ---- Cruising levels ---------------------------------------------
+     A wheel was the wrong control for this. VFR levels are DISCRETE, so
+     spinning through 100 ft steps to reach 9,500 is worse than choosing
+     from the levels that are actually legal.
+
+     ICAO semicircular rule, which is what PNG uses: magnetic track
+     000-179 takes the easterly set, 180-359 the westerly. VFR adds 500
+     ft to the IFR level. If a route exists we know its track, so the
+     applicable direction is preselected and the matching levels are
+     marked - but every level stays reachable, because the rule has
+     exceptions and the app should not be the one deciding. */
+  var qkRules = 'vfr', qkDir = 'auto';
+
+  function routeTrackDeg(){
+    if (!ROUTE || ROUTE.length < 2) return null;
+    var a = ROUTE[0], b = ROUTE[ROUTE.length - 1];
+    return trkBetween(a, b);
+  }
+  function dirOfTrack(t){
+    if (t == null) return null;
+    var m = ((t % 360) + 360) % 360;
+    return (m < 180) ? 'e' : 'w';
+  }
+  function qkLevelList(){
+    var out = [], base = (qkRules === 'vfr') ? 500 : 0;
+    for (var th = 1; th <= 20; th++){
+      var ft = th * 1000 + base;
+      out.push({ ft:ft, dir:(th % 2) ? 'e' : 'w' });
+    }
+    return out;
+  }
+
+  function qkDrawLevels(){
+    var host = $('#qkLevels'); if (!host) return;
+    var trk = routeTrackDeg(), auto = dirOfTrack(trk);
+    var want = (qkDir === 'auto') ? auto : (qkDir === 'all' ? null : qkDir);
+
+    var seg = $('#qkSeg');
+    if (seg){
+      seg.innerHTML =
+          '<span class="grp">'
+        +   '<button data-qr="vfr"' + (qkRules === 'vfr' ? ' class="on"' : '') + '>VFR</button>'
+        +   '<button data-qr="ifr"' + (qkRules === 'ifr' ? ' class="on"' : '') + '>IFR</button>'
+        + '</span><span class="grp">'
+        +   '<button data-qd="e"' + (want === 'e' ? ' class="on"' : '') + '>East</button>'
+        +   '<button data-qd="w"' + (want === 'w' ? ' class="on"' : '') + '>West</button>'
+        +   '<button data-qd="all"' + (want === null ? ' class="on"' : '') + '>All</button>'
+        + '</span>';
+    }
+
+    var tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
+             + 'stroke-linejoin="round" stroke-linecap="round"><path d="M4 12.5l5 5 11-11"/></svg>';
+    var h = '', cur = qkWheelVals.ft;
+    qkLevelList().forEach(function(L){
+      if (want && L.dir !== want) return;
+      var rec = (auto && L.dir === auto);
+      h += '<button class="qklvr' + (L.ft === cur ? ' sel' : '') + (rec ? ' rec' : '')
+        +  '" data-lv="' + L.ft + '">'
+        +  '<span class="ft">' + L.ft.toLocaleString() + '</span>'
+        +  '<span class="dir">' + (L.dir === 'e' ? '000\u2013179\u00b0' : '180\u2013359\u00b0')
+        +    (rec ? ' \u00b7 your track' : '') + '</span>'
+        +  '<span class="tick">' + tick + '</span></button>';
+    });
+    host.innerHTML = h;
+
+    Array.prototype.slice.call(host.querySelectorAll('[data-lv]')).forEach(function(b){
+      b.addEventListener('click', function(){
+        qkWheelVals.ft = parseInt(b.getAttribute('data-lv'), 10);
+        qkPaintVal(); qkDrawLevels();
+      });
+    });
+    if (seg){
+      Array.prototype.slice.call(seg.querySelectorAll('[data-qr],[data-qd]')).forEach(function(b){
+        b.addEventListener('click', function(){
+          var r = b.getAttribute('data-qr'), d = b.getAttribute('data-qd');
+          if (r){
+            qkRules = r;
+            /* keep the same thousands when switching rule set */
+            var th = Math.round((qkWheelVals.ft - (r === 'vfr' ? 0 : 500)) / 1000);
+            qkWheelVals.ft = th * 1000 + (r === 'vfr' ? 500 : 0);
+          }
+          if (d) qkDir = d;
+          qkPaintVal(); qkDrawLevels();
+        });
+      });
+    }
+    var sel = host.querySelector('.qklvr.sel');
+    if (sel && sel.scrollIntoView) sel.scrollIntoView({ block:'center' });
+  }
+
   function qkBuildDial(what){
     var wheels = $('#qkWheels'), quick = $('#qkQuick');
     wheels.innerHTML = ''; quick.innerHTML = ''; qkWheelVals = {};
+    wheels.style.display = '';
+    $('#qkLevels').classList.remove('on');
+    $('#qkLevels').innerHTML = '';
+    if ($('#qkSeg')) $('#qkSeg').style.display = 'none';
     var refs = {};
 
     if (what === 'alt'){
-      var list = [];
-      for (var ft = 0; ft <= 15000; ft += 100) list.push(ft);
-      var sel = Math.round(Math.min(15000, Math.max(0, AC.alt)) / 100);
-      var a = buildWheel('ft', list, sel, 'feet', function(v){ return v.toLocaleString(); });
-      wheels.appendChild(a.wrap); refs.ft = a.w;
-      [['\u2212 1,000', -10], ['\u2212 500', -5], ['+ 500', 5], ['+ 1,000', 10]]
-        .forEach(function(q){
-          var b = document.createElement('button');
-          b.type = 'button'; b.textContent = q[0];
-          b.addEventListener('click', function(){ refs.ft.__goto(refs.ft.__idx + q[1], true); });
-          quick.appendChild(b);
-        });
+      /* a list of legal levels, not a wheel */
+      wheels.style.display = 'none';
+      $('#qkLevels').classList.add('on');
+      qkWheelVals.ft = AC.alt;
+      qkRules = (AC.alt % 1000 === 500) ? 'vfr' : 'ifr';
+      qkDir = 'auto';
+      if (!$('#qkSeg')){
+        var sg = document.createElement('div');
+        sg.className = 'qkseg'; sg.id = 'qkSeg';
+        $('#qkLevels').parentNode.insertBefore(sg, $('#qkLevels'));
+      }
+      $('#qkSeg').style.display = '';
+      qkDrawLevels();
+      qkPaintVal();
     }
 
     if (what === 'etd'){
@@ -8801,7 +9012,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       alt:  ['Cruise altitude', 'Feet', String(AC.alt)],
       etd:  ['ETD', 'UTC, as HHMM', (ETD_MIN == null ? '' : clock(0).replace(':', ''))]
     }[what];
-    $('#qkTtl').textContent = cfg[0];
+    $('#qkTtl').textContent = cfg[0].toUpperCase();   /* the window header is mono caps */
     var dial = (what === 'alt' || what === 'etd');
     $('#qkText').classList.toggle('off', dial);
     $('#qkDial').classList.toggle('on', dial);
@@ -8823,7 +9034,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     /* wheel values are already valid by construction - the list only
        contains legal ones, so there is nothing to reject */
     if (qkWhat === 'alt' || qkWhat === 'etd'){
-      if (qkWhat === 'alt') AC.alt = qkWheelVals.ft;
+      if (qkWhat === 'alt'){
+        if (qkWheelVals.ft == null){ toast('Pick a level'); return; }
+        AC.alt = qkWheelVals.ft;
+      }
       else {
         ETD_MIN = qkWheelVals.hh * 60 + qkWheelVals.mm;
         try{ localStorage.setItem('nmp.iphone.etd', String(ETD_MIN)); }catch(e){}
@@ -10587,10 +10801,23 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
     /* -- reorder mode, card movers, and Use route -- */
     (function(){
+      /* Reorder and Additions live in .vhead, which refreshFuel does NOT
+         replace - but refreshFuel calls initFuel, so an unguarded
+         addEventListener here stacks a new handler on the SAME node every
+         time. Listeners then go 1, 2, 4, 8, 16... and each tap toggles
+         fuelEdit that many times, so from the second tap it lands back
+         where it started and the button looks dead. The exponential
+         growth is what eventually locked the app up.
+
+         Everything below rebuilt by refreshFuel is a fresh node each
+         time and needs no guard; these two are not, and do. */
       var ed = root.querySelector('[data-f="edit"]');
-      if (ed) ed.addEventListener('click', function(){
-        fuelEdit = !fuelEdit; refreshFuel(root);
-      });
+      if (ed && !ed._wired){
+        ed._wired = 1;
+        ed.addEventListener('click', function(){
+          fuelEdit = !fuelEdit; refreshFuel(root);
+        });
+      }
       var ad = root.querySelector('[data-f="adds"]');
       if (ad && !ad._wired){ ad._wired = 1; ad.addEventListener('click', openFuelAdd); }
       Array.prototype.forEach.call(root.querySelectorAll('[data-fmv]'), function(b){
@@ -11463,7 +11690,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var nRt = FLIGHTS.filter(function(f){ return !f.rec; }).length;
     var nWp = DB.filter(function(p){ return p.cat === 'mine'; }).length;
 
-    var h = '<div class="cnote" style="margin-bottom:14px">Explicit only. Nothing syncs on its '
+    var h = '<div class="cnote" style="margin-bottom:20px">Explicit only. Nothing syncs on its '
           + 'own, and a pull never touches the route you are flying \u2014 it adds to the library, '
           + 'and loading one stays a separate step.</div>';
 
@@ -11478,16 +11705,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       +  'library.</div>';
 
     if (!base || !key){
-      return h + '<div class="cempty" style="margin-top:16px">Enter the URL and key to '
+      return h + '<div class="cempty" style="margin-top:26px">Enter the URL and key to '
                + 'push or pull.</div>';
     }
 
-    h += '<div class="csec">Routes <span class="cnt">' + nRt + ' here</span></div>'
+    h += '<div class="csec cldsec">Routes <span class="cnt">' + nRt + ' here</span></div>'
       +  '<div class="cldrow"><button data-cld="pushR">Push to cloud</button>'
       +    '<button data-cld="pullR">Pull from cloud</button></div>'
       +  '<div class="cldmsg" id="cldMsgR"></div>'
 
-      +  '<div class="csec">Waypoints <span class="cnt">' + nWp + ' here</span></div>'
+      +  '<div class="csec cldsec">Waypoints <span class="cnt">' + nWp + ' here</span></div>'
       +  '<div class="cldrow"><button data-cld="pushW">Push to cloud</button>'
       +    '<button data-cld="pullW">Pull from cloud</button></div>'
       +  '<div class="cldmsg" id="cldMsgW"></div>'
