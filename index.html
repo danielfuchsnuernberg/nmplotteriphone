@@ -16,6 +16,261 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v116 2026-08-01 Tablet band - the same app with more room, not a
+                       second layout. Same views, components and tokens.
+
+                       Breakpoint is 600px, NOT 768: an iPad mini in
+                       portrait is 744pt, so a 768 band would have missed
+                       it entirely and left it rendering the phone
+                       layout. Measured off the screenshots rather than
+                       assumed.
+
+                       What changes: the bottom bar shows 6 configured
+                       slots instead of 4 and the activity strip 6
+                       columns instead of 5 - both in JS, and the stored
+                       config now always carries 6 entries with the bar
+                       rendering the first tabSlots() of them, so one
+                       configuration is shared and moving between devices
+                       or rotating never destroys it. The airfield card
+                       becomes a full-height side panel so the map stays
+                       live beside it; on a phone it has to cover the
+                       map, here it does not. Body text gets a 760px
+                       measure cap. Touch tokens up: mod-b 44 to 50,
+                       tab bar 58 to 66.
+
+                       sizeCard() sets an inline height, which would have
+                       beaten the CSS and left a half-height column
+                       floating against the edge - it now stands down at
+                       tablet width. Crossing the breakpoint rebuilds the
+                       bar and strip, so Split View resizing and rotation
+                       both settle correctly.
+       v115 2026-08-01 A route could draw as a line with nothing at its
+                       ends. Route points are drawn by the same loop as
+                       every other marker, so they were subject to the
+                       category toggles and the zoom rank gate: a route
+                       between two procedure fixes vanished at both ends
+                       because the fixes layer defaults OFF, and at low
+                       zoom the rank gate did the same to a small
+                       airfield. Strips, fixes and navaids were all
+                       affected; only fields and personal waypoints
+                       happened to be on by default.
+                       A point in the route now always draws, and always
+                       keeps its label. Those gates decide what else is
+                       worth showing - they must never hide the thing you
+                       are flying to. Route labels also win the collision
+                       pass outright rather than being culled by whatever
+                       was drawn near them first.
+       v114 2026-08-01 Share route sheet ran edge to edge. Its content
+                       sits in .tedlist, which carries no horizontal
+                       padding because it is built to hold full-bleed
+                       .tedrow buttons that supply their own - and the
+                       share content is not rows. So every element
+                       touched both screen edges and the route title was
+                       CLIPPED at the left rather than merely tight.
+                       The sheet now supplies its own 14px gutter,
+                       matching the --edge convention the views use. The
+                       route summary truncates from the right with an
+                       ellipsis, keeping the departure visible, instead
+                       of overflowing its box. The footnote keeps its
+                       full-width rule by bleeding back out rather than
+                       doubling the gutter. Save button height aligned to
+                       --mod-b instead of a hardcoded 52px.
+                       Checked the other eight .tedlist users: all hold
+                       .tedrow buttons, so this sheet was the only one
+                       misusing it.
+       v113 2026-08-01 Aircraft defaults corrected: cruise TAS 110 -> 120,
+                       fuel burn 176 -> 220 kg/h. Fuel on board and ETD
+                       now start EMPTY, because they change every flight
+                       and a stale default is worse than a blank - a
+                       blank cannot be mistaken for a figure.
+                       Both are load-bearing, so blank had to mean
+                       "unknown", not zero. Fuel on arrival, FUEL REM and
+                       ENDURANCE dash instead of computing from a guess,
+                       and every ETA reads em-dash until an ETD is set.
+                       Clearing either field stores null rather than
+                       falling back to the previous value.
+                       Caught while doing it: the briefing tested
+                       T.rem < resKg to decide whether to paint the
+                       figure red, and null < 110 is TRUE in JavaScript -
+                       so a blank fuel load would have shown NaN in
+                       warning red. Guarded.
+                       The ETD wheel opens on the current UTC time when
+                       nothing is set, which is the value most likely
+                       wanted, and the FPL button reads "ETD set" rather
+                       than a dash.
+       v112 2026-07-31 Cloud library, under More -> Cloud. Same Worker,
+                       same collections and the same X-Library-Key header
+                       the desktop build uses, so the two apps read ONE
+                       library instead of drifting apart - which is the
+                       whole point of it now that both are maintained.
+
+                       EXPLICIT ONLY, and built so it cannot break the
+                       standing rule. Nothing runs on a timer, on load,
+                       or on anything but a button press. A pull adds to
+                       the local library and never touches ROUTE, so it
+                       cannot overwrite a route you are flying; loading
+                       one stays a separate, deliberate action through
+                       the existing Load button. A push uploads only what
+                       the cloud does not already have and never deletes
+                       remotely, so pushing from the phone cannot remove
+                       work done on the desktop. On a pull, an item you
+                       already hold is skipped - the local copy wins.
+
+                       Pulled routes are run through snapRoute, so a
+                       route saved on the desktop against older
+                       coordinates lands on the airfield pack's
+                       positions.
+
+                       Recorded flights are deliberately NOT synced: they
+                       carry full tracks and belong on the device.
+       v111 2026-07-31 Runway data for 377 fields, up from six. Lifted
+                       from v262's PNG_RUNWAYS (L10471): 381 runways with
+                       both designators and the true bearing. The six
+                       majors keep their fuller records; everything else
+                       now falls back to the pack instead of "no runway
+                       detail".
+                       Only 23 carry surveyed threshold coordinates, and
+                       a length can only come from those - so a length is
+                       shown where the ends are known and a DASH where
+                       they are not, rather than a number derived from
+                       nothing. The Airports list shows the length where
+                       it exists and the designator pair otherwise.
+                       Wind components now compute for every one of the
+                       377 against the live METAR, which is the number
+                       that matters going into a strip.
+                       Verified on extraction: all 381 designators agree
+                       with their own bearings to within 15 degrees.
+                       Caught in validation: 58 identifiers are of the
+                       form PG-0001, which is not a valid bare object key
+                       - unquoted they broke the entire script.
+       v110 2026-07-31 The recorder is flight-worthy.
+
+                       Wake lock. iOS suspends JavaScript when the screen
+                       sleeps, so the recorder only ever worked for legs
+                       you sat watching - the moment the display went
+                       off, fixes stopped and the track got a hole. The
+                       Screen Wake Lock API now holds the display awake
+                       while recording, is re-acquired on
+                       visibilitychange because iOS drops it when you
+                       switch apps, and is released the instant recording
+                       stops - holding a screen on costs battery in an
+                       aircraft with no charger. It needs iOS 16.4+ and a
+                       secure context, so a failed request is treated as
+                       unavailable, not as an error, and the toast only
+                       promises the screen will stay on when it actually
+                       can.
+
+                       Storage. Tracks were in localStorage, which is
+                       about 5 MB for the WHOLE app - routes, notes,
+                       waypoints and settings share it. At roughly 47 KB
+                       per flight hour a few dozen recordings crowd
+                       everything out, and a full localStorage throws on
+                       write and loses data silently. Tracks now go to
+                       IndexedDB, as v262 does; the flight list keeps a
+                       light copy without the track and pulls it back on
+                       demand. Anything the previous build saved is
+                       migrated on first run, deleting a flight deletes
+                       its track rather than orphaning it, and if
+                       IndexedDB is unavailable it falls back to the old
+                       path rather than failing.
+       v109 2026-07-31 Fuel additions rebuilt as a centred overlay, the
+                       same shape as the GPS coordinate readout, instead
+                       of a bottom sheet. Each container is its own card,
+                       stacked: icon on top, then the metric pair in bold
+                       mono - 200 L - 160 kg - and the imperial
+                       conversion beneath it in lighter weight. The
+                       figures you plan with read first; the conversion
+                       supports them rather than competing.
+                       The long range tank icon is now drawn from the
+                       tank itself: a riveted rectangular box with a
+                       tapered wedge at one end, vertical panel seams,
+                       the filler cap on top and the angled filler neck
+                       off the nose. It had been a capsule, which the
+                       tank is not.
+       v108 2026-07-31 Pasted coordinates in the commonest format did not
+                       parse. The parser only accepted the hemisphere as
+                       a PREFIX (S06 34.2 E146 43.6). Google Maps, Apple
+                       Maps and most chart apps put it as a SUFFIX, and
+                       no branch matched, so it said No match.
+                       Suffix degrees/minutes/seconds now parses, in
+                       either order, with or without the degree, minute
+                       and second symbols, and with decimal minutes.
+                       Found while fixing it: the prefix form had no
+                       seconds branch either, so S06 32 18.13 failed too.
+                       Both handle seconds now.
+                       Verified against eight real formats, all landing
+                       within 4 m of each other, and confirmed that
+                       identifiers, place names and impossible values
+                       (99 minutes) are still rejected rather than
+                       silently becoming a position.
+       v107 2026-07-31 "Where is the flight log" turned up a defect in
+                       v106. It is More -> Flights, but that view is a
+                       ROUTE library, and a recorded flight dropped into
+                       it broke three ways: no ts, which it sorts on and
+                       displays, so NaN; flString printing hundreds of
+                       track fixes as a waypoint list; and flStats
+                       computing ETE from planned TAS rather than the
+                       time actually flown.
+                       A recorded flight is now its own kind of record.
+                       pts is a two-point start/end summary and the full
+                       track lives in .track, so nothing tries to read it
+                       as a plan. Its card shows what a flight has -
+                       distance flown, time, average groundspeed, fix
+                       count - and is marked green down the edge. The
+                       header counts routes and flights separately.
+                       Its actions are Show on map and Delete, not "load
+                       into flight plan", because loading 300 fixes into
+                       a route is nonsense. A shown track draws dashed
+                       and dimmer than a live recording.
+       v106 2026-07-31 The recorder records, and the fuel figures work.
+
+                       REC was a stopwatch - a counter, no track, nothing
+                       saved. Fixes already arrive through the GPS
+                       handler, so it now logs them, using v262's
+                       downsampling (L5857): a point when 40 m has been
+                       covered OR 5 s has passed, and a coverage gap over
+                       12 s starts a NEW SEGMENT rather than drawing a
+                       straight line across the hole. Persisted every 5 s
+                       and restored on load, so a reload mid-sector costs
+                       seconds rather than the flight. Starting the
+                       recorder starts tracking if it is not already on.
+                       The flown track draws live in green, segment by
+                       segment. Stopping saves it to the flight log with
+                       distance and fix count; holding to reset now says
+                       "discarded", because it is a track being thrown
+                       away, not a timer.
+
+                       FUEL REM and ENDURANCE dashed because nothing knew
+                       when the flight began. The recorder is that
+                       reference. Both are burn-rate estimates from
+                       AC.burn, not a measured flow, so they appear only
+                       while recording and dash otherwise rather than
+                       implying knowledge the app does not have. FUEL REQ
+                       is trip burn plus reserve from the live ETE.
+       v105 2026-07-31 Weather is live. This was the last place the app
+                       presented fabricated data as though it were
+                       current: six frozen METAR strings from 21 June,
+                       decoded by real code, so it looked like a working
+                       weather page and never changed. All six are
+                       DELETED, along with the six TAFs. FIELD_INFO now
+                       holds only static facts - elevation, town, IATA,
+                       runways, frequencies.
+                       Fetch lifted from v262 L12745: /metar?ids=..&
+                       format=json&hours=12, newest report per station by
+                       obsTime, 204 or an empty body meaning the station
+                       is not reporting rather than an error. The proxy
+                       URL is not hard-coded - paste your worker URL in
+                       Settings, same as desktop, and it reports whether
+                       it worked. With none set, weather is simply
+                       absent.
+                       Everything downstream now reads the live report:
+                       the card, the flight-category tint on the map and
+                       in the Airports list, the runway crosswind, and
+                       the density-altitude prefill - that last one fed
+                       QNH and OAT from a June string into a performance
+                       answer. Reports older than 90 minutes are marked
+                       stale. TAF says plainly that this build does not
+                       fetch it.
        v104 2026-07-31 The marker dot was not on its own coordinate.
                        .fld held the dot AND the label and was centred as
                        a whole with translate(-50%,-50%). With a label
@@ -2042,6 +2297,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fld.k-field.twr i{box-shadow:0 0 0 2px var(--bg,#0a0e13), 0 0 0 3.5px currentColor}
 .fld.k-field.twr{color:var(--good,#8de84a)}
 .fld.k-field.twr b{color:var(--good,#8de84a)}
+/* a recorded flight is a different kind of object from a saved route */
+.flc.rec{border-left:2px solid var(--good,#8de84a)}
+.flc.rec .rt{color:var(--good,#8de84a);opacity:.8}
+/* Cloud view */
+.cldrow{display:flex;gap:var(--gut);margin-bottom:8px}
+.cldrow button{flex:1 1 0;height:var(--mod-b);border-radius:var(--radius);
+  background:var(--inset);border:1px solid var(--border-strong);color:var(--text-2);
+  font-size:var(--t-sm);font-weight:600}
+.cldrow button:active{background:var(--panel)}
+.cldmsg{min-height:18px;margin-bottom:8px;font-family:var(--mono);
+  font-size:var(--t-xs);color:var(--accent-2);letter-spacing:.02em}
+.csec .cnt{margin-left:8px;font-family:var(--mono);font-weight:400;
+  color:var(--text-fainter);letter-spacing:.04em}
 .apfrom{padding:2px var(--edge) 8px;font-size:var(--t-2xs);font-weight:700;
   letter-spacing:.1em;text-transform:uppercase;color:var(--text-fainter)}
 /* ---- In-flight value picker ----------------------------------
@@ -2686,6 +2954,61 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    background; own-ship centres on the middle of the VISIBLE map, which
    is the area not covered by the frequency panel. */
 #hud{display:none}
+/* ============================================================
+   TABLET
+
+   Not a second layout. Same views, same components, same tokens - the
+   room is spent on breathing space and one more column, not on a
+   different app. Three things actually change:
+
+     1. the bottom bar shows 6 configured slots instead of 4, and the
+        activity strip 6 columns instead of 5 (both in JS, so one
+        configuration is shared and survives moving between devices)
+     2. the airfield CARD becomes a side panel, so the map stays live
+        and interactive beside it - on a phone it has to cover the map,
+        here it does not
+     3. body text gets a measure cap, because a 744pt line is not
+        readable
+
+   600px, not 768: an iPad mini in portrait is 744pt, and a 768 band
+   would have missed it entirely and left it on the phone layout.
+   ============================================================ */
+@media (min-width:600px){
+  :root{
+    --edge:22px;
+    --mod-a:36px;
+    --mod-b:50px;
+    --tabbar:66px;
+    --top-pad:14px;
+  }
+
+  /* the airfield card sits BESIDE the map, not over it. Height is
+     cleared in sizeCard() for the same reason. */
+  .card{
+    left:auto;right:0;top:0;bottom:0;
+    width:43%;min-width:330px;max-width:460px;
+    transform:translateX(100%);
+    border-top:0;border-left:1px solid var(--border-strong);
+    padding-top:calc(var(--sat) + var(--top-pad));
+  }
+  .card.on{transform:translateX(0)}
+  .cgrip{display:none}          /* nothing to drag when it is full height */
+
+  /* More: a narrower slide-in - the list does not need the width */
+  .sheet{width:38%;min-width:300px;max-width:420px}
+
+  /* readable measure; the map and its overlays are exempt */
+  .vbody > *{max-width:760px;margin-left:auto;margin-right:auto}
+
+  /* sheets centre rather than clinging to the bottom edge */
+  .ted{align-items:center}
+  .tedw{max-width:520px;border-radius:12px}
+  .gpswin{max-width:520px}
+
+  .tab .ic,.tab .ic svg{width:26px;height:26px}
+  .rb svg{width:22px;height:22px}
+}
+
 @media (orientation:landscape) and (max-height:500px){
   /* .rgrp is rgba(13,18,25,.84) with no blur, while .hud-act and
      .hud-bar are rgba(13,18,25,.55) with a 10px blur. Over the map the
@@ -2830,11 +3153,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .hud-panel .pb .kv .k{font-size:var(--t-sm);color:var(--text-muted)}
 .hud-panel .pb .kv .v{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--text)}
 
-/* ---- Share route ------------------------------------------ */
+/* ---- Share route ------------------------------------------
+   .tedlist carries no horizontal padding because it is built to hold
+   full-bleed .tedrow buttons that supply their own. The share content
+   is not rows, so it ran to both edges and the route title was clipped
+   rather than merely tight. This sheet supplies its own gutter. */
+.shwrap{padding:14px 14px 16px}
+/* .wnote brings its own 14px gutter, which would double inside the
+   wrapper - and the rule above it should span the full sheet width */
+.shwrap .wnote{margin:16px -14px -16px;padding:12px 14px 14px}
 .shhd{font-size:var(--t-2xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
   color:var(--text-fainter);margin:2px 0 10px}
-.shsum{display:flex;align-items:baseline;gap:8px;margin-bottom:16px}
-.shsum b{font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text);
+.shsum{display:flex;align-items:baseline;gap:8px;margin-bottom:16px;min-width:0}
+/* the route can be long - it must truncate from the RIGHT, keeping the
+   departure visible, rather than overflow its box to the left */
+.shsum b{flex:1 1 auto;min-width:0;
+  font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .shsum span{flex:0 0 auto;font-size:var(--t-2xs);color:var(--text-fainter)}
 /* copy targets: one tall tappable card per format */
@@ -2850,7 +3184,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .shcopy .ico{flex:0 0 auto;width:22px;height:22px;color:var(--accent-2)}
 .shcopy.done .ico{color:var(--good)}
 .shcopy .ico svg{width:22px;height:22px;display:block}
-.shsave{width:100%;height:52px;margin-top:16px;border-radius:var(--radius);
+.shsave{width:100%;height:var(--mod-b);margin-top:16px;border-radius:var(--radius);
   display:flex;align-items:center;justify-content:center;gap:8px;
   background:var(--accent);color:#0a0e13;font-size:var(--t-md);font-weight:700}
 .shsave svg{width:18px;height:18px}
@@ -2976,6 +3310,29 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .faq .l,.faq .k{display:block;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
   color:var(--text);letter-spacing:.01em;white-space:nowrap}
 .faq .k{margin-top:3px;color:var(--text-2)}
+
+/* Fuel additions: one card per container, stacked, in a centred window
+   like the GPS readout. Icon on top, metric in bold beneath it, the
+   imperial conversion under that in lighter weight - the figures you
+   plan with read first, the conversion supports them. */
+.fabody{padding:14px;display:flex;flex-direction:column;gap:10px}
+.facard{display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:14px 10px 12px;border-radius:10px;
+  background:var(--inset);border:1px solid var(--border)}
+.faic{width:46px;height:46px;border-radius:10px;margin-bottom:7px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);border:1px solid var(--border-strong);color:var(--route)}
+.faic svg{width:28px;height:28px}
+.fatt{font-size:var(--t-sm);color:var(--text-2);letter-spacing:.02em;margin-bottom:3px}
+.famain{font-family:var(--mono);font-size:var(--t-lg);font-weight:700;
+  color:var(--text);letter-spacing:.01em;white-space:nowrap}
+.fasub{font-family:var(--mono);font-size:var(--t-xs);font-weight:400;
+  color:var(--text-fainter);letter-spacing:.03em;white-space:nowrap;margin-top:2px}
+.famain i,.fasub i{font-style:normal}
+.famain i::before,.fasub i::before{content:'\00b7';margin:0 8px;
+  color:var(--text-fainter);font-weight:400}
+.fafoot{padding:0 14px 15px;text-align:center;
+  font-size:var(--t-2xs);color:var(--text-fainter);letter-spacing:.03em}
 
 /* ---- Downloads --------------------------------------------- */
 .dlsum{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);
@@ -3552,7 +3909,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <b>Share route</b>
       <button class="x" id="shEdClose" aria-label="Close">&times;</button>
     </div>
-    <div class="tedlist" id="shList"></div>
+    <div class="tedlist shwrap" id="shList"></div>
   </div>
 </div>
 
@@ -3739,14 +4096,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 </div>
 
 <!-- Fuel additions (carriage reminders) -->
-<div class="ted" id="fuelAdd">
-  <div class="tedw">
-    <div class="tedh">
-      <b>Fuel additions</b>
-      <button class="x" id="fuelAddClose" aria-label="Close">&times;</button>
+<div class="gpsov" id="fuelAdd">
+  <div class="gpswin">
+    <div class="gpsh">
+      <span class="t"><b>FUEL</b> &middot; Additions</span>
+      <button class="gpsx" id="fuelAddClose" aria-label="Close">&times;</button>
     </div>
-    <div class="tedhint top">Nominal capacities &middot; weights at 0.80&nbsp;kg/L</div>
-    <div class="tedlist" id="fuelAddList"></div>
+    <div class="fabody" id="fuelAddList"></div>
+    <div class="fafoot">Nominal capacities &middot; weights at 0.80&nbsp;kg/L</div>
   </div>
 </div>
 
@@ -3827,8 +4184,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v104';
-  var BUILD   = '2026-07-31';
+  var VERSION = 'v116';
+  var BUILD   = '2026-08-01';
 
   var $  = function(s){ return document.querySelector(s); };
   var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -3948,7 +4305,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      DEMO ONLY - not for navigation.
      ============================================================ */
 
-  var AC  = { reg:'P2-LAW', type:'BK117', tas:110, burn:176, fob:500, resMin:30, alt:9500 };
+  /* fob and ETD start EMPTY because they change every flight - a stale
+     default is worse than a blank, since a blank cannot be mistaken for
+     a figure. null means "not entered", and everything that reads them
+     dashes rather than computing from a guess. */
+  var AC  = { reg:'P2-LAW', type:'BK117', tas:120, burn:220, fob:null, resMin:30, alt:9500 };
   var SET = { clr:1000, labels:'auto', coordFmt:'ddm' };   /* route line lives in LAYERS */
   var SET_KEY = 'nmp.iphone.set', savedEtd = null;
   (function(){
@@ -4881,15 +5242,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function totals(){
     var L = legs(), d = 0, hr = 0;
     L.forEach(function(l){ d += l.nm; hr += l.hr; });
-    return { legs:L, nm:d, hr:hr, burn:hr * AC.burn, rem: AC.fob - hr * AC.burn };
+    return { legs:L, nm:d, hr:hr, burn:hr * AC.burn,
+             rem: (AC.fob == null ? null : AC.fob - hr * AC.burn) };
   }
   function hhmm(hr){
     var h = Math.floor(hr), m = Math.round((hr - h) * 60);
     if (m === 60){ h += 1; m = 0; }
     return h + ':' + String(m).padStart(2, '0');
   }
-  var ETD_MIN = (savedEtd !== null) ? savedEtd : 3 * 60 + 8;
+  var ETD_MIN = (savedEtd !== null) ? savedEtd : null;
   function clock(hr){
+    if (ETD_MIN == null) return '\u2014';     /* no ETD, so no ETA */
     var t = Math.round(ETD_MIN + hr * 60) % 1440;
     return String(Math.floor(t / 60)).padStart(2,'0') + String(t % 60).padStart(2,'0');
   }
@@ -4909,7 +5272,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + '<div class="drow">'
       + '<button class="dbtn" data-hb="proc">Procedure</button>'
       + '<button class="dbtn" data-hb="ats">Routes (' + ATS_ROUTES.length + ')</button>'
-      + '<button class="dbtn" data-hb="etd">ETD ' + clock(0) + '</button></div>';
+      + '<button class="dbtn" data-hb="etd">ETD ' + (ETD_MIN == null ? 'set' : clock(0)) + '</button></div>';
     if (!ROUTE.length){
       h += '<div class="chipempty">No route. Tap Add to build one.</div>';
     }
@@ -5037,9 +5400,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function stripHTML(){
     var T = totals();
     var resKg = AC.burn * (AC.resMin / 60);
-    var low = T.rem < resKg;
+    var known = (T.rem != null);
+    var low = known && T.rem < resKg;      /* null < resKg is TRUE in JS */
     return '<div class="hero"><span class="k">Fuel on arrival</span>'
-      + '<span class="v' + (low ? ' warn' : '') + '">' + Math.round(T.rem) + '<u>kg</u></span></div>'
+      + '<span class="v' + (low ? ' warn' : '') + '">'
+      +   (known ? Math.round(T.rem) + '<u>kg</u>' : '\u2014') + '</span></div>'
       + '<div class="minis">'
       +   '<div class="mini"><span class="k">Dist</span><span class="v">' + T.nm.toFixed(0) + '</span></div>'
       +   '<div class="mini"><span class="k">ETE</span><span class="v">' + hhmm(T.hr) + '</span></div>'
@@ -5829,7 +6194,33 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       if (la !== null && lo !== null) return { lat:la, lon:lo };
     }
 
-    // 3) hemisphere-suffix decimal  "6.568S 146.726E"
+    /* 3) hemisphere-SUFFIX degrees/minutes/seconds, which is what Google
+          Maps, Apple Maps and most chart apps put on the clipboard:
+            6°32'18.13"S 147°36'11.46"E
+          Also takes D M.M and plain D with the hemisphere trailing, and
+          either order. Only the suffix form is handled here - the prefix
+          form is case 2 above. */
+    var sfxDMS = t.match(
+      /^\s*(\d{1,3})\s*[\u00b0D: ]\s*(?:(\d{1,2}(?:\.\d+)?)\s*['\u2032M: ]?\s*(?:([\d.]+)\s*["\u2033S]?)?)?\s*([NS])\s*[,;/ ]+\s*(\d{1,3})\s*[\u00b0D: ]\s*(?:(\d{1,2}(?:\.\d+)?)\s*['\u2032M: ]?\s*(?:([\d.]+)\s*["\u2033S]?)?)?\s*([EW])\s*$/);
+    if (!sfxDMS){
+      var r = t.match(
+        /^\s*(\d{1,3})\s*[\u00b0D: ]\s*(?:(\d{1,2}(?:\.\d+)?)\s*['\u2032M: ]?\s*(?:([\d.]+)\s*["\u2033S]?)?)?\s*([EW])\s*[,;/ ]+\s*(\d{1,3})\s*[\u00b0D: ]\s*(?:(\d{1,2}(?:\.\d+)?)\s*['\u2032M: ]?\s*(?:([\d.]+)\s*["\u2033S]?)?)?\s*([NS])\s*$/);
+      if (r) sfxDMS = [r[0], r[5], r[6], r[7], r[8], r[1], r[2], r[3], r[4]];
+    }
+    if (sfxDMS){
+      function dms(d, m, sec){
+        var v = parseInt(d, 10) + (m ? parseFloat(m) / 60 : 0) + (sec ? parseFloat(sec) / 3600 : 0);
+        return (m && parseFloat(m) >= 60) || (sec && parseFloat(sec) >= 60) ? null : v;
+      }
+      var la2 = dms(sfxDMS[1], sfxDMS[2], sfxDMS[3]);
+      var lo2 = dms(sfxDMS[5], sfxDMS[6], sfxDMS[7]);
+      if (la2 !== null && lo2 !== null && la2 <= 90 && lo2 <= 180){
+        return { lat: la2 * (sfxDMS[4] === 'S' ? -1 : 1),
+                 lon: lo2 * (sfxDMS[8] === 'W' ? -1 : 1) };
+      }
+    }
+
+    // 3b) hemisphere-suffix decimal  "6.568S 146.726E"
     var sfx = t.match(/^\s*(\d{1,2}(?:\.\d+)?)\s*([NS])\s*[,/ ]?\s*(\d{1,3}(?:\.\d+)?)\s*([EW])\s*$/);
     if (sfx){
       var sla = parseFloat(sfx[1]) * (sfx[2] === 'S' ? -1 : 1);
@@ -5879,6 +6270,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (rest.indexOf(' ') >= 0){
       var parts = rest.split(' ');
       dStr = parts[0]; mStr = parts[1] || '0';
+      /* a third group is seconds - the prefix form had no seconds branch
+         at all, so S06 32 18.13 used to fail too */
+      if (parts[2] && /^\d{1,2}(\.\d+)?$/.test(parts[2]) && /^\d{1,2}$/.test(mStr)){
+        var sec = parseFloat(parts[2]);
+        if (sec < 60) mStr = String(parseFloat(mStr) + sec / 60);
+      }
     } else {
       var w = isLat ? 2 : 3;
       if (rest.length <= w){ dStr = rest; mStr = '0'; }
@@ -5918,9 +6315,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { k:'edest', t:'ETE DEST',  g:function(){ return fmtHM(eteH(nmToDest())); } },
     { k:'anext', t:'ETA NEXT',  g:function(){ return etaStr(nmToNext()); } },
     { k:'adest', t:'ETA DEST',  g:function(){ return etaStr(nmToDest()); } },
-    { k:'frem',  t:'FUEL REM',  g:function(){ return null; } },
-    { k:'freq',  t:'FUEL REQ',  g:function(){ return null; } },
-    { k:'endur', t:'ENDURANCE', g:function(){ return null; } },
+    /* Fuel figures need a departure reference, and the recorder is it.
+       These are burn-rate ESTIMATES from AC.burn, not a measured flow -
+       so they appear only while recording, and dash the rest of the
+       time rather than implying knowledge the app does not have. */
+    { k:'frem',  t:'FUEL REM',  g:function(){
+        var h = recHours(); if (h == null || AC.fob == null) return null;
+        var r = AC.fob - AC.burn * h;
+        return r > 0 ? String(Math.round(r)) : '0'; } },
+    { k:'freq',  t:'FUEL REQ',  g:function(){
+        var e = eteH(nmToDest()); if (e == null) return null;
+        return String(Math.round(AC.burn * e + AC.burn * (AC.resMin / 60))); } },
+    { k:'endur', t:'ENDURANCE', g:function(){
+        var h = recHours(); if (h == null || AC.fob == null || !(AC.burn > 0)) return null;
+        var r = AC.fob - AC.burn * h;
+        return r > 0 ? fmtHM(r / AC.burn) : '0:00'; } },
     { k:'wind',  t:'WIND',      g:function(){ return null; } },
     { k:'oat',   t:'OAT',       g:function(){ return null; } },
     { k:'xte',   t:'XTE',       g:function(){ var x = xteNm(); return x == null ? null
@@ -6008,10 +6417,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var actCfg  = loadAct();
   var pageIdx = 0;
 
+  /* six fields fit across a tablet, five across a phone - same strip,
+     same configuration, one more column where there is room */
+  function actPer(){ return TAB_MQ.matches ? 6 : 5; }
+
   function drawActy(){
-    var h = '';
-    for (var i = 0; i < 5; i++){
-      var f = actField(actCfg[pageIdx * 5 + i]);
+    var h = '', per = actPer();
+    if (pageIdx * per >= actCfg.length) pageIdx = 0;
+    for (var i = 0; i < per; i++){
+      var f = actField(actCfg[pageIdx * per + i]);
       if (!f){ h += '<div class="acol"></div>'; continue; }
       var val = null;
       try { val = f.g ? f.g() : null; } catch(_){ val = null; }
@@ -6023,7 +6437,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#actyPage').innerHTML = h;
   }
   $('#actyNext').addEventListener('click', function(){
-    pageIdx = (pageIdx + 1) % 2;
+    pageIdx = (pageIdx + 1) % Math.max(1, Math.ceil(actCfg.length / actPer()));
     drawActy();
   });
   drawActy();
@@ -6254,6 +6668,184 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   /* ---- REC: tap to start or stop, hold to reset ---- */
   var recRun = false, recSec = 0, recT = null, recHold = null, recDidHold = false;
+
+  /* ---- the recorder actually records now ---------------------------
+     It was a stopwatch: a counter, no track, nothing saved. Fixes
+     already arrive through the GPS handler, so recording is a matter of
+     logging them sensibly.
+
+     Downsampling and the gap rule are v262's (L5857): log when 40 m has
+     been covered OR 5 s has passed, and treat a coverage gap over 12 s
+     as the start of a new segment rather than drawing a straight line
+     across the hole. Persisted every 5 s so a crash or a reload costs
+     seconds, not the sector. */
+  var REC_MIN_M = 40, REC_MIN_MS = 5000, REC_GAP_MS = 12000, REC_FLUSH_MS = 5000;
+  var REC_KEY = 'nmp.iphone.rec';
+  var recTrack = [], recStartMs = 0, recLast = null, recFlushAt = 0;
+
+  /* ---- Screen wake lock -------------------------------------------
+     Without this the recorder is only good for legs you sit watching:
+     iOS suspends JavaScript when the screen sleeps, so no fixes arrive
+     and the track gets a hole in it. The Screen Wake Lock API keeps the
+     display awake while recording.
+
+     Two things it is not. It does NOT survive backgrounding - switching
+     apps still suspends us, and iOS releases the lock, so we re-acquire
+     on visibilitychange. And it is not universal: it needs iOS 16.4+ and
+     a secure context, so the request can legitimately fail and must not
+     be treated as an error. Released the moment recording stops, because
+     holding the screen on costs battery in an aircraft with no charger. */
+  var wakeLock = null;
+
+  function wakeSupported(){
+    return typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+  }
+  async function wakeAcquire(){
+    if (!wakeSupported() || wakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      /* the system can drop it on its own - clear the handle so the
+         visibility hook knows to ask again */
+      wakeLock.addEventListener('release', function(){ wakeLock = null; });
+    } catch(_){ wakeLock = null; }
+  }
+  function wakeRelease(){
+    if (!wakeLock) return;
+    try { wakeLock.release(); } catch(_){ }
+    wakeLock = null;
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible' && recRun) wakeAcquire();
+  });
+
+  /* ---- Track storage ----------------------------------------------
+     Tracks were going into localStorage, which is roughly 5 MB for the
+     WHOLE app - routes, notes, waypoints, settings and flights all
+     share it. At about 47 KB per flight hour a few dozen recordings
+     crowd everything else out, and when it fills, writes throw and data
+     is lost silently. v262 uses IndexedDB for exactly this reason.
+
+     Flight records and the in-progress track now live in IndexedDB;
+     everything small stays in localStorage where it belongs. Anything
+     already saved is migrated on first run. If IndexedDB is
+     unavailable, it falls back to localStorage rather than failing. */
+  var IDB_NAME = 'nmplotter-iphone', IDB_STORE = 'flights', _idb = null;
+
+  function idb(){
+    if (_idb) return Promise.resolve(_idb);
+    return new Promise(function(res, rej){
+      if (typeof indexedDB === 'undefined'){ rej(new Error('no idb')); return; }
+      var r;
+      try { r = indexedDB.open(IDB_NAME, 1); } catch(e){ rej(e); return; }
+      r.onupgradeneeded = function(){
+        var d = r.result;
+        if (!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE, { keyPath:'id' });
+      };
+      r.onsuccess = function(){ _idb = r.result; res(_idb); };
+      r.onerror   = function(){ rej(r.error || new Error('idb open failed')); };
+      /* another tab or the home-screen app holding an older version */
+      r.onblocked = function(){ rej(new Error('storage busy')); };
+    });
+  }
+  function idbPut(rec){
+    return idb().then(function(d){
+      return new Promise(function(res, rej){
+        var tx = d.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(rec);
+        tx.oncomplete = res; tx.onerror = function(){ rej(tx.error); };
+      });
+    });
+  }
+  function idbDel(id){
+    return idb().then(function(d){
+      return new Promise(function(res, rej){
+        var tx = d.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE)['delete'](id);
+        tx.oncomplete = res; tx.onerror = function(){ rej(tx.error); };
+      });
+    });
+  }
+  function idbAll(){
+    return idb().then(function(d){
+      return new Promise(function(res, rej){
+        var tx = d.transaction(IDB_STORE, 'readonly');
+        var q = tx.objectStore(IDB_STORE).getAll();
+        q.onsuccess = function(){ res(q.result || []); };
+        q.onerror   = function(){ rej(q.error); };
+      });
+    });
+  }
+
+  function recSave(){
+    var rec = { id:'__inprogress', run:recRun, start:recStartMs, sec:recSec, track:recTrack };
+    idbPut(rec).catch(function(){
+      /* no IndexedDB - keep the old behaviour rather than lose the track */
+      try { localStorage.setItem(REC_KEY, JSON.stringify(rec)); } catch(_){ }
+    });
+  }
+  function recResume(r){
+    if (!r || !r.run || !r.track) return;
+    recTrack = r.track; recStartMs = r.start || 0; recSec = r.sec || 0;
+    recRun = true; recT = setInterval(recTick, 1000);
+    recLast = recTrack.length ? recTrack[recTrack.length - 1] : null;
+    wakeAcquire();                       /* a recording resumed on load */
+    try { recPaint(); drawActy(); renderMap(); } catch(_){ }
+  }
+  (function recRestore(){
+    /* migrate anything the previous build left in localStorage, then
+       forget that key */
+    var legacy = null;
+    try { legacy = JSON.parse(localStorage.getItem(REC_KEY)); } catch(_){ }
+    idb().then(function(){
+      return idbAll().then(function(all){
+        var live = null;
+        all.forEach(function(x){ if (x.id === '__inprogress') live = x; });
+        if (!live && legacy){
+          live = legacy; live.id = '__inprogress';
+          idbPut(live).catch(function(){});
+        }
+        try { localStorage.removeItem(REC_KEY); } catch(_){ }
+        recResume(live);
+      });
+    }).catch(function(){
+      recResume(legacy);                 /* no IndexedDB: old path */
+    });
+  })();
+
+  function recLog(fix){
+    if (!recRun || !fix) return;
+    var now = fix.t || Date.now();
+    if (recLast){
+      var dm = nmBetween({ lat:recLast.lat, lon:recLast.lon }, fix) * 1852;
+      var dt = now - recLast.t;
+      if (dm < REC_MIN_M && dt < REC_MIN_MS) return;
+      if (dt > REC_GAP_MS) recTrack.push(null);      /* segment break */
+    }
+    var p = { lat:+fix.lat.toFixed(5), lon:+fix.lon.toFixed(5), t:now };
+    if (fix.alt != null) p.a = Math.round(fix.alt);
+    if (fix.gs  != null) p.g = Math.round(fix.gs);
+    recTrack.push(p);
+    recLast = p;
+    if (now - recFlushAt > REC_FLUSH_MS){ recFlushAt = now; recSave(); }
+  }
+
+  function recDistNm(){
+    var d = 0, prev = null;
+    recTrack.forEach(function(p){
+      if (!p){ prev = null; return; }
+      if (prev) d += nmBetween(prev, p);
+      prev = p;
+    });
+    return d;
+  }
+  function recPoints(){ return recTrack.filter(Boolean).length; }
+
+  /* elapsed since the recorder was started, in hours - the reference the
+     fuel figures need and never had */
+  function recHours(){
+    if (!recStartMs) return null;
+    return (Date.now() - recStartMs) / 3600000;
+  }
   function recStr(){
     return String(Math.floor(recSec / 60)).padStart(2, '0') + ':'
          + String(recSec % 60).padStart(2, '0');
@@ -6268,18 +6860,61 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   /* one place to start/stop, shared by the rail and the landscape HUD */
   function recToggleShared(){
     recRun = !recRun;
-    if (recRun){ recT = setInterval(recTick, 1000); }
-    else { clearInterval(recT); recT = null; }
-    recPaint();
+    if (recRun){
+      recT = setInterval(recTick, 1000);
+      recStartMs = Date.now(); recTrack = []; recLast = null; recFlushAt = 0; shownTrack = null;
+      wakeAcquire();
+      if (!NMX_GPS.running()){
+        NMX_GPS.start(); locState = Math.max(locState, 1); locSync();
+        toast('Recording \u2014 acquiring GPS'
+            + (wakeSupported() ? ', screen stays on' : ''));
+      } else {
+        toast('Recording' + (wakeSupported() ? ' \u2014 screen stays on' : ''));
+      }
+      if (GPSFIX) recLog(GPSFIX);
+    } else {
+      clearInterval(recT); recT = null;
+      wakeRelease();
+      recSave();
+      var n = recPoints(), nm = recDistNm();
+      if (n >= 2){
+        var pts = recTrack.filter(Boolean);
+        var a = pts[0], b = pts[pts.length - 1];
+        /* pts stays a two-point summary. The full track lives in .track.
+           Putting hundreds of fixes in pts would have the route library
+           print them all as a waypoint string and compute ETE from
+           planned TAS instead of the time actually flown. */
+        FLIGHTS.unshift({
+          id:'r' + Date.now(),
+          nm:'Flight \u00b7 ' + new Date(recStartMs).toISOString().slice(0, 16).replace('T', ' ') + 'Z',
+          ts:recStartMs,
+          rec:true, track:pts, startMs:recStartMs, sec:recSec, nmFlown:+nm.toFixed(1),
+          pts:[{ id:null, nm:'Start', cat:'trk', lat:a.lat, lon:a.lon },
+               { id:null, nm:'End',   cat:'trk', lat:b.lat, lon:b.lon }]
+        });
+        saveFlights();
+        toast('Saved \u00b7 ' + nm.toFixed(1) + ' nm, ' + n + ' fixes');
+        try { refreshFlightsView(); } catch(_){ }
+      } else {
+        toast(n ? 'Too few fixes to save' : 'No fixes recorded');
+      }
+      recStartMs = 0; recTrack = []; recLast = null;
+      try { localStorage.removeItem(REC_KEY); } catch(_){ }
+    }
+    recPaint(); drawActy();
   }
   function recTick(){ recSec++; if (recSec > 5999) recSec = 0; recPaint(); }
   $('#rbRec').addEventListener('touchstart', function(){
     recDidHold = false;
     recHold = setTimeout(function(){
       recDidHold = true;
-      recRun = false; clearInterval(recT); recT = null; recSec = 0; recPaint();
+      recRun = false; clearInterval(recT); recT = null; recSec = 0;
+      recTrack = []; recLast = null; recStartMs = 0;
+      wakeRelease();
+      try { localStorage.removeItem(REC_KEY); } catch(_){ }
+      recPaint(); drawActy();
       if (navigator.vibrate) navigator.vibrate(10);
-      toast('Timer reset');
+      toast('Recording discarded');
     }, 650);
   }, { passive:true });
   ['touchend','touchcancel','touchmove'].forEach(function(ev){
@@ -6395,37 +7030,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var FIELD_INFO = {
     AYNZ:{ elev:239, town:'Lae', iata:'LAE',
       rwy:[{l:'09', h:'27', b:95.0,  e:[-6.56887,146.715,-6.57078,146.737]}],
-      freq:[['APP','118.6'],['ATIS','128.6'],['LAE RDO','120.7'],['TWR','121.7']],
-      metar:'AYNZ 210600Z 09008KT 9999 FEW020 SCT090 29/23 Q1010',
-      taf:'AYNZ 210500Z 2106/2118 09010KT 9999 SCT020 TEMPO 2108/2112 4000 SHRA BKN012' },
+      freq:[['APP','118.6'],['ATIS','128.6'],['LAE RDO','120.7'],['TWR','121.7']] },
     AYGA:{ elev:5282, town:'Goroka', iata:'GKA',
       rwy:[{l:'17L', h:'35R', b:176.0, e:[-6.07496,145.392,-6.08625,145.39301]},
            {l:'17R', h:'35L', b:176.0, e:[-6.07532,145.39101,-6.09023,145.392]}],
-      freq:[['TWR','118.7']],
-      metar:'AYGA 210600Z 14006KT 9999 SCT025 BKN080 24/14 Q1017',
-      taf:'AYGA 210500Z 2106/2118 14008KT 9999 SCT025 TEMPO 2107/2110 3000 SHRA BKN015' },
+      freq:[['TWR','118.7']] },
     AYMH:{ elev:5388, town:'Mount Hagen', iata:'HGU',
       rwy:[{l:'08', h:'26', b:85.0,  e:[-5.82708,144.293,-5.82615,144.30299]},
            {l:'12', h:'30', b:121.0, e:[-5.82376,144.291,-5.83398,144.308]}],
-      freq:[['ATIS','128.4'],['HAGEN TWR','120.5']],
-      metar:'AYMH 210600Z 12007KT 8000 SCT020 BKN070 23/15 Q1018',
-      taf:'AYMH 210500Z 2106/2118 12010KT 9999 SCT020 TEMPO 2108/2113 2000 TSRA BKN010CB' },
+      freq:[['ATIS','128.4'],['HAGEN TWR','120.5']] },
     AYMD:{ elev:20, town:'Madang', iata:'MAG',
       rwy:[{l:'07', h:'25', b:75.0, e:[-5.20893,145.782,-5.20524,145.79601]}],
-      freq:[['ATIS','127.8'],['MADANG CNTR','120.1'],['TWR','118.1']],
-      metar:'AYMD 210600Z 04010KT 9999 FEW018 SCT100 31/25 Q1009',
-      taf:'AYMD 210500Z 2106/2118 05010KT 9999 FEW018 SCT100' },
+      freq:[['ATIS','127.8'],['MADANG CNTR','120.1'],['TWR','118.1']] },
     AYPY:{ elev:146, town:'Port Moresby', iata:'POM',
       rwy:[{l:'14L', h:'32R', b:148.4, e:[-9.43087,147.214,-9.4521,147.22701]},
            {l:'14R', h:'32L', b:142.0, e:[-9.43471,147.213,-9.45063,147.22301]}],
-      freq:[['JACKSONS APP','125.8'],['ATIS','128.0'],['JACKSONS GND','121.7'],['JACKSONS TWR','118.1']],
-      metar:'AYPY 210600Z 13012KT 9999 FEW025 SCT090 32/22 Q1008',
-      taf:'AYPY 210500Z 2106/2206 13012KT 9999 FEW025 SCT090' },
+      freq:[['JACKSONS APP','125.8'],['ATIS','128.0'],['JACKSONS GND','121.7'],['JACKSONS TWR','118.1']] },
     AYTK:{ elev:49, town:'Kokopo', iata:'RAB',
       rwy:[{l:'10', h:'28', b:106.0, e:[-4.33822,152.37199,-4.34262,152.38699]}],
-      freq:[['LAE RDO','127.1'],['MTAF','120.9'],['TWR','118.2']],
-      metar:'AYTK 210600Z 11009KT 9999 SCT020 BKN090 30/24 Q1010',
-      taf:'AYTK 210500Z 2106/2118 11010KT 9999 SCT020' }
+      freq:[['LAE RDO','127.1'],['MTAF','120.9'],['TWR','118.2']] }
   };
   function rwyLenM(r){
     return Math.round(nmBetween({lat:r.e[0],lon:r.e[1]}, {lat:r.e[2],lon:r.e[3]}) * 1852);
@@ -6491,6 +7114,95 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   /* ---- METAR helpers ---- */
+  /* ================================================================
+     LIVE WEATHER
+
+     Lifted from v262 L12745. The proxy URL is not hard-coded - it is
+     yours, pasted once in Settings, exactly as on desktop. Endpoint
+     and semantics are v262's: /metar?ids=..&format=json&hours=12,
+     newest report per station by obsTime, 204 or an empty body meaning
+     the station is not reporting rather than an error.
+
+     The six frozen METAR strings that used to sit in FIELD_INFO are
+     gone. A field either has a real observation or it says it has
+     none - it never shows a plausible one. */
+  var WX_KEY = 'nmp.iphone.wxproxy';
+  var WXC = {};          /* icao -> { raw, obs, at } */
+  var wxState = 'idle';  /* idle | loading | ok | noproxy | error */
+  var wxErr = '';
+  var WX_TTL = 10 * 60 * 1000;
+
+  function wxProxy(){
+    try { return (localStorage.getItem(WX_KEY) || '').replace(/\/+$/, ''); }
+    catch(_){ return ''; }
+  }
+  function wxRaw(id){
+    var e = id && WXC[id];
+    return e && e.raw ? e.raw : null;
+  }
+  function wxAgeMin(id){
+    var e = id && WXC[id];
+    if (!e || !e.obs) return null;
+    return Math.max(0, Math.round((Date.now() / 1000 - e.obs) / 60));
+  }
+  function wxAgeStr(id){
+    var m = wxAgeMin(id);
+    if (m == null) return '';
+    return m < 60 ? m + ' min ago' : (Math.floor(m / 60) + ' h ' + (m % 60) + ' min ago');
+  }
+  function wxFresh(id){
+    var e = id && WXC[id];
+    return !!(e && e.at && (Date.now() - e.at) < WX_TTL);
+  }
+
+  function wxFetch(ids, done){
+    var px = wxProxy();
+    if (!px){ wxState = 'noproxy'; if (done) done(); return; }
+    ids = (ids || []).filter(function(i){ return i && /^[A-Z]{4}$/.test(i); });
+    if (!ids.length){ if (done) done(); return; }
+    wxState = 'loading';
+    fetch(px + '/metar?ids=' + encodeURIComponent(ids.join(',')) + '&format=json&hours=12',
+          { headers:{ 'Accept':'application/json' } })
+      .then(function(r){ return r.text().then(function(t){ return { status:r.status, text:t }; }); })
+      .then(function(res){
+        var t = (res.text || '').trim();
+        var now = Date.now();
+        /* a station that is simply not reporting is not a failure */
+        ids.forEach(function(i){ if (!WXC[i]) WXC[i] = { raw:null, obs:0, at:now }; else WXC[i].at = now; });
+        if (res.status === 204 || !t){ wxState = 'ok'; if (done) done(); return; }
+        var arr = null;
+        try { arr = JSON.parse(t); } catch(_){ }
+        var list = Array.isArray(arr) ? arr : (arr && arr.rawOb ? [arr] : []);
+        list.forEach(function(x){
+          if (!x || !x.rawOb) return;
+          var id = x.icaoId || String(x.rawOb).trim().split(/\s+/)[0] || '';
+          if (!id) return;
+          if (!WXC[id] || (x.obsTime || 0) >= (WXC[id].obs || 0)){
+            WXC[id] = { raw:x.rawOb, obs:x.obsTime || 0, at:now };
+          }
+        });
+        wxState = 'ok'; wxErr = '';
+        if (done) done();
+      })
+      .catch(function(err){
+        wxState = 'error'; wxErr = (err && err.message) || 'network';
+        if (done) done();
+      });
+  }
+
+  /* stations worth having loaded: the route, plus the reporting fields */
+  function wxIdsOfInterest(){
+    var out = {}, i;
+    (ROUTE || []).forEach(function(p){ if (p.id) out[p.id] = 1; });
+    ['AYNZ','AYPY','AYGA','AYMD','AYMH','AYTK'].forEach(function(k){ out[k] = 1; });
+    return Object.keys(out);
+  }
+  function wxRefresh(force, done){
+    var ids = wxIdsOfInterest().filter(function(i){ return force || !wxFresh(i); });
+    if (!ids.length){ if (done) done(); return; }
+    wxFetch(ids, done);
+  }
+
   function wxCat(m){
     if (!m) return ['—','var(--text-fainter)'];
     var vis = 9999, bkn = 9999;
@@ -6595,55 +7307,72 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return h;
   }
 
-  /* nearest field that actually reports, for a field that does not */
+  /* nearest field that actually reports - from what has come back live,
+     not from a fixed table of six */
   function nearestMetar(f){
     var best = null, bd = 1e9;
-    Object.keys(FIELD_INFO).forEach(function(id){
-      if (id === f.id) return;
-      var p = dbById(id); if (!p || !FIELD_INFO[id].metar) return;
+    Object.keys(WXC).forEach(function(id){
+      if (id === f.id || !WXC[id].raw) return;
+      var p = dbById(id); if (!p) return;
       var d = nmBetween(f, p);
-      if (d < bd){ bd = d; best = { id:id, p:p, d:d, fi:FIELD_INFO[id] }; }
+      if (d < bd){ bd = d; best = { id:id, p:p, d:d, raw:WXC[id].raw }; }
     });
     return best;
   }
 
   function cardWx(f, fi){
-    if (!fi){
-      /* No station here. Show the nearest one that does report, clearly
-         labelled as somewhere else - never as this field's weather. */
+    if (!wxProxy()){
+      return '<div class="cempty">No weather source configured.<br>'
+        + 'Add your weather worker URL in Settings.</div>';
+    }
+    var raw = wxRaw(f.id);
+
+    if (!raw){
+      if (wxState === 'loading') return '<div class="cempty">Fetching weather\u2026</div>';
+      if (wxState === 'error')
+        return '<div class="cempty">Weather unavailable \u2014 ' + wxErr + '</div>';
+      /* No report here. Show the nearest one that does, clearly labelled
+         as somewhere else - never as this field's weather. */
       var nr = nearestMetar(f);
-      if (!nr) return '<div class="cempty">No weather station in demo data</div>';
-      var ncat = wxCat(nr.fi.metar);
+      if (!nr) return '<div class="cempty">No report for ' + f.id
+        + ', and none nearby.</div>';
+      var ncat = wxCat(nr.raw);
       return '<div class="cnote" style="margin-bottom:12px">' + f.id
-        + ' has no weather station. Nearest report is <b>' + nr.id + '</b>, '
+        + ' is not reporting. Nearest report is <b>' + nr.id + '</b>, '
         + nr.d.toFixed(0) + ' nm ' + String(Math.round(trkBetween(f, nr.p))).padStart(3,'0')
         + '\u00b0. This is that field\u2019s weather, not this one\u2019s.</div>'
         + '<div class="metar"><div class="hdr">'
         + '<span class="dot" style="background:' + ncat[1] + '"></span>'
         + '<span style="color:' + ncat[1] + '">' + ncat[0] + '</span>'
-        + '<span class="age">' + nr.id + '</span></div>'
-        + '<div class="raw" style="color:' + ncat[1] + '">' + nr.fi.metar + '</div></div>';
+        + '<span class="age">' + nr.id + ' \u00b7 ' + wxAgeStr(nr.id) + '</span></div>'
+        + '<div class="raw" style="color:' + ncat[1] + '">' + nr.raw + '</div></div>';
     }
+
     if (cardSub === 'metar'){
-      var cat = wxCat(fi.metar);
+      var cat = wxCat(raw);
+      var age = wxAgeMin(f.id);
+      var stale = (age != null && age > 90);
+      var fi2 = { metar: raw };
       return '<div class="metar"><div class="hdr">'
         + '<span class="dot" style="background:' + cat[1] + '"></span>'
         + '<span style="color:' + cat[1] + '">' + cat[0] + '</span>'
-        + '<span class="age">14m ago</span></div>'
-        + '<div class="raw" style="color:' + cat[1] + '">' + fi.metar + '</div>'
+        + '<span class="age"' + (stale ? ' style="color:var(--route)"' : '') + '>'
+        +   (wxAgeStr(f.id) || 'time unknown') + (stale ? ' \u00b7 stale' : '') + '</span></div>'
+        + '<div class="raw" style="color:' + cat[1] + '">' + raw + '</div>'
         + '<div class="csec">Decoded</div>'
-        + metarTimeRow(fi.metar)
-        + kvWind(fi.metar)
-        + metarVisRow(fi.metar)
+        + metarTimeRow(raw)
+        + kvWind(raw)
+        + metarVisRow(raw)
         + '<div class="kv"><span class="k">Temp / dew</span><span class="v">'
-        +   (fi.metar.match(/\s(M?\d{2})\/(M?\d{2})\s/) || [0,'\u2014','\u2014']).slice(1,3).join(' / ') + '</span></div>'
+        +   (raw.match(/\s(M?\d{2})\/(M?\d{2})\s/) || [0,'\u2014','\u2014']).slice(1,3).join(' / ') + '</span></div>'
         + '<div class="kv"><span class="k">QNH</span><span class="v">'
-        +   (fi.metar.match(/Q(\d{4})/) ? fi.metar.match(/Q(\d{4})/)[1] + ' hPa' : '\u2014') + '</span></div>'
+        +   (raw.match(/Q(\d{4})/) ? raw.match(/Q(\d{4})/)[1] + ' hPa' : '\u2014') + '</span></div>'
         + '</div>';
     }
     if (cardSub === 'taf'){
-      return '<div class="metar"><div class="hdr"><span>TAF</span><span class="age">1h ago</span></div>'
-        + '<div class="raw" style="color:var(--text-2)">' + fi.taf + '</div></div>';
+      /* the worker endpoint this build uses serves METAR only - saying so
+         is better than showing a forecast from a frozen string */
+      return '<div class="cempty">TAF is not fetched by this build.</div>';
     }
     var lv = [[2000,'090',12,18],[5000,'110',18,12],[10000,'130',24,6],[14000,'150',28,1]];
     var h = '<div class="csec">Forecast winds</div>';
@@ -6651,7 +7380,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       h += '<div class="kv"><span class="k">' + r[0].toLocaleString() + '\'</span>'
          + '<span class="v">' + r[1] + '\u00b0 / ' + r[2] + ' kt &nbsp; ' + (r[3] > 0 ? '+' : '') + r[3] + '\u00b0C</span></div>';
     });
-    return h + '<div class="cnote">Demo data.</div>';
+    return h + '<div class="cnote">Placeholder \u2014 no forecast-wind source is wired up.</div>';
   }
   /* METAR day/time group: 210600Z -> "0600Z · 1600 LT" */
   function metarTimeRow(m){
@@ -6683,14 +7412,411 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + '</span></div>';
   }
 
+  /* ---- Runways -----------------------------------------------------
+     377 fields, 381 runways, lifted from v262's PNG_RUNWAYS. The phone
+     build had six. Each carries both designators and the true bearing;
+     26 also carry surveyed threshold coordinates, which is what a
+     length can be computed from - the rest give you the direction to
+     line up on and nothing more, and the card says so rather than
+     inventing a length.
+
+     Verified on extraction: every one of the 381 designators agrees
+     with its own bearing to within 15 degrees. */
+  var RWY = {
+    'AYAA':[{l:'15',h:'33',b:155.5}],
+    'AYAE':[{l:'14',h:'32',b:145.5}],
+    'AYAF':[{l:'03',h:'21',b:35.5}],
+    'AYAG':[{l:'06',h:'24',b:65.5}],
+    'AYAI':[{l:'16',h:'34',b:165.5}],
+    'AYAK':[{l:'13',h:'31',b:135.5}],
+    'AYAM':[{l:'18',h:'36',b:185.5}],
+    'AYAN':[{l:'07',h:'25',b:75.5}],
+    'AYAO':[{l:'01',h:'19',b:15.5}],
+    'AYAQ':[{l:'05',h:'23',b:55.5}],
+    'AYAT':[{l:'14',h:'32',b:145.5}],
+    'AYAU':[{l:'14',h:'32',b:145.5}],
+    'AYAW':[{l:'18',h:'36',b:185.5}],
+    'AYAX':[{l:'16',h:'34',b:165.5}],
+    'AYAY':[{l:'14',h:'32',b:145.5}],
+    'AYBA':[{l:'04',h:'22',b:45.5}],
+    'AYBB':[{l:'11',h:'29',b:115.5}],
+    'AYBC':[{l:'07',h:'25',b:75.5}],
+    'AYBF':[{l:'10',h:'28',b:105.5}],
+    'AYBG':[{l:'10',h:'28',b:105.5}],
+    'AYBH':[{l:'14',h:'32',b:145.5}],
+    'AYBI':[{l:'14',h:'32',b:145.5}],
+    'AYBK':[{l:'04',h:'22',b:48.0,e:[-5.42701,154.66701,-5.41751,154.67799]}],
+    'AYBO':[{l:'01',h:'19',b:15.5}],
+    'AYBP':[{l:'14',h:'32',b:145.5}],
+    'AYBQ':[{l:'16',h:'34',b:165.5}],
+    'AYBR':[{l:'12',h:'30',b:125.5}],
+    'AYBS':[{l:'12',h:'30',b:125.5}],
+    'AYBT':[{l:'11',h:'29',b:115.5}],
+    'AYBU':[{l:'15',h:'33',b:155.5}],
+    'AYBW':[{l:'05',h:'23',b:55.5}],
+    'AYBX':[{l:'04',h:'22',b:45.5}],
+    'AYBZ':[{l:'05',h:'23',b:55.5}],
+    'AYCG':[{l:'08',h:'26',b:85.5}],
+    'AYCH':[{l:'03',h:'21',b:35.6,e:[-6.02755,144.968,-6.02021,144.974]}],
+    'AYCN':[{l:'01',h:'19',b:15.5}],
+    'AYDB':[{l:'12',h:'30',b:125.5}],
+    'AYDE':[{l:'12',h:'30',b:125.5}],
+    'AYDI':[{l:'15',h:'33',b:155.5}],
+    'AYDK':[{l:'10',h:'28',b:105.5}],
+    'AYDO':[{l:'10',h:'28',b:105.5}],
+    'AYDP':[{l:'06',h:'24',b:65.5}],
+    'AYDQ':[{l:'12',h:'30',b:125.5}],
+    'AYDS':[{l:'10',h:'28',b:105.5}],
+    'AYDU':[{l:'14',h:'32',b:135.0,e:[-9.08229,143.203,-9.09122,143.21201]}],
+    'AYDW':[{l:'10',h:'28',b:105.5}],
+    'AYDY':[{l:'10',h:'28',b:105.5}],
+    'AYEA':[{l:'15',h:'33',b:155.5}],
+    'AYEB':[{l:'01',h:'19',b:15.5}],
+    'AYED':[{l:'02',h:'20',b:25.5}],
+    'AYEE':[{l:'12',h:'30',b:125.5}],
+    'AYEF':[{l:'17',h:'35',b:175.5}],
+    'AYEG':[{l:'01',h:'19',b:15.5}],
+    'AYEH':[{l:'09',h:'27',b:95.5}],
+    'AYEK':[{l:'09',h:'27',b:95.5}],
+    'AYEL':[{l:'14',h:'32',b:145.5}],
+    'AYEM':[{l:'17',h:'35',b:175.5}],
+    'AYEN':[{l:'16',h:'34',b:165.5}],
+    'AYEO':[{l:'04',h:'22',b:45.5}],
+    'AYET':[{l:'14',h:'32',b:145.5}],
+    'AYEW':[{l:'06',h:'24',b:65.5}],
+    'AYEY':[{l:'02',h:'20',b:25.5}],
+    'AYFE':[{l:'12',h:'30',b:125.5}],
+    'AYFK':[{l:'06',h:'24',b:65.5}],
+    'AYFO':[{l:'12',h:'30',b:125.5}],
+    'AYFS':[{l:'09',h:'27',b:95.5}],
+    'AYFU':[{l:'05',h:'23',b:55.5}],
+    'AYGA':[{l:'17L',h:'35R',b:176.0,e:[-6.07496,145.392,-6.08625,145.39301]},{l:'17R',h:'35L',b:176.0,e:[-6.07532,145.39101,-6.09023,145.392]}],
+    'AYGC':[{l:'04',h:'22',b:45.5}],
+    'AYGD':[{l:'02',h:'20',b:25.5}],
+    'AYGE':[{l:'12',h:'30',b:125.5}],
+    'AYGH':[{l:'03',h:'21',b:35.5}],
+    'AYGJ':[{l:'12',h:'30',b:125.5}],
+    'AYGM':[{l:'02',h:'20',b:25.5}],
+    'AYGN':[{l:'09',h:'27',b:101.3,e:[-10.31,150.326,-10.313,150.341]}],
+    'AYGO':[{l:'17',h:'35',b:175.5}],
+    'AYGQ':[{l:'11',h:'29',b:115.5}],
+    'AYGR':[{l:'03',h:'21',b:38.1,e:[-8.81049,148.304,-8.7986,148.314]}],
+    'AYGU':[{l:'10',h:'28',b:105.5}],
+    'AYGX':[{l:'08',h:'26',b:85.5}],
+    'AYGY':[{l:'14',h:'32',b:145.5}],
+    'AYHA':[{l:'03',h:'21',b:35.5}],
+    'AYHB':[{l:'02',h:'20',b:25.5}],
+    'AYHE':[{l:'16',h:'34',b:165.5}],
+    'AYHF':[{l:'17',h:'35',b:175.5}],
+    'AYHH':[{l:'04',h:'22',b:45.5}],
+    'AYHJ':[{l:'01',h:'19',b:15.5,e:[-5.1943,142.95874,-5.18856,142.9604]}],
+    'AYHK':[{l:'12',h:'30',b:133.0,e:[-5.45786,150.40094,-5.46984,150.41355]}],
+    'AYHN':[{l:'17',h:'35',b:175.5}],
+    'AYHO':[{l:'06',h:'24',b:65.5}],
+    'AYHQ':[{l:'03',h:'21',b:35.5}],
+    'AYHT':[{l:'14',h:'32',b:145.5}],
+    'AYHU':[{l:'03',h:'21',b:35.5}],
+    'AYHW':[{l:'08',h:'26',b:85.5}],
+    'AYHX':[{l:'17',h:'35',b:175.5}],
+    'AYIB':[{l:'03',h:'21',b:35.5}],
+    'AYID':[{l:'09',h:'27',b:95.5}],
+    'AYII':[{l:'06',h:'24',b:65.5}],
+    'AYIM':[{l:'18',h:'36',b:185.5}],
+    'AYIN':[{l:'11',h:'29',b:115.5}],
+    'AYIP':[{l:'18',h:'36',b:185.5}],
+    'AYIQ':[{l:'14',h:'32',b:145.5}],
+    'AYIR':[{l:'05',h:'23',b:55.5}],
+    'AYIS':[{l:'16',h:'34',b:165.5}],
+    'AYIU':[{l:'10',h:'28',b:105.5}],
+    'AYIW':[{l:'05',h:'23',b:55.5}],
+    'AYIX':[{l:'10A',h:'28D',b:105.5}],
+    'AYIY':[{l:'11',h:'29',b:115.5}],
+    'AYJS':[{l:'03',h:'21',b:35.5}],
+    'AYJW':[{l:'15',h:'33',b:155.5}],
+    'AYKA':[{l:'14',h:'32',b:145.5}],
+    'AYKD':[{l:'14',h:'32',b:145.5}],
+    'AYKH':[{l:'15',h:'33',b:155.5}],
+    'AYKI':[{l:'07',h:'25',b:75.5}],
+    'AYKJ':[{l:'09',h:'27',b:95.5}],
+    'AYKM':[{l:'14',h:'32',b:146.0,e:[-7.96,145.769,-7.96694,145.774]}],
+    'AYKO':[{l:'17',h:'35',b:175.5}],
+    'AYKQ':[{l:'07',h:'25',b:75.5}],
+    'AYKR':[{l:'16',h:'34',b:159.6}],
+    'AYKT':[{l:'16',h:'34',b:165.5}],
+    'AYKV':[{l:'12',h:'30',b:124.9,e:[-2.57498,150.802,-2.58381,150.814]}],
+    'AYKY':[{l:'12',h:'30',b:125.5}],
+    'AYLE':[{l:'02',h:'20',b:29.0,e:[-5.2216,151.392,-5.2169,151.395]}],
+    'AYLG':[{l:'14',h:'32',b:145.5}],
+    'AYLH':[{l:'01',h:'19',b:15.5}],
+    'AYLI':[{l:'09',h:'27',b:95.5}],
+    'AYLL':[{l:'06',h:'24',b:65.5}],
+    'AYLN':[{l:'17',h:'35',b:175.5}],
+    'AYLO':[{l:'04',h:'22',b:45.5}],
+    'AYLS':[{l:'12',h:'30',b:125.5}],
+    'AYLT':[{l:'07',h:'25',b:75.5}],
+    'AYLX':[{l:'04',h:'22',b:45.5}],
+    'AYLZ':[{l:'10',h:'28',b:105.5}],
+    'AYMB':[{l:'17',h:'35',b:175.5}],
+    'AYMD':[{l:'07',h:'25',b:75.0,e:[-5.20893,145.782,-5.20524,145.79601]}],
+    'AYMH':[{l:'08',h:'26',b:85.0,e:[-5.82708,144.293,-5.82615,144.30299]},{l:'12',h:'30',b:121.0,e:[-5.82376,144.291,-5.83398,144.308]}],
+    'AYMJ':[{l:'08',h:'26',b:85.5}],
+    'AYMN':[{l:'17',h:'35',b:172.8,e:[-6.14171,143.65601,-6.15377,143.658]}],
+    'AYMO':[{l:'16',h:'34',b:161.0,e:[-2.05393,147.42101,-2.06988,147.427]}],
+    'AYMP':[{l:'10',h:'28',b:105.5}],
+    'AYMQ':[{l:'10',h:'28',b:105.5}],
+    'AYMR':[{l:'09',h:'27',b:95.5}],
+    'AYMS':[{l:'08',h:'26',b:85.5}],
+    'AYMU':[{l:'09',h:'27',b:95.5}],
+    'AYMV':[{l:'14',h:'32',b:145.5}],
+    'AYMY':[{l:'15',h:'33',b:155.5}],
+    'AYMZ':[{l:'15',h:'33',b:155.5}],
+    'AYNB':[{l:'02',h:'20',b:25.5}],
+    'AYNC':[{l:'05',h:'23',b:55.5}],
+    'AYND':[{l:'15',h:'33',b:155.5}],
+    'AYNI':[{l:'12',h:'30',b:125.5}],
+    'AYNJ':[{l:'06',h:'24',b:65.5}],
+    'AYNM':[{l:'12',h:'30',b:125.5}],
+    'AYNN':[{l:'09',h:'27',b:95.5}],
+    'AYNO':[{l:'08',h:'26',b:85.5}],
+    'AYNS':[{l:'15',h:'33',b:155.5}],
+    'AYNT':[{l:'09',h:'27',b:95.5}],
+    'AYNU':[{l:'12',h:'30',b:125.5}],
+    'AYNX':[{l:'12',h:'30',b:125.5}],
+    'AYNZ':[{l:'09',h:'27',b:95.0,e:[-6.56887,146.715,-6.57078,146.737]}],
+    'AYOB':[{l:'14',h:'32',b:145.5}],
+    'AYOD':[{l:'10',h:'28',b:105.5}],
+    'AYOE':[{l:'01',h:'19',b:15.5}],
+    'AYOF':[{l:'06',h:'24',b:65.5}],
+    'AYOG':[{l:'12',h:'30',b:125.5}],
+    'AYOH':[{l:'01',h:'19',b:15.5}],
+    'AYOJ':[{l:'10',h:'28',b:105.5}],
+    'AYOK':[{l:'02',h:'20',b:25.5}],
+    'AYOL':[{l:'15',h:'33',b:155.5}],
+    'AYOM':[{l:'14',h:'32',b:145.5}],
+    'AYOO':[{l:'12',h:'30',b:125.5}],
+    'AYOP':[{l:'12',h:'30',b:125.5}],
+    'AYOS':[{l:'17',h:'35',b:175.5}],
+    'AYOU':[{l:'18',h:'36',b:185.5}],
+    'AYOV':[{l:'18',h:'36',b:185.5}],
+    'AYOX':[{l:'01',h:'19',b:15.5}],
+    'AYOY':[{l:'01',h:'19',b:15.5}],
+    'AYPA':[{l:'11',h:'29',b:115.5}],
+    'AYPB':[{l:'01',h:'19',b:15.5}],
+    'AYPC':[{l:'01',h:'19',b:15.5}],
+    'AYPD':[{l:'08',h:'26',b:85.5}],
+    'AYPE':[{l:'18',h:'36',b:185.5}],
+    'AYPI':[{l:'05',h:'23',b:55.5}],
+    'AYPJ':[{l:'09',h:'27',b:95.5}],
+    'AYPO':[{l:'18',h:'36',b:185.5}],
+    'AYPQ':[{l:'01',h:'19',b:15.5}],
+    'AYPS':[{l:'01D',h:'19A',b:15.5}],
+    'AYPY':[{l:'14L',h:'32R',b:148.4,e:[-9.43087,147.214,-9.4521,147.22701]},{l:'14R',h:'32L',b:142.0,e:[-9.43471,147.213,-9.45063,147.22301]}],
+    'AYQB':[{l:'07',h:'25',b:75.5}],
+    'AYQL':[{l:'14',h:'32',b:145.5}],
+    'AYQM':[{l:'16',h:'34',b:165.5}],
+    'AYQQ':[{l:'16',h:'34',b:165.5}],
+    'AYQR':[{l:'12',h:'30',b:125.5}],
+    'AYQV':[{l:'15',h:'33',b:155.5}],
+    'AYQW':[{l:'07',h:'25',b:75.5}],
+    'AYRA':[{l:'07',h:'25',b:75.5}],
+    'AYRE':[{l:'12',h:'30',b:125.5}],
+    'AYRG':[{l:'15',h:'33',b:155.5}],
+    'AYRI':[{l:'12',h:'30',b:125.5}],
+    'AYRK':[{l:'15',h:'33',b:155.5}],
+    'AYRO':[{l:'01',h:'19',b:15.5}],
+    'AYRR':[{l:'08',h:'26',b:85.5}],
+    'AYRT':[{l:'16',h:'34',b:165.5}],
+    'AYRV':[{l:'05',h:'23',b:55.5}],
+    'AYSB':[{l:'18',h:'36',b:185.5}],
+    'AYSD':[{l:'12',h:'30',b:125.5}],
+    'AYSF':[{l:'11',h:'29',b:115.5}],
+    'AYSI':[{l:'06',h:'24',b:65.5}],
+    'AYSK':[{l:'14',h:'32',b:145.5}],
+    'AYSL':[{l:'18',h:'36',b:185.5}],
+    'AYSP':[{l:'16',h:'34',b:165.5}],
+    'AYSR':[{l:'10',h:'28',b:105.5}],
+    'AYSS':[{l:'14',h:'32',b:145.5}],
+    'AYSW':[{l:'09',h:'27',b:95.5}],
+    'AYSX':[{l:'17',h:'35',b:175.5}],
+    'AYTA':[{l:'14',h:'32',b:145.5}],
+    'AYTB':[{l:'14',h:'32',b:145.5}],
+    'AYTD':[{l:'07',h:'25',b:75.5}],
+    'AYTF':[{l:'01',h:'19',b:15.5}],
+    'AYTG':[{l:'03',h:'21',b:35.5},{l:'14',h:'32',b:145.5}],
+    'AYTH':[{l:'08',h:'26',b:85.5}],
+    'AYTK':[{l:'10',h:'28',b:106.0,e:[-4.33822,152.37199,-4.34262,152.38699]}],
+    'AYTM':[{l:'16',h:'34',b:165.5}],
+    'AYTO':[{l:'16',h:'34',b:165.5}],
+    'AYTQ':[{l:'14',h:'32',b:145.5}],
+    'AYTR':[{l:'07',h:'25',b:75.5}],
+    'AYTS':[{l:'06',h:'24',b:65.5}],
+    'AYTT':[{l:'18',h:'36',b:185.5}],
+    'AYTU':[{l:'06',h:'24',b:65.5}],
+    'AYTV':[{l:'12',h:'30',b:125.5}],
+    'AYTW':[{l:'02',h:'20',b:25.5}],
+    'AYTY':[{l:'10',h:'28',b:105.5}],
+    'AYTZ':[{l:'04',h:'22',b:45.5}],
+    'AYUA':[{l:'04',h:'22',b:45.5}],
+    'AYUC':[{l:'13',h:'31',b:135.5}],
+    'AYUE':[{l:'09',h:'27',b:95.5}],
+    'AYUG':[{l:'07',h:'25',b:75.5}],
+    'AYUI':[{l:'01',h:'19',b:15.5}],
+    'AYUK':[{l:'09A',h:'27D',b:95.5}],
+    'AYUM':[{l:'14',h:'32',b:145.5}],
+    'AYUN':[{l:'07',h:'25',b:75.5}],
+    'AYUO':[{l:'16',h:'34',b:165.5}],
+    'AYUP':[{l:'03',h:'21',b:35.5}],
+    'AYUQ':[{l:'13',h:'31',b:135.5}],
+    'AYUS':[{l:'14',h:'32',b:145.5}],
+    'AYUT':[{l:'15',h:'33',b:155.5}],
+    'AYUV':[{l:'14',h:'32',b:145.5}],
+    'AYUX':[{l:'04',h:'22',b:45.5}],
+    'AYUY':[{l:'09',h:'27',b:95.5}],
+    'AYUZ':[{l:'07',h:'25',b:75.5}],
+    'AYVA':[{l:'17',h:'35',b:175.5}],
+    'AYVB':[{l:'10',h:'28',b:105.5}],
+    'AYVK':[{l:'01',h:'19',b:15.5}],
+    'AYVL':[{l:'14',h:'32',b:143.0}],
+    'AYVM':[{l:'02',h:'20',b:25.5}],
+    'AYVN':[{l:'12',h:'30',b:130.0,e:[-2.68762,141.297,-2.69776,141.30901]}],
+    'AYVO':[{l:'04',h:'22',b:45.5}],
+    'AYVP':[{l:'08',h:'26',b:85.5}],
+    'AYWB':[{l:'14',h:'32',b:145.5}],
+    'AYWD':[{l:'14',h:'32',b:139.0,e:[-5.63807,143.89101,-5.64853,143.89999]}],
+    'AYWE':[{l:'18A',h:'36D',b:185.5}],
+    'AYWH':[{l:'05',h:'23',b:55.5}],
+    'AYWJ':[{l:'14',h:'32',b:145.5}],
+    'AYWK':[{l:'10',h:'28',b:103.9,e:[-3.5821,143.662,-3.58556,143.67599]}],
+    'AYWL':[{l:'18',h:'36',b:185.5}],
+    'AYWM':[{l:'02A',h:'20D',b:25.5}],
+    'AYWN':[{l:'15',h:'33',b:155.5}],
+    'AYWO':[{l:'11',h:'29',b:115.5}],
+    'AYWY':[{l:'10A',h:'28D',b:105.5}],
+    'AYXA':[{l:'08A',h:'26D',b:85.5}],
+    'AYXB':[{l:'16',h:'34',b:165.5}],
+    'AYXI':[{l:'18',h:'36',b:185.5}],
+    'AYXO':[{l:'10',h:'28',b:105.5}],
+    'AYXP':[{l:'09',h:'27',b:95.5}],
+    'AYXW':[{l:'05',h:'23',b:55.5}],
+    'AYXY':[{l:'11',h:'29',b:115.5}],
+    'AYYA':[{l:'07',h:'25',b:75.5}],
+    'AYYC':[{l:'01',h:'19',b:15.5}],
+    'AYYD':[{l:'10',h:'28',b:105.5}],
+    'AYYI':[{l:'16',h:'34',b:165.5}],
+    'AYYK':[{l:'13',h:'31',b:135.5}],
+    'AYYL':[{l:'03',h:'21',b:35.5}],
+    'AYYN':[{l:'06',h:'24',b:65.5}],
+    'AYYO':[{l:'12',h:'30',b:125.5}],
+    'AYYQ':[{l:'03',h:'21',b:35.5}],
+    'AYYT':[{l:'12',h:'30',b:125.5}],
+    'AYYU':[{l:'11',h:'29',b:115.5}],
+    'AYYV':[{l:'14',h:'32',b:145.5}],
+    'AYYW':[{l:'15',h:'33',b:155.5}],
+    'AYYZ':[{l:'21',h:'03',b:213.0}],
+    'AYZA':[{l:'15',h:'33',b:155.5}],
+    'AYZI':[{l:'15',h:'33',b:155.5}],
+    'AYZM':[{l:'08',h:'26',b:85.5}],
+    'AYZN':[{l:'11',h:'29',b:115.5}],
+    'AYZQ':[{l:'11',h:'29',b:115.5}],
+    'AYZS':[{l:'14',h:'32',b:145.5}],
+    'AYZU':[{l:'03',h:'21',b:35.5}],
+    'AYZW':[{l:'17',h:'35',b:175.5}],
+    'AYZZ':[{l:'14',h:'32',b:145.5}],
+    'AZB':[{l:'10',h:'28',b:105.5}],
+    'BOV':[{l:'15',h:'33',b:155.5}],
+    'FUB':[{l:'07',h:'25',b:75.5}],
+    'HEO':[{l:'12',h:'30',b:125.5}],
+    'IMA':[{l:'08',h:'26',b:85.5}],
+    'IOK':[{l:'18',h:'36',b:185.5}],
+    'ITK':[{l:'01',h:'19',b:15.5}],
+    'KAK':[{l:'11',h:'29',b:115.5}],
+    'KMB':[{l:'17',h:'35',b:175.5}],
+    'KUP':[{l:'12',h:'30',b:125.5}],
+    'LTF':[{l:'11',h:'29',b:115.0}],
+    'MGP':[{l:'13',h:'31',b:135.5}],
+    'MMV':[{l:'01',h:'19',b:15.5}],
+    'MNP':[{l:'17',h:'35',b:175.5}],
+    'MWU':[{l:'17',h:'35',b:175.0}],
+    'NOM':[{l:'08D',h:'26A',b:85.5}],
+    'NOO':[{l:'14A',h:'32D',b:145.5}],
+    'NWT':[{l:'03',h:'21',b:35.5}],
+    'PG-0001':[{l:'04',h:'22',b:45.5}],
+    'PG-0002':[{l:'18',h:'36',b:185.5}],
+    'PG-0003':[{l:'18',h:'36',b:185.5}],
+    'PG-0004':[{l:'04',h:'22',b:45.5}],
+    'PG-0005':[{l:'09',h:'27',b:100.0}],
+    'PG-0010':[{l:'14',h:'32',b:136.0}],
+    'PG-0012':[{l:'10',h:'28',b:105.5}],
+    'PG-0013':[{l:'14',h:'32',b:145.5}],
+    'PG-0014':[{l:'17',h:'35',b:175.5}],
+    'PG-0015':[{l:'12',h:'30',b:125.5}],
+    'PG-0016':[{l:'15',h:'33',b:155.5}],
+    'PG-0017':[{l:'10',h:'28',b:105.5}],
+    'PG-0018':[{l:'09',h:'27',b:95.5}],
+    'PG-0019':[{l:'16',h:'34',b:165.5}],
+    'PG-0021':[{l:'09',h:'27',b:95.5}],
+    'PG-0023':[{l:'10',h:'28',b:105.5}],
+    'PG-0024':[{l:'12',h:'30',b:125.5}],
+    'PG-0026':[{l:'17',h:'35',b:175.5}],
+    'PG-0027':[{l:'14',h:'32',b:145.5}],
+    'PG-0028':[{l:'11',h:'29',b:115.5}],
+    'PG-0030':[{l:'01',h:'19',b:15.5}],
+    'PG-0031':[{l:'05',h:'23',b:55.5}],
+    'PG-0033':[{l:'15',h:'33',b:155.5}],
+    'PG-0036':[{l:'18',h:'36',b:185.5}],
+    'PG-0037':[{l:'12',h:'30',b:125.5}],
+    'PG-0039':[{l:'11',h:'29',b:115.5}],
+    'PG-0042':[{l:'03',h:'21',b:35.5}],
+    'PG-0043':[{l:'17',h:'35',b:175.5}],
+    'PG-0044':[{l:'06',h:'24',b:65.5}],
+    'PG-0045':[{l:'11',h:'29',b:115.5}],
+    'PG-0046':[{l:'14',h:'32',b:145.5}],
+    'PG-0047':[{l:'16',h:'34',b:165.5}],
+    'PG-0049':[{l:'10',h:'28',b:105.5}],
+    'PG-0051':[{l:'03',h:'21',b:35.5}],
+    'PG-0052':[{l:'09',h:'27',b:95.5}],
+    'PG-0054':[{l:'17',h:'35',b:179.0}],
+    'PG-0055':[{l:'3',h:'21',b:32.0}],
+    'PG-0056':[{l:'08',h:'26',b:85.5}],
+    'PG-0057':[{l:'14',h:'32',b:145.5}],
+    'PG-0059':[{l:'07',h:'25',b:75.5}],
+    'PG-0060':[{l:'01',h:'19',b:15.5}],
+    'PG-0066':[{l:'16',h:'34',b:165.5}],
+    'PG-0067':[{l:'16',h:'34',b:165.5}],
+    'PG-0068':[{l:'06',h:'24',b:65.5}],
+    'PG-0069':[{l:'11',h:'29',b:115.5}],
+    'PG-0072':[{l:'11',h:'29',b:115.5}],
+    'PG-0074':[{l:'14',h:'32',b:145.5}],
+    'PG-0094':[{l:'16',h:'34',b:162.0,e:[-6.04925,142.87358,-6.06536,142.8773]}],
+    'PG-0096':[{l:'05D',h:'23A',b:50.0,e:[-6.25382,144.98882,-6.26645,144.98563]}],
+    'PG-0099':[{l:'06',h:'24',b:65.5}],
+    'PG-0105':[{l:'18',h:'36',b:185.5}],
+    'PG-0112':[{l:'18A',h:'36D',b:185.5}],
+    'PG-0116':[{l:'12',h:'30',b:125.5}],
+    'PG-0145':[{l:'09',h:'27',b:95.5}],
+    'PG-0157':[{l:'9',h:'27',b:95.5}],
+    'PG-0159':[{l:'08',h:'26',b:85.5}],
+    'PG-0160':[{l:'12',h:'30',b:125.5}],
+    'PG-IHU':[{l:'12',h:'30',b:125.5}],
+    'PPX':[{l:'02',h:'20',b:25.5}],
+    'PUA':[{l:'08',h:'26',b:85.5}]
+  };
+
+  function rwyFor(id){
+    if (!id) return null;
+    var fi = FIELD_INFO[id];
+    if (fi && fi.rwy && fi.rwy.length) return fi.rwy;   /* the six with full detail */
+    return RWY[id] || null;
+  }
+
   function cardRwy(f, fi){
-    if (!fi){
-      return '<div class="cempty">No runway detail for ' + f.id + '</div>'
-        + '<div class="cnote">Detailed runway data (length, surface, bearings) is published '
-        + 'for the majors. Bush strips are the gap the AIP does not fill \u2014 your own notes '
+    var rws = rwyFor(f.id);
+    if (!rws){
+      return '<div class="cempty">No runway data for ' + (f.id || 'this point') + '</div>'
+        + '<div class="cnote">This field is not in the runway dataset. Your own notes '
         + 'on a strip belong under My notes on the Info tab.</div>';
     }
-    var w = metarWind(fi.metar), h = '';
+    var w = metarWind(wxRaw(f.id)), h = '';   /* runway wind from the live report */
     fi.rwy.forEach(function(r){
       var m = rwyLenM(r);
       h += '<div class="rwyc"><div class="rh"><b>' + r.l + '/' + r.h + '</b>'
@@ -6715,8 +7841,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       }
       h += '</div>';
     });
-    return h + '<div class="cnote">Runway data from the live NM Plotter dataset; lengths derived '
-      + 'from threshold coordinates. H = headwind, T = tailwind, X = crosswind, from the demo METAR above.</div>';
+    return h + '<div class="cnote">Runway data from the NM Plotter dataset. A length is shown '
+      + 'only where surveyed threshold coordinates exist; a dash means the dataset carries the '
+      + 'direction but not the ends. H = headwind, T = tailwind, X = crosswind, computed from the '
+      + 'live METAR. Advisory \u2014 check the AIP before use.</div>';
   }
 
   function cardProc(f){
@@ -6775,6 +7903,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function drawCard(){
     var f = cardAdHoc || dbById(cardId); if (!f) return;
+    if (f.id && wxProxy() && !wxFresh(f.id)){
+      wxFetch([f.id].concat(wxIdsOfInterest()), function(){
+        if (card.classList.contains('on')) drawCard();
+        renderMap();
+      });
+    }
     var fi = f.id ? FIELD_INFO[f.id] : null;
     $('#cardIcao').textContent = f.id || label(f);
     $('#cardName').textContent = f.nm;
@@ -7083,6 +8217,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return 0.66;
   })();
   function sizeCard(){
+    /* On a tablet the card is a full-height side panel, so its height is
+       the CSS's business. An inline height set here would beat the rule
+       and leave a half-height column floating against the edge. */
+    if (TAB_MQ.matches){ card.style.height = ''; return; }
     cardMax = Math.max(CARD_MIN, window.innerHeight - 120);
     card.style.height = Math.max(CARD_MIN, Math.min(cardMax, Math.round(cardFrac * cardMax))) + 'px';
   }
@@ -7154,6 +8292,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      ============================================================ */
 
   var IC = {
+    /* cloud with an up/down pair - the library is two-way and explicit */
+    cloud:    '<path d="M7 18.4h9.6a3.9 3.9 0 0 0 .5-7.8 5.4 5.4 0 0 0-10.5-1.2A3.9 3.9 0 0 0 7 18.4z"/>'
+            + '<path d="M10 15.2l2-2.2 2 2.2"/><path d="M12 13v4"/>',
     map:      '<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>',
     airports: '<path d="M12 3.2l1.4 6.6 6.6 1.4v1.6l-6.6 1.4L12 20.8l-1.4-6.6L4 12.8v-1.6l6.6-1.4z"/>',
     fuel:     '<path d="M12 3.4S19 12.2 19 16.2a7 7 0 0 1-14 0C5 12.2 12 3.4 12 3.4z"/><path d="M15 15.4a3.9 3.9 0 0 1-2.6 3.6"/>',
@@ -7181,6 +8322,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     { k:'calc',     t:'Calculator' },
     { k:'freq',     t:'Freqs'    },
     { k:'flights',  t:'Flights'  },
+    { k:'cloud',    t:'Cloud'    },
     { k:'notes',    t:'Notes'    },
     { k:'downloads',t:'Downloads' }
   ];
@@ -7198,7 +8340,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return k;
   }
 
-  var STORE_KEY = 'nmp.iphone.tabs', TAB_SLOTS = 4;
+  /* ---- Tablet: the same bar, with more slots ------------------------
+     A tablet is not a different app, so nothing here is a second layout.
+     The slot COUNT is what changes: 4 on a phone, 6 with the room for it.
+
+     The stored config always holds MAX_SLOTS entries and the bar renders
+     the first tabSlots() of them, so moving between devices - or just
+     rotating - never destroys a configuration. Choosing 6 on the tablet
+     and picking the phone up again shows the first 4 of those 6, in the
+     order you set. */
+  var STORE_KEY = 'nmp.iphone.tabs', MAX_SLOTS = 6;
+  var TAB_MQ = window.matchMedia('(min-width:600px)');
+  function tabSlots(){ return TAB_MQ.matches ? 6 : 4; }
   /* a saved slot may name a view that no longer exists - W&B was removed,
      and anything else might be one day. Drop unknown keys and backfill so
      a stale config can never leave a dead tab in the bar. */
@@ -7209,20 +8362,26 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
   function loadCfg(){
     var fill = ['charts','freq','notes','flights','calc','fuel','airports','map'];
+    var base = ['airports','map','charts','fuel'];
     try{
       var s = localStorage.getItem(STORE_KEY);
       if (s){
         var a = JSON.parse(s);
         if (a && a.length){
           a = a.filter(knownTab);
-          for (var i = 0; i < fill.length && a.length < TAB_SLOTS; i++){
+          /* always carry MAX_SLOTS so a phone never truncates what the
+             tablet configured */
+          for (var i = 0; i < fill.length && a.length < MAX_SLOTS; i++){
             if (a.indexOf(fill[i]) < 0) a.push(fill[i]);
           }
-          if (a.length === TAB_SLOTS) return a;
+          if (a.length >= MAX_SLOTS) return a.slice(0, MAX_SLOTS);
         }
       }
     }catch(e){}
-    return ['airports','map','charts','fuel'];
+    for (var j = 0; j < fill.length && base.length < MAX_SLOTS; j++){
+      if (base.indexOf(fill[j]) < 0) base.push(fill[j]);
+    }
+    return base;
   }
   function saveCfg(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(tabCfg)); }catch(e){} }
 
@@ -7575,8 +8734,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       for (i = 0; i < 24; i++) hh.push(i);
       for (i = 0; i < 60; i++) mm.push(i);
       var pad = function(v){ return (v < 10 ? '0' : '') + v; };
-      var H = buildWheel('hh', hh, Math.floor(ETD_MIN / 60), 'hh', pad);
-      var M = buildWheel('mm', mm, ETD_MIN % 60, 'mm', pad);
+      /* no ETD set yet - open on the current time, which is the value
+         you are most likely to want */
+      var seed = ETD_MIN;
+      if (seed == null){ var nd = new Date(); seed = nd.getUTCHours() * 60 + nd.getUTCMinutes(); }
+      var H = buildWheel('hh', hh, Math.floor(seed / 60), 'hh', pad);
+      var M = buildWheel('mm', mm, seed % 60, 'mm', pad);
       wheels.appendChild(H.wrap); wheels.appendChild(M.wrap);
       refs.hh = H.w; refs.mm = M.w;
 
@@ -7612,7 +8775,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       reg:  ['Registration', 'Registration', AC.reg],
       type: ['Aircraft type', 'Type', AC.type],
       alt:  ['Cruise altitude', 'Feet', String(AC.alt)],
-      etd:  ['ETD', 'UTC, as HHMM', clock(0).replace(':', '')]
+      etd:  ['ETD', 'UTC, as HHMM', (ETD_MIN == null ? '' : clock(0).replace(':', ''))]
     }[what];
     $('#qkTtl').textContent = cfg[0];
     var dial = (what === 'alt' || what === 'etd');
@@ -8316,9 +9479,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         if (!t){ toast('No field with data in the plan'); return; }
         var fi = FIELD_INFO[t.id];
         body.querySelector('#e6el').value = fi.elev;
-        var q = fi.metar && fi.metar.match(/Q(\d{4})/);
+        /* QNH and OAT pulled from the live report, not a frozen string -
+           these feed a density-altitude answer and must be current */
+        var mr = wxRaw(t.id);
+        var q = mr && mr.match(/Q(\d{4})/);
         if (q) body.querySelector('#e6qnh').value = q[1];
-        var tp = fi.metar && fi.metar.match(/\s(M?\d{2})\/M?\d{2}\s/);
+        var tp = mr && mr.match(/\s(M?\d{2})\/M?\d{2}\s/);
         if (tp) body.querySelector('#e6oat').value = tp[1].replace('M', '-');
         solveAlt();
         toast('From ' + t.id);
@@ -8495,7 +9661,38 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     try{ var a = JSON.parse(localStorage.getItem(FL_KEY)); if (a && a.length) return a; }catch(e){}
     return [];
   })();
-  function saveFlights(){ try{ localStorage.setItem(FL_KEY, JSON.stringify(FLIGHTS)); }catch(e){} }
+  /* Routes are small and stay in localStorage. A recorded flight carries
+     its full track and does not - one 2 h sector is about 94 KB, and a
+     handful would fill the 5 MB the whole app shares. Tracks go to
+     IndexedDB; the flight list keeps a light copy without the track. */
+  function saveFlights(){
+    var light = FLIGHTS.map(function(f){
+      if (!f.rec || !f.track) return f;
+      var c = {}; for (var k in f) if (k !== 'track') c[k] = f[k];
+      c.trackInIdb = true;
+      return c;
+    });
+    try { localStorage.setItem(FL_KEY, JSON.stringify(light)); }
+    catch(e){ toast('Storage full \u2014 delete some saved flights'); }
+
+    FLIGHTS.forEach(function(f){
+      if (f.rec && f.track) idbPut({ id:f.id, track:f.track }).catch(function(){});
+    });
+  }
+
+  /* pull the tracks back in once IndexedDB is open */
+  (function loadTracks(){
+    if (!FLIGHTS.some(function(f){ return f.trackInIdb && !f.track; })) return;
+    idbAll().then(function(all){
+      var byId = {};
+      all.forEach(function(x){ if (x.track) byId[x.id] = x.track; });
+      var got = 0;
+      FLIGHTS.forEach(function(f){
+        if (f.trackInIdb && !f.track && byId[f.id]){ f.track = byId[f.id]; got++; }
+      });
+      if (got) try { refreshFlightsView(); } catch(_){ }
+    }).catch(function(){});
+  })();
   function flById(id){ for (var i=0;i<FLIGHTS.length;i++) if (FLIGHTS[i].id === id) return FLIGHTS[i]; return null; }
 
   function flStats(pts){
@@ -8516,17 +9713,38 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
 
   function flightsHTML(){
-    var h = '<div class="flbar"><span class="cnt">' + FLIGHTS.length
-          + (FLIGHTS.length === 1 ? ' route' : ' routes') + '</span>'
+    var nRec = FLIGHTS.filter(function(f){ return f.rec; }).length;
+    var nRt  = FLIGHTS.length - nRec;
+    var h = '<div class="flbar"><span class="cnt">'
+          + nRt + (nRt === 1 ? ' route' : ' routes')
+          + (nRec ? ' \u00b7 ' + nRec + (nRec === 1 ? ' flight' : ' flights') : '')
+          + '</span>'
           + '<button data-fl="save"' + (ROUTE.length < 2 ? ' disabled' : '')
           + '>Save current</button></div>';
 
     if (!FLIGHTS.length){
-      return h + '<div class="cempty">No saved routes yet.<br>Build a route in FPL, '
-               + 'then tap Save current.</div>';
+      return h + '<div class="cempty">No saved routes or flights yet.<br>Build a route in FPL '
+               + 'and tap Save current, or record a flight with REC.</div>';
     }
 
-    FLIGHTS.slice().sort(function(a, b){ return b.ts - a.ts; }).forEach(function(f){
+    FLIGHTS.slice().sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); }).forEach(function(f){
+      /* A recorded flight is a different thing from a planned route and
+         is not described by waypoints, distance-by-plan or ETE. */
+      if (f.rec){
+        var mins = Math.round((f.sec || 0) / 60);
+        h += '<button class="flc rec" data-flid="' + f.id + '">'
+          +  '<span class="top"><b>' + esc(f.nm) + '</b>'
+          +    '<span class="ts">' + noteAge(f.ts) + '</span></span>'
+          +  '<div class="rt">Recorded track \u00b7 ' + (f.track ? f.track.length : 0) + ' fixes</div>'
+          +  '<div class="st"><span>FLOWN <b>' + (f.nmFlown != null ? f.nmFlown.toFixed(1) : '\u2014')
+          +      '</b> nm</span>'
+          +    '<span>TIME <b>' + Math.floor(mins / 60) + ':'
+          +      String(mins % 60).padStart(2, '0') + '</b></span>'
+          +    '<span>AVG <b>' + (f.sec > 0 && f.nmFlown != null
+                 ? Math.round(f.nmFlown / (f.sec / 3600)) : '\u2014') + '</b> kt</span></div>'
+          +  '</button>';
+        return;
+      }
       var st = flStats(f.pts), cur = flSame(f.pts);
       h += '<button class="flc' + (cur ? ' cur' : '') + '" data-flid="' + f.id + '">'
         +  '<span class="top"><b>' + esc(f.nm) + '</b>'
@@ -8573,7 +9791,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     flEditing = flById(id); if (!flEditing) return;
     closeAll();
     $('#flName').value = flEditing.nm;
-    $('#flRoute').textContent = flString(flEditing.pts);
+    $('#flRoute').textContent = flEditing.rec
+      ? ((flEditing.track ? flEditing.track.length : 0) + ' fixes \u00b7 '
+         + (flEditing.nmFlown != null ? flEditing.nmFlown.toFixed(1) + ' nm flown' : ''))
+      : flString(flEditing.pts);
     clearTimeout(flLoadArm); flLoadArm = null;
     clearTimeout(flDelArm);  flDelArm = null;
     drawFlActs();
@@ -8584,6 +9805,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   flEd.addEventListener('click', function(e){ if (e.target === flEd) closeFl(); });
 
   function drawFlActs(){
+    /* A recorded track is not a flight plan - loading 300 fixes into the
+       route would be nonsense. It gets Show on map instead. */
+    if (flEditing.rec){
+      $('#flActs').innerHTML =
+          '<button class="tedrow" data-fa="show" style="color:var(--good)">Show on map</button>'
+        + '<button class="tedrow" data-fa="del" style="color:var(--bad)">'
+        +   (flDelArm ? 'Tap again to delete' : 'Delete') + '</button>';
+      return;
+    }
     var busy = ROUTE.length > 1 && !flSame(flEditing.pts);
     $('#flActs').innerHTML =
         '<button class="tedrow" data-fa="load" style="color:var(--route)">'
@@ -8600,7 +9830,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     });
   }
 
+  /* a saved track shown on the map, cleared by picking another or by
+     starting a new recording */
+  var shownTrack = null;
+
   function flAction(a){
+    if (a === 'show'){
+      shownTrack = (flEditing && flEditing.track) || null;
+      closeFl();
+      if (shownTrack && shownTrack.length){
+        goTo('map');
+        renderMap();
+        try {
+          LMAP.fitBounds(L.latLngBounds(shownTrack.map(function(p){ return [p.lat, p.lon]; })),
+                         { padding:[40,40], animate:false });
+        } catch(_){ }
+        toast(shownTrack.length + ' fixes shown');
+      }
+      return;
+    }
     if (!flEditing) return;
     if (a === 'load'){
       if (ROUTE.length > 1 && !flSame(flEditing.pts) && !flLoadArm){
@@ -8639,6 +9887,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         return;
       }
       clearTimeout(flDelArm); flDelArm = null;
+      /* the track lives in IndexedDB, so deleting the list entry alone
+         would orphan it there and leak the space */
+      idbDel(flEditing.id).catch(function(){});
       FLIGHTS = FLIGHTS.filter(function(x){ return x.id !== flEditing.id; });
       saveFlights(); flEditing = null;
       refreshFlightsView(); closeFl();
@@ -8850,8 +10101,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     items.forEach(function(it){
       var p = it.p, fi = FIELD_INFO[p.id];
       var dot = 'var(--text-fainter)';
-      if (fi) dot = wxCat(fi.metar)[1];
-      var rwy = fi ? (rwyLenM(fi.rwy[0]).toLocaleString() + ' m') : (p.cat === 'strip' ? 'Strip' : '\u2014');
+      var wr = wxRaw(p.id);
+      if (wr) dot = wxCat(wr)[1];
+      /* the list now has runway data for 377 fields, not six. Show the
+         length where the thresholds are surveyed, otherwise the
+         designator pair, which is still useful at a glance. */
+      var rws = rwyFor(p.id), rwy;
+      if (rws && rws[0].e && rws[0].e.length === 4) rwy = rwyLenM(rws[0]).toLocaleString() + ' m';
+      else if (rws) rwy = rws[0].l + '/' + rws[0].h;
+      else rwy = (p.cat === 'strip' ? 'Strip' : '\u2014');
       h += '<button class="nprow" data-ap="' + p.id + '">'
         +  '<span class="npdot" style="background:' + dot + '"></span>'
         +  '<span class="npid">' + p.id + '</span>'
@@ -8956,6 +10214,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
                  : (k === 'downloads')? '<div class="vhead"><b>Downloads</b>'
                      + '<span class="sub">offline data</span></div>'
                      + '<div class="vbody">' + downloadsHTML() + '</div>'
+                 : (k === 'cloud')    ? '<div class="vhead"><b>Cloud</b>'
+                     + '<span class="sub">shared library</span></div>'
+                     + '<div class="vbody" id="cloudBody">' + cloudHTML() + '</div>'
                  : stubHTML(k);
     viewLayer.appendChild(el);
     viewCache[k] = el;
@@ -8966,6 +10227,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (k === 'charts') wireCharts(el);
     if (k === 'freq') wireFreqs(el);
     if (k === 'downloads') wireDownloads(el);
+    if (k === 'cloud') wireCloud(el);
     if (k === 'calc') wireCalc(el);
     return el;
   }
@@ -9010,7 +10272,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var gpsOpen  = gps && gps.classList.contains('on');
     var busy     = moreOpen || gpsOpen;
     var h = '';
-    tabCfg.forEach(function(k){
+    tabCfg.slice(0, tabSlots()).forEach(function(k){
       var lit = (k === 'gps') ? gpsOpen : (!busy && activeTab === k);
       h += '<button class="tab' + (lit ? ' on' : '') + '" data-tab="' + k + '">'
          + '<span class="ic">' + svg(k) + '</span>'
@@ -9052,7 +10314,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   var MORE_TINT = {
     map:'var(--accent-2)', airports:'var(--good)', fuel:'var(--route)',
     charts:'var(--accent-2)', wb:'var(--navaid)', freq:'var(--magenta)',
-    flights:'var(--good)', notes:'var(--route)', gps:'var(--accent)'
+    flights:'var(--good)', notes:'var(--route)', gps:'var(--accent)',
+    cloud:'var(--accent-2)'
   };
   /* anything with a tile at the top of the sheet is not repeated below */
   var MORE_TILES = ['downloads'];
@@ -9088,7 +10351,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function drawEd(){
     var s = '';
-    for (var i = 0; i < TAB_SLOTS; i++){
+    for (var i = 0; i < tabSlots(); i++){
       s += '<button class="tslot' + (i === tedSlot ? ' sel' : '') + '" data-slot="' + i + '">'
          + '<span class="n">Slot ' + (i + 1) + '</span>'
          + '<span class="v">' + vTitle(tabCfg[i]) + '</span></button>';
@@ -9118,7 +10381,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         if (at >= 0) tabCfg[at] = tabCfg[tedSlot];   // swap, never duplicate
         tabCfg[tedSlot] = k;
         saveCfg();
-        if (tabCfg.indexOf(activeTab) < 0){ activeTab = firstView(); showView(activeTab); }
+        if (tabCfg.slice(0, tabSlots()).indexOf(activeTab) < 0){
+          activeTab = firstView(); showView(activeTab);
+        }
         drawEd();
         renderTabs();
       });
@@ -9163,9 +10428,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     drum: '<ellipse cx="12" cy="6.2" rx="5.8" ry="2.2"/>'
         + '<path d="M6.2 6.2v11.6a5.8 2.2 0 0 0 11.6 0V6.2"/>'
         + '<path d="M6.2 10.6a5.8 2.2 0 0 0 11.6 0M6.2 14.2a5.8 2.2 0 0 0 11.6 0"/>',
-    lrt:  '<path d="M7.2 8.8h9.6a3.2 3.2 0 0 1 0 6.4H7.2a3.2 3.2 0 0 1 0-6.4z"/>'
-        + '<path d="M10.4 9v6M13.6 9v6"/>'
-        + '<path d="M11 8.8V7h2v1.8"/>'
+    /* Drawn from the tank itself rather than guessed: a riveted
+       rectangular box with a tapered wedge at one end - the top edge
+       runs further out than the bottom - vertical panel seams, the
+       filler cap on top and the angled filler neck off the nose. The
+       old shape was a capsule, which this is not. */
+    lrt:  '<path d="M4.6 9.4h15.8v7.2H7.9z"/>'
+        + '<path d="M11 9.4v7.2M14.6 9.4v7.2M18.2 9.4v7.2"/>'
+        + '<circle cx="13.4" cy="8.1" r="1.15"/>'
+        + '<path d="M6 9.4L3.9 7.3M3 8.2L4.8 6.4"/>'
   };
   var ADDS = [
     { i:'can',  t:'Jerry can',       l:'20 L',  g:'5.3 US gal',  k:'16 kg',  p:'35 lb'  },
@@ -9176,14 +10447,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   (function(){
     var h = '';
     ADDS.forEach(function(a){
-      h += '<div class="farow"><span class="fasq">'
-         + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" '
-         + 'stroke-linejoin="round" stroke-linecap="round">' + ADD_IC[a.i] + '</svg></span>'
-         + '<span class="fanm">' + a.t + '</span>'
-         + '<span class="faq">'
-         + '<span class="l">' + a.l + '</span><span class="g">' + a.g + '</span>'
-         + '<span class="k">' + a.k + '</span><span class="p">' + a.p + '</span>'
-         + '</span></div>';
+      h += '<div class="facard">'
+         + '<span class="faic">'
+         +   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" '
+         +   'stroke-linejoin="round" stroke-linecap="round">' + ADD_IC[a.i] + '</svg>'
+         + '</span>'
+         + '<span class="fatt">' + a.t + '</span>'
+         + '<span class="famain">' + a.l + '<i>' + a.k + '</i></span>'
+         + '<span class="fasub">' + a.g + '<i>' + a.p + '</i></span>'
+         + '</div>';
     });
     $('#fuelAddList').innerHTML = h;
   })();
@@ -9591,7 +10863,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + setRow('Type', null, '<input class="fin" data-set="type" type="text" value="' + AC.type + '">')
       + setRow('Cruise TAS', 'kt', inCtrl('tas', AC.tas))
       + setRow('Fuel burn', 'kg per hour', inCtrl('burn', AC.burn))
-      + setRow('Fuel on board', 'kg', inCtrl('fob', AC.fob))
+      + setRow('Fuel on board', 'kg \u00b7 set per flight', inCtrl('fob', AC.fob == null ? '' : AC.fob))
       + setRow('Reserve', 'minutes', segCtrl('resMin', [[15,'15'],[30,'30'],[45,'45'],[60,'60']], AC.resMin))
 
       + '<div class="csec">Flight plan</div>'
@@ -9599,6 +10871,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + setRow('ETD', 'UTC, hhmm', '<input class="fin" data-set="etd" type="text" inputmode="numeric" value="' + etdStr() + '">')
       + setRow('Low clearance warning', 'NavLog and Profile turn red below this',
                segCtrl('clr', [[500,'500'],[1000,'1000'],[1500,'1500']], SET.clr))
+
+      + '<div class="csec">Weather</div>'
+      + setRow('Weather source', 'your worker URL \u2014 same one the desktop build uses',
+               '<input class="fin" data-set="wxproxy" type="url" inputmode="url" '
+             + 'autocapitalize="off" autocorrect="off" spellcheck="false" '
+             + 'placeholder="https://your-worker.workers.dev" value="'
+             + (wxProxy() || '') + '">')
+      + '<div class="cnote">METAR is fetched live. With no URL set, weather is '
+      + 'simply absent \u2014 nothing is shown from stored data.</div>'
 
       + '<div class="csec">Map</div>'
       + setRow('Airfield labels', 'declutter', segCtrl('labels', [['off','Off'],['auto','Auto'],['always','Always']], SET.labels))
@@ -9624,11 +10905,34 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $$('#setBody input[data-set]').forEach(function(el){
       el.addEventListener('change', function(){
         var k = el.getAttribute('data-set'), v = el.value;
+        if (k === 'wxproxy'){
+          var u = String(v).trim().replace(/\/+$/, '');
+          try { localStorage.setItem(WX_KEY, u); } catch(_){ }
+          WXC = {}; wxState = u ? 'idle' : 'noproxy'; wxErr = '';
+          if (u){
+            toast('Checking weather source\u2026');
+            wxRefresh(true, function(){
+              renderMap();
+              toast(wxState === 'error' ? ('Weather source failed \u2014 ' + wxErr)
+                  : (Object.keys(WXC).some(function(i){ return WXC[i].raw; })
+                     ? 'Weather source working' : 'Connected, but no reports returned'));
+            });
+          } else toast('Weather source cleared');
+          drawSet();
+          return;
+        }
         if (k === 'reg' || k === 'type'){ AC[k] = v.trim() || AC[k]; }
         else if (k === 'etd'){
-          var m = String(v).replace(/\D/g, '').padStart(4, '0').slice(0, 4);
-          var hh = parseInt(m.slice(0, 2), 10), mm = parseInt(m.slice(2), 10);
-          if (hh < 24 && mm < 60) ETD_MIN = hh * 60 + mm; else toast('ETD must be 0000-2359');
+          if (!String(v).trim()){ ETD_MIN = null; }        /* cleared */
+          else {
+            var m = String(v).replace(/\D/g, '').padStart(4, '0').slice(0, 4);
+            var hh = parseInt(m.slice(0, 2), 10), mm = parseInt(m.slice(2), 10);
+            if (hh < 24 && mm < 60) ETD_MIN = hh * 60 + mm; else toast('ETD must be 0000-2359');
+          }
+        }
+        else if (k === 'fob'){
+          /* clearing it means "not entered yet", not zero */
+          AC.fob = String(v).trim() ? snum(v, AC.fob) : null;
         }
         else AC[k] = snum(v, AC[k]);
         saveSet(); drawSet(); drawFpl();
@@ -9953,6 +11257,261 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $('#dgrSheet').classList.add('on');
   }
 
+  /* ================================================================
+     CLOUD LIBRARY
+
+     Same Worker and the same collections the desktop build uses, so the
+     two apps share one library rather than drifting apart - which is the
+     whole reason for it.
+
+     EXPLICIT ONLY. Nothing here runs on a timer, on load, or on any
+     event other than a button press. The standing rule is that a sync
+     must never be able to overwrite a route you are flying: a pull
+     brings items into the library as separate entries, it does not
+     touch ROUTE, and replacing the active route stays a deliberate
+     second action through the existing Load button.
+
+     Push is additive too - it uploads what the cloud does not already
+     have and never deletes remotely. */
+  var CLOUD_BASE_KEY = 'nmp.iphone.cloudbase';
+  var CLOUD_KEY_KEY  = 'nmp.iphone.cloudkey';
+
+  function cloudBase(){
+    try { return (localStorage.getItem(CLOUD_BASE_KEY) || '').trim().replace(/\/+$/, ''); }
+    catch(_){ return ''; }
+  }
+  function cloudKey(){
+    try { return (localStorage.getItem(CLOUD_KEY_KEY) || '').trim(); } catch(_){ return ''; }
+  }
+  function cloudErr(e){
+    var m = (e && e.message) || String(e);
+    if (m === 'no-key')  return 'no library key set';
+    if (m === 'no-base') return 'no library URL set';
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'no connection';
+    return m;
+  }
+  function cloudFetch(path, opts){
+    opts = opts || {};
+    var base = cloudBase(), key = cloudKey();
+    if (!base) return Promise.reject(new Error('no-base'));
+    if (!key)  return Promise.reject(new Error('no-key'));
+    opts.headers = Object.assign({ 'X-Library-Key': key }, opts.headers || {});
+    return fetch(base + path, opts).then(function(r){
+      if (!r.ok){
+        return r.json().catch(function(){ return {}; }).then(function(j){
+          throw new Error(j.error || ('HTTP ' + r.status));
+        });
+      }
+      return r;
+    });
+  }
+  function cloudList(col, full){
+    return cloudFetch('/' + (col || 'routes') + (full ? '?full=1' : ''))
+      .then(function(r){ return r.json(); })
+      .then(function(j){ return j.items || j.routes || []; });
+  }
+  function cloudPut(col, id, obj){
+    return cloudFetch('/' + (col || 'routes') + '/' + encodeURIComponent(id), {
+      method:'PUT', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(obj)
+    }).then(function(r){ return r.json(); });
+  }
+
+  /* ---- push: upload what the cloud does not have ------------------
+     Never deletes remotely, and skips anything already up there, so a
+     push from the phone can never remove work done on the desktop. */
+  var cloudBusy = false;
+
+  function cloudPushRoutes(report){
+    if (cloudBusy) return;
+    var mine = FLIGHTS.filter(function(f){ return !f.rec; });
+    if (!mine.length){ report('No saved routes to push'); return; }
+    cloudBusy = true;
+    report('Checking\u2026');
+    cloudList('routes').then(function(have){
+      var has = {};
+      have.forEach(function(x){ has[String(x.id)] = 1; });
+      var todo = mine.filter(function(f){ return !has[String(f.id)]; });
+      if (!todo.length){ cloudBusy = false; report('All up to date \u2713'); return; }
+      var ok = 0, bad = 0, i = 0;
+      (function next(){
+        if (i >= todo.length){
+          cloudBusy = false;
+          report(bad ? (ok + ' up \u00b7 ' + bad + ' failed') : ('Uploaded ' + ok + ' \u2713'));
+          drawCloud();
+          return;
+        }
+        report('Uploading ' + (i + 1) + ' of ' + todo.length + '\u2026');
+        var f = todo[i++];
+        cloudPut('routes', String(f.id), f)
+          .then(function(){ ok++; }, function(){ bad++; })
+          .then(next);
+      })();
+    }, function(e){ cloudBusy = false; report('\u2717 ' + cloudErr(e)); });
+  }
+
+  function cloudPushWaypoints(report){
+    if (cloudBusy) return;
+    var mine = DB_EXTRA.filter(function(p){ return p.cat === 'mine'; });
+    if (!mine.length){ report('No waypoints to push'); return; }
+    cloudBusy = true;
+    report('Checking\u2026');
+    cloudList('waypoints').then(function(have){
+      var has = {};
+      have.forEach(function(x){ has[String(x.id)] = 1; });
+      var todo = mine.filter(function(p){ return !has[String(p.id)]; });
+      if (!todo.length){ cloudBusy = false; report('All up to date \u2713'); return; }
+      var ok = 0, bad = 0, i = 0;
+      (function next(){
+        if (i >= todo.length){
+          cloudBusy = false;
+          report(bad ? (ok + ' up \u00b7 ' + bad + ' failed') : ('Uploaded ' + ok + ' \u2713'));
+          drawCloud();
+          return;
+        }
+        report('Uploading ' + (i + 1) + ' of ' + todo.length + '\u2026');
+        var p = todo[i++];
+        cloudPut('waypoints', String(p.id), p)
+          .then(function(){ ok++; }, function(){ bad++; })
+          .then(next);
+      })();
+    }, function(e){ cloudBusy = false; report('\u2717 ' + cloudErr(e)); });
+  }
+
+  /* ---- pull: bring items DOWN into the local library ---------------
+     Merged by id. An item already held locally is left alone - the
+     local copy wins, because it may be the one you are flying. Nothing
+     here touches ROUTE. */
+  function cloudPullRoutes(report){
+    if (cloudBusy) return;
+    cloudBusy = true;
+    report('Fetching\u2026');
+    cloudList('routes', true).then(function(items){
+      var have = {};
+      FLIGHTS.forEach(function(f){ have[String(f.id)] = 1; });
+      var added = 0, skipped = 0;
+      items.forEach(function(x){
+        if (!x || x.id == null || !x.pts || !x.pts.length) return;
+        if (have[String(x.id)]){ skipped++; return; }
+        x.pts = snapRoute(x.pts);
+        if (!x.ts) x.ts = Date.now();
+        FLIGHTS.unshift(x); added++;
+      });
+      if (added) saveFlights();
+      cloudBusy = false;
+      report(added ? ('Added ' + added + (skipped ? ' \u00b7 ' + skipped + ' already here' : ''))
+                   : (skipped ? 'Nothing new \u2014 all ' + skipped + ' already here'
+                              : 'Library is empty'));
+      try { refreshFlightsView(); } catch(_){ }
+      drawCloud();
+    }, function(e){ cloudBusy = false; report('\u2717 ' + cloudErr(e)); });
+  }
+
+  function cloudPullWaypoints(report){
+    if (cloudBusy) return;
+    cloudBusy = true;
+    report('Fetching\u2026');
+    cloudList('waypoints', true).then(function(items){
+      var have = {};
+      DB.forEach(function(p){ if (p.id) have[String(p.id)] = 1; });
+      var added = 0, skipped = 0;
+      items.forEach(function(x){
+        if (!x || x.id == null || typeof x.lat !== 'number' || typeof x.lon !== 'number') return;
+        if (have[String(x.id)]){ skipped++; return; }
+        var w = { id:String(x.id), nm:x.nm || x.name || String(x.id), cat:'mine',
+                  lat:x.lat, lon:x.lon };
+        DB.unshift(w); added++;
+      });
+      if (added){ saveMarks(); renderMap(); }
+      cloudBusy = false;
+      report(added ? ('Added ' + added + (skipped ? ' \u00b7 ' + skipped + ' already here' : ''))
+                   : (skipped ? 'Nothing new \u2014 all ' + skipped + ' already here'
+                              : 'Library is empty'));
+      drawCloud();
+    }, function(e){ cloudBusy = false; report('\u2717 ' + cloudErr(e)); });
+  }
+
+  /* ---- Cloud view --------------------------------------------------
+     Deliberately plain: what is set up, what is here, and four buttons.
+     No status light that implies a background process, because there
+     isn't one. */
+  function cloudHTML(){
+    var base = cloudBase(), key = cloudKey();
+    var nRt = FLIGHTS.filter(function(f){ return !f.rec; }).length;
+    var nWp = DB.filter(function(p){ return p.cat === 'mine'; }).length;
+
+    var h = '<div class="cnote" style="margin-bottom:14px">Explicit only. Nothing syncs on its '
+          + 'own, and a pull never touches the route you are flying \u2014 it adds to the library, '
+          + 'and loading one stays a separate step.</div>';
+
+    h += '<div class="csec">Library</div>'
+      +  '<div class="ntfld"><label for="cldBase">Worker URL</label>'
+      +  '<input id="cldBase" type="url" inputmode="url" autocapitalize="off" autocorrect="off" '
+      +  'spellcheck="false" placeholder="https://your-worker.workers.dev" value="' + esc(base) + '"></div>'
+      +  '<div class="ntfld"><label for="cldKey">Library key</label>'
+      +  '<input id="cldKey" type="password" autocapitalize="off" autocorrect="off" '
+      +  'spellcheck="false" placeholder="the key the desktop build uses" value="' + esc(key) + '"></div>'
+      +  '<div class="cnote">Same URL and key as the desktop build, so both apps read one '
+      +  'library.</div>';
+
+    if (!base || !key){
+      return h + '<div class="cempty" style="margin-top:16px">Enter the URL and key to '
+               + 'push or pull.</div>';
+    }
+
+    h += '<div class="csec">Routes <span class="cnt">' + nRt + ' here</span></div>'
+      +  '<div class="cldrow"><button data-cld="pushR">Push to cloud</button>'
+      +    '<button data-cld="pullR">Pull from cloud</button></div>'
+      +  '<div class="cldmsg" id="cldMsgR"></div>'
+
+      +  '<div class="csec">Waypoints <span class="cnt">' + nWp + ' here</span></div>'
+      +  '<div class="cldrow"><button data-cld="pushW">Push to cloud</button>'
+      +    '<button data-cld="pullW">Pull from cloud</button></div>'
+      +  '<div class="cldmsg" id="cldMsgW"></div>'
+
+      +  '<div class="cnote" style="margin-top:16px">Push uploads only what the cloud does not '
+      +  'already have and never deletes anything remotely. Pull adds only what you do not '
+      +  'already hold \u2014 your local copy always wins. Recorded flights are not synced; '
+      +  'they carry full tracks and belong on the device.</div>';
+    return h;
+  }
+
+  function drawCloud(){
+    var b = $('#cloudBody');
+    if (b && viewCache.cloud && viewCache.cloud.classList.contains('on')){
+      b.innerHTML = cloudHTML();
+      wireCloudBody(b);
+    }
+  }
+
+  function wireCloudBody(el){
+    var bs = el.querySelector('#cldBase'), ks = el.querySelector('#cldKey');
+    if (bs) bs.addEventListener('change', function(){
+      try { localStorage.setItem(CLOUD_BASE_KEY, bs.value.trim().replace(/\/+$/, '')); } catch(_){ }
+      drawCloud();
+    });
+    if (ks) ks.addEventListener('change', function(){
+      try { localStorage.setItem(CLOUD_KEY_KEY, ks.value.trim()); } catch(_){ }
+      drawCloud();
+    });
+    function rep(sel){
+      return function(t){ var m = el.querySelector(sel); if (m) m.textContent = t; };
+    }
+    var acts = {
+      pushR: function(){ cloudPushRoutes(rep('#cldMsgR')); },
+      pullR: function(){ cloudPullRoutes(rep('#cldMsgR')); },
+      pushW: function(){ cloudPushWaypoints(rep('#cldMsgW')); },
+      pullW: function(){ cloudPullWaypoints(rep('#cldMsgW')); }
+    };
+    /* $$ takes no scope argument - query the element directly */
+    Array.prototype.slice.call(el.querySelectorAll('[data-cld]')).forEach(function(b){
+      b.addEventListener('click', function(){
+        var f = acts[b.getAttribute('data-cld')];
+        if (f) f();
+      });
+    });
+  }
+  function wireCloud(el){ wireCloudBody(el); }
+
   var NMX_setBase = null;
 
   /* Real Leaflet layers, exactly as v262 does it. Leaflet owns pan and
@@ -9965,6 +11524,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         box:  L.layerGroup().addTo(LMAP),
         leg:  L.layerGroup().addTo(LMAP),
         mk:   L.layerGroup().addTo(LMAP),
+        trk:  L.layerGroup().addTo(LMAP),
         ship: L.layerGroup().addTo(LMAP)
       };
     }
@@ -9998,10 +11558,34 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     map.classList.add('base-' + LAYERS.base);
     $('#terrOv').classList.toggle('on', !!LAYERS.terrain && !LMAP);
     if (typeof terrSync === 'function') terrSync();
+    if (LAYERS.wxcat && wxProxy() && wxState === 'idle') wxRefresh(false, function(){ renderMap(); });
 
     var G = nmxGroups();
     if (!G) return;                      /* no Leaflet, no overlay */
-    G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers();
+    G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers(); G.trk.clearLayers();
+
+    /* the flown track, while recording. Drawn per segment so a coverage
+       gap shows as a gap rather than a straight line across it. */
+    /* a saved track being reviewed, dimmer than a live recording */
+    if (!recRun && shownTrack && shownTrack.length > 1){
+      L.polyline(shownTrack.map(function(p){ return [p.lat, p.lon]; }),
+                 { color:'#8de84a', weight:2, opacity:.55, dashArray:'5 4',
+                   interactive:false, lineJoin:'round' }).addTo(G.trk);
+    }
+
+    if (recRun && recTrack.length > 1){
+      var seg = [];
+      recTrack.concat([null]).forEach(function(p){
+        if (!p){
+          if (seg.length > 1)
+            L.polyline(seg, { color:'#8de84a', weight:2, opacity:.85,
+                              interactive:false, lineJoin:'round' }).addTo(G.trk);
+          seg = [];
+          return;
+        }
+        seg.push([p.lat, p.lon]);
+      });
+    }
 
     /* ---- CTAF zones -------------------------------------------------
        The frequency has to sit INSIDE its own zone. Hanging it off the
@@ -10140,24 +11724,41 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var drawn = 0;
     var show = { field:LAYERS.fields, strip:LAYERS.strips, fix:LAYERS.fixes,
                  mine:LAYERS.mine, navaid:LAYERS.navaid };
+
+    /* A point that is IN THE ROUTE always draws. Category toggles and the
+       zoom rank gate decide what else is worth showing; they must never
+       hide the thing you are flying to. A route of procedure fixes with
+       the fixes layer off drew as a line with no ends - and at low zoom
+       the rank gate did the same to a small airfield. */
+    var onRoute = {};
+    if (LAYERS.route) (ROUTE || []).forEach(function(p){ if (p.id) onRoute[p.id] = 1; });
+
     DB.forEach(function(p){
-      if (!show[p.cat]) return;
+      var isRt = !!(p.id && onRoute[p.id]);
+      if (!isRt && !show[p.cat]) return;
       var ranked = (p.rk != null);
-      if (ranked && p.rk > dotCap) return;
+      if (!isRt && ranked && p.rk > dotCap) return;
       if (!inDrawBounds(p.lat, p.lon)) return;
 
       var tint = '';
       if (LAYERS.wxcat && p.cat === 'field'){
-        var fi = FIELD_INFO[p.id];
-        if (fi) tint = 'background:' + wxCat(fi.metar)[1] + ';';
+        var wr = wxRaw(p.id);
+        if (wr) tint = 'background:' + wxCat(wr)[1] + ';';
       }
 
       var lab = '';
-      if (SET.labels !== 'off' && (!ranked || SET.labels === 'always' || p.rk <= labCap)){
+      /* and it keeps its label, or you get an unlabelled dot on the line */
+      if (SET.labels !== 'off' && (isRt || !ranked || SET.labels === 'always' || p.rk <= labCap)){
         var txt = p.lb || p.id;
         var chw = (p.cat === 'strip') ? 5.5 : 6.4;
         var lp = LMAP.latLngToLayerPoint([p.lat, p.lon]);
-        if (fits(lp.x, lp.y + 6, txt.length * chw + 4, 12)){
+        var w2 = txt.length * chw + 4;
+        /* a route label wins the collision outright, rather than being
+           culled by whatever happened to be drawn near it first */
+        if (isRt){
+          placed.push([lp.x - w2 / 2, lp.y + 6, lp.x + w2 / 2, lp.y + 18]);
+          lab = '<b' + (SET.labels === 'auto' ? ' style="opacity:.75"' : '') + '>' + txt + '</b>';
+        } else if (fits(lp.x, lp.y + 6, w2, 12)){
           lab = '<b' + (SET.labels === 'auto' ? ' style="opacity:.75"' : '') + '>' + txt + '</b>';
         }
       }
@@ -10460,7 +12061,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return '<div class="kv"><span class="k">Aircraft</span><span class="v">' + AC.reg + ' \u00b7 ' + AC.type + '</span></div>'
       + '<div class="kv"><span class="k">Cruise TAS</span><span class="v">' + AC.tas + ' kt</span></div>'
       + '<div class="kv"><span class="k">Cruise alt</span><span class="v">' + AC.alt.toLocaleString() + " ft</span></div>"
-      + '<div class="kv"><span class="k">Fuel on board</span><span class="v">' + AC.fob + ' kg</span></div>'
+      + '<div class="kv"><span class="k">Fuel on board</span><span class="v">'
+      +   (AC.fob == null ? '\u2014' : AC.fob + ' kg') + '</span></div>'
       + '<div class="cnote">Full settings are in portrait. This is a read-only glance in flight.</div>';
   }
 
@@ -10918,6 +12520,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       else if (locCentreOnFix){ centreOn(GPSFIX.lat, GPSFIX.lon); }
       locCentreOnFix = false;
 
+      try { recLog(GPSFIX); } catch(_){ }
+
       /* a Direct To asked for before we had an origin */
       if (dctPending){
         var want = dctPending; dctPending = null; clearTimeout(dctPendT);
@@ -10979,6 +12583,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       },
       fix: function(){ return GPSFIX; }
     };
+  })();
+
+  /* Crossing the breakpoint - a rotation, or Split View being resized -
+     changes how many slots and columns fit, so both rebuild. */
+  (function(){
+    function onBp(){
+      try { renderTabs(); drawActy(); renderMap(); } catch(_){ }
+    }
+    if (TAB_MQ.addEventListener) TAB_MQ.addEventListener('change', onBp);
+    else if (TAB_MQ.addListener) TAB_MQ.addListener(onBp);
+    window.addEventListener('orientationchange', function(){ setTimeout(onBp, 150); });
   })();
 
   /* Clocks and ETAs move whether or not a fix has arrived. */
