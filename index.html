@@ -16,6 +16,109 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v158 2026-08-01 NEXT FREQUENCY, from the corridor, and the green.
+
+                       v262 answers this question twice and disagrees
+                       with itself. Its Freqs tab paints the card with
+                       seq===1 green - ordinal, so on a plotted route the
+                       departure field stays green the whole flight. Its
+                       GPS card paints green off distance to the field
+                       ahead. The first is wrong in the air; the second
+                       is right and only exists while tracking. Neither
+                       is copied verbatim.
+
+                       One rule here, used by every surface: the field
+                       you should be on NOW is the first freq-bearing
+                       field at or ahead of your position ALONG the
+                       route, with a mile of back tolerance so it does
+                       not drop off the moment you pass abeam. Position
+                       is the GPS fix; with no fix it is the active
+                       waypoint, so the answer is still right on the pad.
+
+                       Corridor, not route points. projOnRoute() gives
+                       every field its perpendicular distance to track
+                       and how far along the track that sits, so the list
+                       is ordered the way it is flown; anything within 15
+                       nm of the route that carries a frequency is in it,
+                       waypoint or not. A strip four miles off track is
+                       one you may have to call and this list could not
+                       see it before. Ours also counts the frequencies
+                       you added yourself, which the desktop has no way
+                       to do.
+
+                       Three surfaces:
+
+                       The frequency window and the landscape HUD get
+                       NEXT FREQUENCY, green - background, border, ident,
+                       distance and every value - once you are inside the
+                       ring plus 2 nm, and a quieter THEN block for the
+                       one to pre-dial.
+
+                       The full route list marks that field's card green
+                       wherever it sits, and now shows the corridor
+                       fields between the legs with their off-track
+                       distance. Amber still means the active waypoint:
+                       two different facts, two colours, and a card can
+                       only ever be one of them.
+
+                       The map gets the approach ring - faint blue dashed
+                       while it is ahead, solid green with a soft fill and
+                       the ident once you are inside it, nothing beyond
+                       twice the radius.
+
+                       On performance: v262 re-sweeps every field on
+                       every call, which is fine on a desktop and not on
+                       a phone at 1 Hz. The corridor is built once and
+                       cached against the route and your frequency set,
+                       behind a bounding box that drops most of the
+                       country first. Per fix all that runs is one
+                       projection of your own position.
+
+                       The green needs a fix and says so. Without one
+                       the distance is measured from the active
+                       waypoint, and a waypoint is zero miles from
+                       itself - which would have painted it green while
+                       you were still on the ground somewhere else. No
+                       fix, no claim about how close you are. Caught by
+                       the harness on its first run.
+
+                       Also removed a stale "in the real build" from the
+                       radio note - the third of those found this week.
+       v157 2026-08-01 ELEVATION on a personal waypoint, editable.
+
+                       Feet AMSL, yours, typed. Kept deliberately separate
+                       from the Ground reading in the window head: Ground
+                       is what the Terrarium tile says about the dirt, and
+                       a pad on a ridge or a hospital roof is not the dirt
+                       underneath it. Blank clears the figure back to
+                       unknown rather than storing a zero, because 0' is a
+                       claim about a place and blank is not.
+
+                       Editable from both hosts, because both already
+                       exist for this: the Elevation row in the waypoint
+                       window, which shows the figure on its right and
+                       opens the number pad, and the Waypoint block on the
+                       card, which already had Name and Coordinates. One
+                       parser behind both. It rides along in saveMarks
+                       with the rest of the record, so it is in cloud sync
+                       and in the desktop library.
+
+                       Found while wiring it: cloudPullWaypoints rebuilt
+                       each incoming waypoint from five named keys. Doing
+                       it that way is right - a remote object should not
+                       be trusted wholesale - but the list was too short.
+                       Push sends the whole record and pull kept id, nm,
+                       cat, lat, lon, so a label or an elevation set on
+                       the desktop was silently dropped on the way down.
+                       lb and el now come through, both type-checked.
+
+                       And saveMarks was storing _d, the distance the My
+                       waypoints list hangs on each record while it sorts.
+                       It went into localStorage and up to the cloud
+                       library, so every device would have held a distance
+                       measured from wherever someone else was standing.
+                       markClean() drops anything underscored on the way
+                       out, for both storage and push.
        v156 2026-08-01 The saved-waypoint window was a degraded copy of
                        the dropped-pin window. Now they share one head.
 
@@ -3865,6 +3968,41 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fqwr .t{font-size:var(--t-xs);color:var(--text-fainter)}
 .fqwr .f{font-family:var(--mono);font-size:var(--t-md);font-weight:700;color:var(--text)}
 .fqwr.pri .f{color:var(--accent)}
+ /* The green state. Same colour and the same trigger as v262's GPS card
+    (--good #34d399, inside the ring + 2 nm), applied to the whole block
+    rather than the numbers alone so it reads at a glance in the air. */
+.fqnext.close{border-top-color:rgba(52,211,153,.4);border:1px solid rgba(52,211,153,.4);
+   background:rgba(52,211,153,.08);border-radius:7px;padding:8px 10px;margin-top:9px}
+.fqnext.close .k{color:var(--good)}
+.fqnext.close .fqnid b{color:var(--good)}
+.fqnext.close .fqnid u{color:var(--good)}
+.fqnext.close .fqwr .f{color:var(--good)}
+.fqnext.close .fqwr.pri .f{color:var(--good)}
+.fqoff{margin:-2px 0 5px;font-size:var(--t-2xs);color:var(--text-fainter)}
+/* the pre-dial one, deliberately quieter than the one you need now */
+.fqthen{margin-top:9px;padding-top:8px;border-top:1px solid var(--border);opacity:.72}
+.fqthen .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.13em;
+   text-transform:uppercase;color:var(--text-fainter);margin-bottom:5px}
+.fqthen .fqnid b{font-size:var(--t-sm)}
+.fqthen .fqwr .f{font-size:var(--t-sm)}
+/* corridor field that is not a route point, in the full route list */
+.fqx{position:relative;padding:8px 0 8px 26px;border-top:1px solid var(--border)}
+.fqx:before{content:'';position:absolute;left:9px;top:0;bottom:0;
+   border-left:1px dashed var(--border-strong)}
+.fqxh{display:flex;align-items:baseline;gap:7px;margin-bottom:3px}
+.fqxh b{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);color:var(--accent-2)}
+.fqxh span{flex:1 1 auto;min-width:0;font-size:var(--t-2xs);color:var(--text-fainter);
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fqxh u{flex:0 0 auto;text-decoration:none;font-family:var(--mono);
+   font-size:var(--t-2xs);color:var(--text-fainter)}
+.fqp.now{border-color:var(--good);box-shadow:0 0 0 1px var(--good);
+   background:rgba(52,211,153,.06)}
+.fqp.now .fqh .ix{background:var(--good);color:#0a0e13}
+.fqp.now .fqh b{color:var(--good)}
+.fqx.now .fqxh b{color:var(--good)}
+/* ident label beside the approach ring, same shape as the CTAF chips */
+.fqring-lb{font-family:var(--mono);font-size:10px;font-weight:700;color:#0a0e13;
+   background:var(--good);border-radius:3px;padding:1px 4px;white-space:nowrap}
 .fqwfoot{margin-top:9px;text-align:center;font-size:var(--t-2xs);
   color:var(--text-fainter);line-height:1.5}
 .fqwfoot button{background:none;color:var(--accent-2);font-size:var(--t-2xs);
@@ -5602,7 +5740,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v156';
+  var VERSION = 'v158';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -6685,8 +6823,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function saveMarks(){
     try{
       localStorage.setItem(MARK_KEY, JSON.stringify(
-        DB.filter(function(p){ return p.cat === 'mine'; })));
+        DB.filter(function(p){ return p.cat === 'mine'; }).map(markClean)));
     }catch(e){}
+  }
+  /* Working fields are hung on the record while a view is open - mineList
+     writes _d, the distance it just sorted on. Those are not part of the
+     waypoint and must not be stored or pushed to the library, or every
+     device ends up holding a distance from wherever someone else was
+     standing. Anything underscored is dropped on the way out. */
+  function markClean(p){
+    var out = {};
+    for (var k in p) if (p.hasOwnProperty(k) && k.charAt(0) !== '_') out[k] = p[k];
+    return out;
   }
   /* A rename changes the key the route, recents and favourites use. */
   function renameMine(oldId, newId){
@@ -7662,10 +7810,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function radHTML(){
     if (ROUTE.length < 1) return '<div class="chipempty">No route. Build one in FPL.</div>';
     var h = '', T = totals();
+    /* Green marks the one you should be on, from the corridor engine -
+       not the ordinal first card, which is what v262's tab does and
+       which stops being true the moment you leave the departure field.
+       Amber stays the ACTIVE WAYPOINT: two different facts, so two
+       different colours, and a card can only ever be one of them. */
+    var st = fqSeqState();
+    var nowId = st.now ? st.now.p.id : null;
+    /* along-track distance of each route point, so a corridor field can
+       be dropped into the leg it actually lies beside */
+    var cum = [0], k;
+    for (k = 0; k < ROUTE.length - 1; k++) cum.push(cum[k] + nmBetween(ROUTE[k], ROUTE[k+1]));
+    var onRoute = {};
+    ROUTE.forEach(function(p){ if (p.id) onRoute[p.id] = 1; });
+
     ROUTE.forEach(function(p, i){
-      var fi = p.id ? FIELD_INFO[p.id] : null;
       var role = (i === 0) ? 'Departure' : (i === ROUTE.length - 1) ? 'Destination' : 'Enroute point';
-      h += '<div class="fqp' + (i === toWpt ? ' act' : '') + '">'
+      var isNow = !!(p.id && p.id === nowId);
+      h += '<div class="fqp' + (isNow ? ' now' : (i === toWpt ? ' act' : '')) + '">'
         +  '<div class="fqh"><span class="ix">' + (i + 1) + '</span>'
         +  '<b>' + label(p) + '</b><span>' + role + '</span></div>';
       /* same predicate as the card, or the two disagree: AYWK carries
@@ -7702,12 +7864,32 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           +  '<span class="e">' + (uniq.length
                ? uniq.map(function(r){ return r[0] + ' ' + r[1]; }).join('  \u00b7  ')
                : 'No enroute frequency published for this leg') + '</span></div>';
+
+        /* Fields that lie beside this leg without being waypoints. A
+           strip four miles off track is still one you may have to call,
+           and until now this list could not see it at all. */
+        var a0 = cum[i], a1 = cum[i + 1];
+        st.list.forEach(function(x){
+          if (onRoute[x.p.id]) return;
+          if (x.along <= a0 + 0.5 || x.along >= a1 - 0.5) return;
+          h += '<div class="fqx' + (x.p.id === nowId ? ' now' : '') + '">'
+            +  '<div class="fqxh"><b>' + esc(x.p.id) + '</b>'
+            +  '<span>' + esc(x.p.nm || '') + '</span>'
+            +  '<u>' + x.off.toFixed(0) + ' nm off track</u></div>';
+          fqRowsFor(x.p.id, 4).forEach(function(r){
+            h += '<button class="fqr' + (fqPrimary(r.lb) ? ' pri' : '') + '" data-f="' + r.vl + '">'
+              +  '<span class="t">' + esc(r.lb) + '</span><span class="f">' + r.vl + '</span></button>';
+          });
+          h += '</div>';
+        });
       }
     });
-    return h + '<div class="cnote">Aerodrome frequencies are from the live NM Plotter dataset. '
-      + 'Enroute entries are the CNTR/RDO frequencies published at the adjoining fields, not FIR '
-      + 'sector boundaries &mdash; those come from AIP ENR 2 in the real build. '
-      + 'Tap a frequency to copy it. Advisory only.</div>';
+    return h + '<div class="cnote">Green is the frequency you should be on now, from your '
+      + 'position along the route; amber is your active waypoint. Fields shown between the legs '
+      + 'are within ' + FQ_CORR_NM + ' nm of track without being waypoints. Aerodrome frequencies '
+      + 'are from the NM Plotter dataset plus anything you added yourself. Enroute entries are the '
+      + 'CNTR/RDO frequencies published at the adjoining fields and the CTAF zones crossed, not FIR '
+      + 'sector boundaries. Tap a frequency to copy it. Advisory only.</div>';
   }
 
   var radDrop = $('#dropRad');
@@ -7834,7 +8016,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     del:    '<path d="M4.5 7h15"/><path d="M9.5 7V4.8h5V7"/>'
           + '<path d="M6.5 7l1 12.2h9L17 7"/><path d="M10.5 10.5v6"/><path d="M13.5 10.5v6"/>',
     save:   '<path d="M5.5 4.5h9L18.5 8.5v11h-13z"/><path d="M8.5 4.5v5h6v-5"/>'
-          + '<path d="M8.5 19.5v-6h7v6"/>'
+          + '<path d="M8.5 19.5v-6h7v6"/>',
+    elev:   '<path d="M2.5 18.5h19"/><path d="M4.5 15.5l5-7.5 3.2 4.8 2.3-3.2 4.5 5.9z"/>'
   };
   function actSvg(k, fill){
     return '<svg viewBox="0 0 24 24" fill="' + (fill ? 'currentColor' : 'none')
@@ -7853,6 +8036,27 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
          + '</button>';
   }
 
+  /* Elevation on a personal waypoint is FEET AMSL, and it is yours: typed
+     by you, not surveyed and not the terrain model. A pad on a ridge, a
+     hospital roof or a strip you know the figure for. It is kept separate
+     from the Ground reading in the head, which is what the Terrarium tile
+     says about the dirt underneath.
+     Empty clears it back to unknown rather than storing a zero, because 0'
+     is a claim about a place and blank is not. */
+  function parseElev(raw){
+    var t = String(raw == null ? '' : raw).trim()
+              .replace(/ft/ig, '').replace(/[,'’\s]/g, '');
+    if (!t) return { ok:true, val:null };
+    if (!/^-?\d{1,5}$/.test(t)) return { ok:false };
+    var n = parseInt(t, 10);
+    if (n < -1000 || n > 30000) return { ok:false };
+    return { ok:true, val:n };
+  }
+  function elevStr(v){
+    return (typeof v === 'number') ? v.toLocaleString() + '\'' : '';
+  }
+  var ELEV_HINT = 'Elevation in feet, -1,000 to 30,000';
+
   function mineActHTML(p){
     var h = ptHead(p);
     /* Grouped rather than seven identical boxes: what it does to the
@@ -7865,6 +8069,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       +  '</div>';
     h += '<div class="asec">Waypoint</div><div class="agrp">'
       +    actRow('data-mna','show','show','Show on map')
+      +    actRow('data-mna','elev','elev','Elevation',
+               { sub:(typeof p.el === 'number') ? elevStr(p.el) : 'Not set' })
       +    actRow('data-mna','fav','star',
                isFav(p.id) ? 'In favourites' : 'Add to favourites',
                { fill:isFav(p.id), cls:isFav(p.id) ? 'on' : '' })
@@ -7906,6 +8112,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       return;
     }
     else if (a === 'fav'){ toggleFav(p.id); openMineWin(p.id); drawMine(); return; }
+    else if (a === 'elev'){ closeMineWin(); openQk('mine:elev'); return; }
     else if (a === 'rename'){ closeMineWin(); openQk('mine:name'); return; }
     else if (a === 'del'){
       /* a waypoint can be in the active route - say so rather than
@@ -8243,19 +8450,137 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      away rather than being duplicated here. */
   fqWin = $('#fqWin');
 
-  function fqNextTarget(){
-    /* the next point in the route that actually has a frequency, and how
-       far it is from the GPS fix - or from the active waypoint if there
-       is no fix. A distance to nothing is worse than no distance. */
-    var from = GPSFIX || (ROUTE.length ? ROUTE[Math.min(toWpt, ROUTE.length - 1)] : null);
-    if (!from || !ROUTE.length) return null;
-    for (var i = Math.max(0, toWpt); i < ROUTE.length; i++){
-      var p = ROUTE[i];
-      if (p.id && allFreqFor(p.id).length){
-        return { p:p, nm: nmBetween(from, p) };
+  /* ============================================================
+     FREQUENCY CORRIDOR
+     Lifted from v262 (nearestOnRoute / matches / fqAheadList) and
+     adapted rather than copied, because the desktop answers this
+     question twice and disagrees with itself. Its Freqs tab paints the
+     card with seq===1 green - purely ordinal, so on a plotted route the
+     departure field stays green for the whole flight - while its GPS
+     card paints green off distance to the field ahead. The ordinal one
+     is wrong in the air; the positional one is right and only exists
+     while tracking.
+
+     One rule here, used everywhere: the field you should be on NOW is
+     the first freq-bearing field at or ahead of your position along the
+     route. Position is the GPS fix; with no fix it is the active
+     waypoint, so the answer is still right sitting on the pad.
+
+     Corridor, not route points. A field four miles off track that you
+     fly straight past may be one you have to call, and it is not a
+     waypoint. v262 sweeps every field within a corridor of the route;
+     so does this - and this one counts the frequencies you added
+     yourself, which the desktop has no way to do.
+     ============================================================ */
+  var FQ_CORR_NM = 15;      /* corridor half-width  - v262 default */
+  var FQ_RING_NM = 10;      /* approach ring radius - v262 default */
+
+  /* Perpendicular distance to the route, and how far ALONG it the
+     nearest point sits, so a list can be ordered the way it is flown
+     rather than by proximity. Sampling matches v262: about 3 nm steps,
+     capped at 120 a leg. */
+  function projOnRoute(pt, pts){
+    if (!pts || !pts.length) return null;
+    if (pts.length === 1) return { off:nmBetween(pt, pts[0]), along:0 };
+    var best = { off:Infinity, along:0 }, cum = 0;
+    for (var i = 0; i < pts.length - 1; i++){
+      var a = pts[i], b = pts[i+1], legNm = nmBetween(a, b);
+      var steps = Math.max(1, Math.min(120, Math.round(legNm / 3)));
+      for (var st = 0; st <= steps; st++){
+        var t = st / steps;
+        var d = nmBetween(pt, { lat:a.lat + (b.lat - a.lat) * t,
+                                lon:a.lon + (b.lon - a.lon) * t });
+        if (d < best.off) best = { off:d, along:cum + legNm * t };
       }
+      cum += legNm;
     }
-    return null;
+    return best;
+  }
+
+  /* The sweep is every field x every leg x up to 120 samples, which is
+     far too much to run on each GPS fix - v262 does exactly that and
+     gets away with it on a desktop. It only changes when the route or
+     your own frequencies change, so it is built once and cached against
+     both, and a bounding box drops most of the country before the fine
+     pass. Per fix all that runs is one projection of your position. */
+  var fqCorrCache = null, fqCorrKey = '';
+  var fqRev = 0;                     /* bumped whenever MYFREQ changes */
+  function fqHasFreqRec(p){
+    /* same three sources as allFreqFor, read straight off the record we
+       already hold - no dbById scan per candidate */
+    return !!((p.fq && p.fq.length) || FIELD_INFO[p.id]
+              || (MYFREQ[p.id] && MYFREQ[p.id].length));
+  }
+  function fqCorridor(){
+    var key = ROUTE.map(function(p){
+      return (p.id || '') + ':' + p.lat.toFixed(4) + ',' + p.lon.toFixed(4);
+    }).join('|') + '#' + fqRev + '#' + FQ_CORR_NM;
+    if (fqCorrCache && fqCorrKey === key) return fqCorrCache;
+    var out = [];
+    if (!ROUTE.length){ fqCorrCache = out; fqCorrKey = key; return out; }
+    var n = -90, s = 90, w = 180, e = -180;
+    ROUTE.forEach(function(p){
+      if (p.lat > n) n = p.lat;
+      if (p.lat < s) s = p.lat;
+      if (p.lon < w) w = p.lon;
+      if (p.lon > e) e = p.lon;
+    });
+    var padLat = FQ_CORR_NM / 60;
+    var padLon = FQ_CORR_NM / (60 * Math.max(0.2, Math.cos((n + s) / 2 * Math.PI / 180)));
+    DB.forEach(function(p){
+      if (!p.id || typeof p.lat !== 'number') return;
+      if (p.cat !== 'field' && p.cat !== 'strip' && p.cat !== 'mine') return;
+      if (p.lat > n + padLat || p.lat < s - padLat) return;
+      if (p.lon < w - padLon || p.lon > e + padLon) return;
+      if (!fqHasFreqRec(p)) return;
+      var pr = projOnRoute(p, ROUTE);
+      if (pr && pr.off <= FQ_CORR_NM) out.push({ p:p, off:pr.off, along:pr.along });
+    });
+    out.sort(function(a, b){ return a.along - b.along; });
+    fqCorrCache = out; fqCorrKey = key;
+    return out;
+  }
+
+  /* Where you are along the route, which corridor entry is therefore
+     current, and what comes after it. One nautical mile of back
+     tolerance so the field does not drop off the card the instant you
+     pass abeam - v262's rule, and it is the right one. */
+  function fqSeqState(){
+    var list = fqCorridor();
+    var from = null, fromLbl = '', meAlong = 0, pr;
+    if (GPSFIX){
+      from = { lat:GPSFIX.lat, lon:GPSFIX.lon }; fromLbl = 'your position';
+      pr = projOnRoute(from, ROUTE);
+      meAlong = pr ? pr.along : 0;
+    } else if (ROUTE.length){
+      var w0 = ROUTE[Math.min(Math.max(toWpt, 0), ROUTE.length - 1)];
+      from = { lat:w0.lat, lon:w0.lon }; fromLbl = label(w0);
+      pr = projOnRoute(w0, ROUTE);
+      meAlong = pr ? pr.along : 0;
+    }
+    var cur = -1;
+    for (var i = 0; i < list.length; i++){
+      if (list[i].along >= meAlong - 1){ cur = i; break; }
+    }
+    var now  = (cur >= 0) ? list[cur] : null;
+    var then = (cur >= 0 && list[cur + 1]) ? list[cur + 1] : null;
+    var dNow  = (now  && from) ? nmBetween(from, now.p)  : null;
+    var dThen = (then && from) ? nmBetween(from, then.p) : null;
+    return {
+      list:list, cur:cur, from:from, fromLbl:fromLbl,
+      now:now, then:then, dNow:dNow, dThen:dThen,
+      /* The green. Only ever with a fix: without one the distance is
+         measured from the active waypoint, and the distance from a
+         waypoint to itself is zero, which would paint it green while you
+         are still sitting somewhere else entirely. No fix, no claim
+         about how close you are. */
+      approaching: (!!GPSFIX && dNow != null && dNow <= FQ_RING_NM + 2)
+    };
+  }
+  /* the freq rows for a corridor entry, in radio order, capped */
+  function fqRowsFor(id, cap){
+    return allFreqFor(id).sort(function(a, b){ return fqRank(a.lb) - fqRank(b.lb); })
+             .slice(0, cap || 4);
   }
 
   /* One builder, two hosts: the portrait window and the landscape HUD
@@ -8280,22 +8605,48 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
     h += '</div>';
 
-    var nx = fqNextTarget();
-    h += '<div class="fqnext"><span class="k">NEXT FREQUENCY</span>';
-    if (!nx){
+    /* The one you should be on, then the one to pre-dial. Green is not
+       decoration: it says you are inside the ring, dial it now. */
+    var st = fqSeqState();
+    h += '<div class="fqnext' + (st.approaching ? ' close' : '') + '">'
+      +  '<span class="k">NEXT FREQUENCY</span>';
+    if (!st.now){
       h += '<div class="fqnid"><span>' + (ROUTE.length ? 'No frequency ahead on this route'
                                                        : 'No route \u2014 build one in FPL') + '</span></div>';
     } else {
-      h += '<div class="fqnid"><b>' + esc(nx.p.id) + '</b>'
-        +  '<span>' + esc(nx.p.nm || '') + '</span>'
-        +  '<u>' + nx.nm.toFixed(0) + '<span style="font-size:var(--t-2xs);color:var(--text-fainter)"> nm</span></u></div>';
-      allFreqFor(nx.p.id).sort(function(a, b){ return fqRank(a.lb) - fqRank(b.lb); })
-        .slice(0, 4).forEach(function(r){
-          h += '<button class="fqwr' + (fqPrimary(r.lb) ? ' pri' : '') + '" data-fqc="' + r.vl + '">'
-            +  '<span class="t">' + esc(r.lb) + '</span><span class="f">' + r.vl + '</span></button>';
-        });
+      /* A distance needs a place to be measured FROM. With a fix that is
+         you; without one it is the active waypoint, and the distance
+         from a waypoint to itself is zero - printing "0 nm" there would
+         read as "you are on top of it". Say what is known instead. */
+      h += '<div class="fqnid"><b>' + esc(st.now.p.id) + '</b>'
+        +  '<span>' + esc(st.now.p.nm || '') + '</span>'
+        +  '<u>' + (GPSFIX && st.dNow != null ? st.dNow.toFixed(0)
+             + '<span style="font-size:var(--t-2xs);color:var(--text-fainter)"> nm</span>'
+             : '\u2014') + '</u></div>';
+      var sub = [];
+      if (st.now.off > 1) sub.push(st.now.off.toFixed(0) + ' nm off track');
+      if (!GPSFIX) sub.push('no fix \u2014 sequenced from your active point');
+      if (sub.length) h += '<div class="fqoff">' + sub.join(' \u00b7 ') + '</div>';
+      fqRowsFor(st.now.p.id, 4).forEach(function(r){
+        h += '<button class="fqwr' + (fqPrimary(r.lb) ? ' pri' : '') + '" data-fqc="' + r.vl + '">'
+          +  '<span class="t">' + esc(r.lb) + '</span><span class="f">' + r.vl + '</span></button>';
+      });
     }
     h += '</div>';
+
+    if (st.then){
+      h += '<div class="fqthen"><span class="k">THEN</span>'
+        +  '<div class="fqnid"><b>' + esc(st.then.p.id) + '</b>'
+        +  '<span>' + esc(st.then.p.nm || '') + '</span>'
+        +  '<u>' + (GPSFIX && st.dThen != null ? st.dThen.toFixed(0)
+             + '<span style="font-size:var(--t-2xs);color:var(--text-fainter)"> nm</span>'
+             : '\u2014') + '</u></div>';
+      fqRowsFor(st.then.p.id, 2).forEach(function(r){
+        h += '<button class="fqwr" data-fqc="' + r.vl + '">'
+          +  '<span class="t">' + esc(r.lb) + '</span><span class="f">' + r.vl + '</span></button>';
+      });
+      h += '</div>';
+    }
 
     h += '<div class="fqwfoot">Tap a frequency to copy \u00b7 advisory only</div>';
     return h;
@@ -9711,6 +10062,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var l2 = town || CAT_LABEL[f.cat] || 'Waypoint';
     var l3 = fi ? 'Elevation ' + fi.elev.toLocaleString() + '\''
                   + (fi.iata ? ' &middot; ' + fi.iata : '')
+                : (f.cat === 'mine' && typeof f.el === 'number')
+                    ? 'Elevation ' + elevStr(f.el)
                 : (town ? (CAT_LABEL[f.cat] || '') : '');
     return '<div class="cinfo"><div class="cthumb">' + (CAT_SHORT[f.cat] || 'WPT') + '</div>'
       + '<div class="m"><b>' + f.nm + '</b>'
@@ -9772,6 +10125,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +  '<div class="setrow"><span class="lb">Coordinates</span>'
         +    '<input class="fin wide" data-wp="coord" type="text" value="'
         +    ddm(f.lat, true) + ' ' + ddm(f.lon, false) + '"></div>'
+        /* the card and the waypoint window are two hosts for the same
+           edit - a figure set in one has to be there in the other */
+        +  '<div class="setrow"><span class="lb">Elevation</span>'
+        +    '<input class="fin wide" data-wp="elev" type="text" inputmode="numeric" '
+        +    'placeholder="feet AMSL" value="'
+        +    (typeof f.el === 'number' ? f.el : '') + '"></div>'
         +  '<div class="wpbtns"><button data-wp="here">Move to map centre</button>'
         +    '<button class="del" data-wp="del">Delete</button></div>';
     }
@@ -10531,6 +10890,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           f.lat = c.lat; f.lon = c.lon;
           ROUTE.forEach(function(p){ if (p.id === f.id){ p.lat = f.lat; p.lon = f.lon; } });
           saveMarks(); drawCard(); renderMap(); drawFpl();
+        });
+      }
+
+      if (w === 'elev'){
+        el.addEventListener('change', function(){
+          var r = parseElev(el.value);
+          if (!r.ok){
+            toast(ELEV_HINT);
+            el.value = (typeof f.el === 'number') ? f.el : '';
+            return;
+          }
+          if (r.val == null) delete f.el; else f.el = r.val;
+          saveMarks(); drawCard(); drawMine();
+          toast(r.val == null ? 'Elevation cleared' : 'Elevation ' + elevStr(r.val));
         });
       }
 
@@ -11426,6 +11799,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       etd:  ['ETD', 'UTC, as HHMM', (ETD_MIN == null ? '' : clock(0).replace(':', ''))],
       /* no hint line: the wheel has no format to explain, and the
          readout above it already shows the value in degrees */
+      'mine:elev': ['Elevation', 'feet above sea level, blank to clear',
+                    (function(){
+                      var p = dbById(MINE_SEL);
+                      return (p && typeof p.el === 'number') ? String(p.el) : '';
+                    })()],
       'mine:name': ['Rename waypoint', 'a short identifier',
                     (function(){ var p = dbById(MINE_SEL); return p ? (p.lb || p.id) : ''; })()],
       'hold:crs': ['Holding course', '', String(HOLD.inb)],
@@ -11444,7 +11822,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     }
     $('#qkLab').textContent = cfg[1];
     $('#qkIn').value = cfg[2];
-    $('#qkIn').setAttribute('inputmode', 'text');
+    /* a figure wants the number pad, a name wants the keyboard */
+    $('#qkIn').setAttribute('inputmode', what === 'mine:elev' ? 'numeric' : 'text');
     qkEd.classList.add('on');
     setTimeout(function(){ try{ $('#qkIn').focus(); }catch(e){} }, 60);
   }
@@ -11468,6 +11847,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       drawFpl(); renderMap();
       if (typeof drawSet === 'function' && $('#setView') && $('#setView').classList.contains('on')) drawSet();
       toast('Saved');
+      return;
+    }
+    if (qkWhat === 'mine:elev'){
+      var er = parseElev($('#qkIn').value);
+      if (!er.ok){ toast(ELEV_HINT); return; }
+      var ep = dbById(MINE_SEL);
+      if (ep){
+        if (er.val == null) delete ep.el; else ep.el = er.val;
+        saveMarks();
+      }
+      qkEd.classList.remove('on');
+      drawMine(); renderMap();
+      if (card && card.classList.contains('on')) drawCard();
+      openMineWin(MINE_SEL);          /* straight back to the point you were on */
+      toast(er.val == null ? 'Elevation cleared' : 'Elevation ' + elevStr(er.val));
       return;
     }
     if (qkWhat === 'mine:name'){
@@ -11763,6 +12157,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return {};
   })();
   function saveMyFreq(){
+    /* the corridor is filtered on which fields have a frequency, so
+       adding one has to rebuild it */
+    fqRev++;
     try{ localStorage.setItem(FREQ_KEY, JSON.stringify(MYFREQ)); }catch(e){}
   }
   function myFreqFor(id){ return MYFREQ[id] || []; }
@@ -14404,7 +14801,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         }
         report('Uploading ' + (i + 1) + ' of ' + todo.length + '\u2026');
         var p = todo[i++];
-        cloudPut('waypoints', String(p.id), p)
+        cloudPut('waypoints', String(p.id), markClean(p))
           .then(function(){ ok++; }, function(){ bad++; })
           .then(next);
       })();
@@ -14451,8 +14848,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       items.forEach(function(x){
         if (!x || x.id == null || typeof x.lat !== 'number' || typeof x.lon !== 'number') return;
         if (have[String(x.id)]){ skipped++; return; }
+        /* Rebuilt field by field rather than trusted wholesale, so a
+           remote object cannot inject anything the app then treats as its
+           own. That is right, but the list was too short: push sends the
+           whole record, pull kept five keys, so a label or an elevation
+           set on the desktop was dropped on the way down without a word. */
         var w = { id:String(x.id), nm:x.nm || x.name || String(x.id), cat:'mine',
                   lat:x.lat, lon:x.lon };
+        if (typeof x.lb === 'string' && x.lb) w.lb = x.lb;
+        if (typeof x.el === 'number' && isFinite(x.el)) w.el = Math.round(x.el);
         DB.unshift(w); added++;
       });
       if (added){ saveMarks(); renderMap(); }
@@ -14788,6 +15192,36 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var G = nmxGroups();
     if (!G) return;                      /* no Leaflet, no overlay */
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers(); G.trk.clearLayers();
+
+    /* APPROACH RING on the field you should be talking to. Lifted from
+       v262's fqUpdateApproachRing, same geometry and the same two
+       states: faint blue dashed while it is merely ahead, solid green
+       with a soft fill and its ident once you are inside the ring. Only
+       while tracking - without a fix there is no "about to fly in" - and
+       nothing at all beyond twice the radius, so the map stays clean. */
+    if (GPSFIX && ROUTE.length){
+      var rs = fqSeqState();
+      if (rs.now && rs.dNow != null && rs.dNow <= FQ_RING_NM * 2){
+        var att = rs.approaching;
+        L.circle([rs.now.p.lat, rs.now.p.lon], {
+          radius: FQ_RING_NM * 1852,
+          color: att ? '#34d399' : '#7fb3d5',
+          weight: att ? 3 : 1,
+          opacity: att ? 0.95 : 0.35,
+          dashArray: att ? null : '5,5',
+          fillColor: '#34d399',
+          fillOpacity: att ? 0.12 : 0,
+          interactive: false
+        }).addTo(G.box);
+        if (att){
+          L.marker([rs.now.p.lat, rs.now.p.lon], {
+            icon: L.divIcon({ className:'', iconSize:null, iconAnchor:[-8, 8],
+                              html:'<div class="fqring-lb">' + esc(rs.now.p.id) + '</div>' }),
+            interactive: false
+          }).addTo(G.box);
+        }
+      }
+    }
 
     /* the flown track, while recording. Drawn per segment so a coverage
        gap shows as a gap rather than a straight line across it. */
