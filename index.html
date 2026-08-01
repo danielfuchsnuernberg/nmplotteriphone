@@ -16,6 +16,39 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v123 2026-08-01 Tab bar pills enlarged. The active pill is the
+                       target you see, and at 38x26 around a 21px icon it
+                       had 2.5px above and below - it read as a cramped
+                       badge rather than a button, which is obvious the
+                       moment one is lit. Now 48x32 on the phone and
+                       58x38 on the tablet. The ICON is unchanged; only
+                       the box around it grew.
+                       Part of this was mine: v116's tablet rule set
+                       .tab .ic AND .tab .ic svg to the same 26px, which
+                       collapsed the pill to exactly the glyph's bounds
+                       and left it with no padding at all. The pill and
+                       the glyph are sized separately now.
+                       Checked it fits: 58px pill in a 106px tab at 7
+                       slots, and the icon-gap-label stack is 56 of the
+                       66px bar.
+       v122 2026-08-01 Radio panel gains a Compact mode, so the
+                       frequencies and the map can be up together. In the
+                       air you do not need the whole route's list - you
+                       need the one you are on and the one you dial next.
+
+                       Compact shows exactly that: the active leg's
+                       enroute frequencies, then the next point's primary
+                       ones. Sizes to its content, capped at a quarter of
+                       the screen, typically nearer a fifth. The drag grip
+                       goes away with it, because there is nothing to
+                       resize when the height IS the content. The button
+                       reads Compact or Full list, and the choice is
+                       remembered.
+
+                       It follows toWpt: a Direct To or passing a
+                       waypoint would otherwise leave it showing the leg
+                       you just left. Checked once a second and redrawn
+                       only when the active point actually changes.
        v121 2026-08-01 Cloud view spacing. .csec carries a bottom rule and
                        no bottom margin, so WORKER URL sat hard against
                        the LIBRARY line with nothing between them. The two
@@ -2568,8 +2601,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   color:var(--text-muted);
 }
+/* The pill is the active-state target, so it needs real padding around
+   the glyph - at 38x26 around a 21px icon it had 2.5px top and bottom
+   and read as a cramped badge rather than a button. The ICON size is
+   unchanged; only the box around it grows. */
 .tab .ic{
-  width:38px;height:26px;border-radius:var(--radius-sm);
+  width:48px;height:32px;border-radius:9px;
   display:flex;align-items:center;justify-content:center;
 }
 .tab svg{width:21px;height:21px;display:block}
@@ -2738,6 +2775,27 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:var(--bg-2);border:1px solid var(--border);
 }
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+/* Compact radio: the active leg only, so the map keeps the screen.
+   The panel sizes to its content and the drag grip goes away - there is
+   nothing to resize when the height is the content. */
+.radsize{position:absolute;top:6px;right:10px;z-index:2;
+  height:var(--mod-a);padding:0 12px;border-radius:var(--radius);
+  background:var(--inset);border:1px solid var(--border-strong);
+  font-size:var(--t-xs);font-weight:700;letter-spacing:.04em;color:var(--text-2)}
+.radsize:active{background:var(--panel)}
+.drop.compact .dgrip{display:none}
+.drop.compact .dbody{overflow-y:auto}
+.radc{padding:0 var(--edge) 10px}
+.radleg{display:flex;align-items:baseline;gap:8px;
+  padding:12px 0 7px;margin-top:2px}
+.radleg .lb{flex:1 1 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-fainter);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.radleg .d{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-2xs);
+  color:var(--text-fainter)}
+.radleg.nx{border-top:1px solid var(--border);margin-top:10px}
+.radleg.nx .lb{color:var(--accent)}
+
 .dgrip{
   flex:0 0 auto;height:22px;display:flex;align-items:center;justify-content:center;
   border-top:1px solid var(--border);background:var(--panel);
@@ -3132,7 +3190,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   .tedw{max-width:520px;border-radius:12px}
   .gpswin{max-width:520px}
 
-  .tab .ic,.tab .ic svg{width:26px;height:26px}
+  /* this set the PILL to the icon's size, collapsing its padding to
+     zero - the pill and the glyph are sized separately */
+  .tab .ic{width:58px;height:38px;border-radius:11px}
+  .tab svg{width:24px;height:24px}
   .rb svg{width:22px;height:22px}
 }
 
@@ -3950,6 +4011,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
 <!-- Radio: frequencies in route order -->
 <div class="drop" id="dropRad">
+  <button class="radsize" id="radSize" aria-label="Show the active leg only">Compact</button>
   <div class="dbody" id="radBody"></div>
   <div class="dgrip" id="radGrip" aria-label="Resize panel"><span></span></div>
 </div>
@@ -4316,7 +4378,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v121';
+  var VERSION = 'v123';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -6026,7 +6088,65 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     return allFreqFor(id).map(function(r){ return [r.lb, r.vl]; });
   }
 
+  /* ---- Compact radio -------------------------------------------------
+     In the air you do not need the whole route's frequencies, you need
+     the one you are on and the one you dial next - and you need the map
+     at the same time. Compact shows exactly the active leg and takes
+     about a fifth of the screen; the full walkthrough is a tap away.
+     The choice is remembered. */
+  var radCompact = (function(){
+    try { return localStorage.getItem('nmp.iphone.radc') === '1'; } catch(_){ return false; }
+  })();
+  function setRadCompact(v){
+    radCompact = !!v;
+    try { localStorage.setItem('nmp.iphone.radc', radCompact ? '1' : '0'); } catch(_){ }
+    sizeRad(); drawRad();
+  }
+
+  function radCompactHTML(){
+    if (ROUTE.length < 1) return '<div class="chipempty">No route. Build one in FPL.</div>';
+    var i = Math.min(Math.max(toWpt, 0), ROUTE.length - 1);
+    var from = ROUTE[Math.max(0, i - 1)], to = ROUTE[i];
+    var T = totals(), leg = T.legs[Math.max(0, i - 1)];
+
+    function primary(p){
+      if (!p || !p.id) return [];
+      return fqAllPairs(p.id).sort(function(a, b){ return fqRank(a[0]) - fqRank(b[0]); })
+               .filter(function(r){ return fqPrimary(r[0]); }).slice(0, 2);
+    }
+    function rows(list){
+      if (!list.length) return '<div class="fqnone">No published frequency</div>';
+      return list.map(function(r){
+        return '<button class="fqr pri" data-f="' + r[1] + '">'
+             + '<span class="t">' + r[0] + '</span><span class="f">' + r[1] + '</span></button>';
+      }).join('');
+    }
+
+    var en = [], seen = {};
+    if (i > 0){
+      fqEnroute(FIELD_INFO[from.id]).concat(fqEnroute(FIELD_INFO[to.id]))
+        .forEach(function(r){ if (!seen[r[1]]){ seen[r[1]] = 1; en.push(r); } });
+      ctafAlong(from, to).forEach(function(z){
+        if (!seen[z.ctaf]){ seen[z.ctaf] = 1; en.push(['CTAF', z.ctaf]); }
+      });
+    }
+
+    var h = '<div class="radc">';
+    h += '<div class="radleg"><span class="lb">Enroute</span>'
+      +  '<span class="d">' + (leg ? leg.nm.toFixed(0) + ' nm' : '') + '</span></div>'
+      +  (en.length ? en.map(function(r){
+             return '<button class="fqr pri" data-f="' + r[1] + '">'
+                  + '<span class="t">' + r[0] + '</span><span class="f">' + r[1] + '</span></button>';
+           }).join('')
+         : '<div class="fqnone">No enroute frequency published for this leg</div>');
+    h += '<div class="radleg nx"><span class="lb">Next \u00b7 ' + label(to) + '</span>'
+      +  '<span class="d">' + (i === ROUTE.length - 1 ? 'destination' : 'enroute point') + '</span></div>'
+      +  rows(primary(to));
+    return h + '</div>';
+  }
+
   function radHTML(){
+    if (radCompact) return radCompactHTML();
     if (ROUTE.length < 1) return '<div class="chipempty">No route. Build one in FPL.</div>';
     var h = '', T = totals();
     ROUTE.forEach(function(p, i){
@@ -6086,6 +6206,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
     radMax = Math.max(FPL_MIN, window.innerHeight - top - tabH - 10);
     radDrop.style.top = top + 'px';
+    radDrop.classList.toggle('compact', radCompact);
+    if (radCompact){
+      /* sized to its content, capped near a fifth of the screen so the
+         map keeps the rest */
+      radDrop.style.height = 'auto';
+      radDrop.style.maxHeight = Math.round(window.innerHeight * 0.25) + 'px';
+      return;
+    }
+    radDrop.style.maxHeight = '';
     radDrop.style.height = Math.max(FPL_MIN, Math.min(radMax, Math.round(radFrac * radMax))) + 'px';
   }
   function drawRad(){
@@ -6093,7 +6222,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     $$('#radBody .fqr').forEach(function(b){
       b.addEventListener('click', function(){ copyText(b.getAttribute('data-f')); });
     });
+    var t = $('#radSize');
+    if (t){
+      t.textContent = radCompact ? 'Full list' : 'Compact';
+      t.setAttribute('aria-label', radCompact ? 'Show the full route' : 'Show the active leg only');
+    }
   }
+  $('#radSize').addEventListener('click', function(e){
+    e.stopPropagation();
+    setRadCompact(!radCompact);
+  });
   $('#tbRad').addEventListener('click', function(){
     var open = radDrop.classList.contains('on');
     closeAll();
@@ -12846,6 +12984,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     else if (TAB_MQ.addListener) TAB_MQ.addListener(onBp);
     window.addEventListener('orientationchange', function(){ setTimeout(onBp, 150); });
   })();
+
+  /* Compact radio shows the ACTIVE leg, so it has to follow toWpt - a
+     Direct To or passing a waypoint otherwise leaves it on the leg you
+     just left. Cheap: only redraws when the active point actually
+     changes. */
+  var radLastWpt = -1;
+  setInterval(function(){
+    if (radCompact && radDrop.classList.contains('on') && toWpt !== radLastWpt){
+      radLastWpt = toWpt; drawRad(); sizeRad();
+    }
+  }, 1000);
 
   /* Clocks and ETAs move whether or not a fix has arrived. */
   setInterval(function(){ drawActy(); }, 1000);
