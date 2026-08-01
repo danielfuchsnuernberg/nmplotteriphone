@@ -16,6 +16,130 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v145 2026-08-01 Terrain profile was blank in landscape.
+
+                       drawHudPanel injected terrHTML() and stopped. The
+                       portrait panel goes through drawTerr(), which also
+                       calls terrPaint(), wires the cruise step buttons
+                       and attaches the scrubber. So in landscape the
+                       chart box, the cruise value, lowest-safe and every
+                       stat came up empty - the markup was there with
+                       nothing to fill it.
+
+                       drawTerr() now takes its root as a parameter and
+                       both hosts call it. Verified by booting the app
+                       twice, portrait and landscape, opening terrain in
+                       each and comparing the markup: identical. Same
+                       lesson as the frequency panel - one builder, two
+                       hosts, or they drift.
+
+                       Two visible strings were also lying. The terrain
+                       note said the data was "a model, not survey data.
+                       In the real build this reads the Terrarium tiles"
+                       - it HAS read Terrarium tiles for many versions.
+                       And the GPS note said "in the real build this is
+                       own-ship position" when it is own-ship position.
+                       Both were demo-shell leftovers claiming the app
+                       was less real than it is, which is its own kind of
+                       wrong on a safety tool.
+       v144 2026-08-01 DROPPED PIN. Long press anywhere on the map.
+
+                       500 ms, cancelled by 12 px of movement so it never
+                       fires mid-pan, and by a second finger so it never
+                       fires mid-pinch. Right-click does the same on a
+                       desktop.
+
+                       The sheet gives the place rather than just a
+                       coordinate: position in DDM and in decimal, each
+                       tappable to copy; the ground elevation there; the
+                       bearing and distance from your present position;
+                       and the nearest known point with its own bearing
+                       and distance, which is what actually tells you
+                       where you are looking.
+
+                       Elevation reads the terrain tile cache rather than
+                       fetching. If the covering tile is not decoded it
+                       says so and explains how to get it, instead of
+                       printing a number it does not have.
+
+                       Four actions: add to the end of the route, insert
+                       as the next point, direct to, or save as a
+                       personal waypoint. Anything that persists gets a
+                       PIN n identifier, skipping any already taken.
+
+                       Labelled plainly as a position picked off the map,
+                       not a surveyed point.
+       v143 2026-08-01 Route lines were drawn on a different path from the
+                       one they describe.
+
+                       The route was one straight polyline through every
+                       point. A straight line in Web Mercator is a RHUMB
+                       line - but track, distance and ETE are all computed
+                       great circle. So the line on the map was not the
+                       path the numbers referred to. Measured: 54 m over
+                       AYNZ-AYGA, 168 m over AYNZ-AYMH, 699 m over
+                       AYPY-AYMH. Nothing zoomed out. Zoomed in, 699 m is
+                       a few hundred pixels of disagreement between the
+                       line and the fix it is supposed to pass through.
+
+                       Each leg is now interpolated along the great
+                       circle, roughly a vertex every 5 nm, capped at 64
+                       so short legs stay cheap. Endpoints land exactly on
+                       their waypoints and coincident points are guarded
+                       rather than dividing by zero.
+
+                       Legs are also drawn per-state now, matching v142's
+                       NavLog: flown is dimmed and dashed, the leg being
+                       flown is heavier, legs to come are unchanged. The
+                       map and the NavLog say the same thing.
+       v142 2026-08-01 NavLog legs now read as three states, not two.
+
+                       A leg you have already flown looked identical to
+                       one still ahead of you - same weight, same colour,
+                       same "Leg 3" tag - even though its ETA and fuel
+                       are history rather than a plan.
+
+                       Flown legs recede to 42% and carry a rule down the
+                       left edge, so the boundary between what is behind
+                       you and what is ahead stays visible while
+                       scrolling, and a quiet "Flown" tag replaces the
+                       leg number. The flying leg keeps the amber border
+                       and badge. Legs to come are unchanged, which is
+                       right - they are the normal case.
+
+                       Verified across every position on a 4-leg route:
+                       exactly one flying leg at each, flown count always
+                       equals toWpt-1, and no leg can be in two states.
+       v141 2026-08-01 Route chips: names, and drag that actually sticks.
+
+                       Each chip now carries the identifier over its name
+                       - AYGA on its own does not say Goroka. Two lines,
+                       identifier in mono, name beneath in the faint
+                       colour, both truncating rather than wrapping.
+
+                       Drag-to-reorder was already built but incomplete,
+                       which is why it felt broken:
+                       - it never called saveRoute(), so a reorder lived
+                         only in memory and came back in the old order on
+                         the next load
+                       - it never called renderMap(), so the leg lines
+                         kept the order you had before
+                       - it tracked toWpt by INDEX, so dragging moved the
+                         active marker onto whatever landed in that slot
+                         rather than keeping it on your point
+                       All three fixed; the active point is captured on
+                       pickup and its index restored on drop, and the map
+                       now follows live as you drag.
+
+                       The gesture also cancelled on 8px of movement
+                       during the hold, which is tighter than ordinary
+                       finger jitter, so it frequently never armed. 14px
+                       now - still well under a deliberate scroll. And
+                       there was nothing saying the chips were draggable
+                       at all, so there is a one-line hint under them.
+
+                       Dropped .chip .nm and .chip.act .nm, dead once the
+                       chip gained its two-line body.
        v140 2026-08-01 The modal rule now actually works, because .ted is
                        made to MIRROR .gpsov property for property rather
                        than being patched from outside.
@@ -2914,6 +3038,36 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    keyboard, and every target clears the 44px minimum. */
 /* the quick-edit window: same shell as the GPS readout */
 /* ---- Terrain window --------------------------------------------- */
+/* ---- Dropped pin ------------------------------------------------- */
+.pinco{padding:12px var(--edge) 4px;display:grid;gap:6px}
+.pinco button{width:100%;text-align:center;background:var(--inset);
+  border:1px solid var(--border-strong);border-radius:var(--radius);padding:9px 10px;
+  font-family:var(--mono);color:var(--text)}
+.pinco .c{font-size:var(--t-md);font-weight:700;letter-spacing:.02em}
+.pinco .d{font-size:var(--t-sm);color:var(--text-2)}
+.pinfacts{display:flex;gap:var(--gut);padding:6px var(--edge) 4px}
+.pinfacts > div{flex:1 1 0;padding:9px 11px;border-radius:var(--radius);background:var(--bg-2)}
+.pinfacts .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter);margin-bottom:3px}
+.pinfacts .v{display:block;font-family:var(--mono);font-size:var(--t-md);
+  font-weight:700;color:var(--text)}
+.pinnear{display:flex;align-items:baseline;gap:8px;margin:4px var(--edge) 0;
+  padding:9px 0;border-top:1px solid var(--border)}
+.pinnear .k{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.pinnear b{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);color:var(--accent-2)}
+.pinnear .n{flex:1 1 auto;min-width:0;font-size:var(--t-xs);color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pinnear u{flex:0 0 auto;text-decoration:none;font-family:var(--mono);
+  font-size:var(--t-xs);color:var(--text-2)}
+.pinacts{display:grid;gap:var(--gut);padding:10px var(--edge) 0}
+.pinacts button{width:100%;height:var(--mod-b);border-radius:var(--radius);
+  background:var(--inset);border:1px solid var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--text);text-align:left;padding:0 14px}
+.pinacts button:first-child{background:var(--accent);border-color:var(--accent);
+  color:#0a0e13;font-weight:700}
+.pinacts button:active{background:var(--panel)}
+
 .twon{display:flex;align-items:center;gap:10px;padding:12px var(--edge) 0}
 .twon span{flex:1 1 auto;font-size:var(--t-sm);color:var(--text-2)}
 .twon button{flex:0 0 auto;height:var(--mod-a);padding:0 16px;border-radius:var(--radius);
@@ -3197,26 +3351,36 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .chips{display:flex;flex-wrap:wrap;gap:var(--gut)}
 .chip{
   flex:1 1 calc(50% - var(--gut));min-width:0;
-  height:var(--mod-a);border-radius:16px;
+  /* two lines now, so it sizes to content rather than a fixed row */
+  min-height:var(--mod-b);padding-top:6px;padding-bottom:6px;
+  border-radius:14px;
   display:flex;align-items:center;gap:6px;
   background:var(--inset);border:1px solid var(--border-strong);
   padding:0 10px 0 6px;
 }
+/* identifier over its name - AYGA alone does not say Goroka */
+.chip .tx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;
+  justify-content:center;gap:1px;overflow:hidden}
+.chip .tx b{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+.chip .tx i{font-style:normal;font-size:var(--t-2xs);color:var(--text-fainter);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+.chip.act .tx b{color:var(--route)}
 .chip .ix{
   flex:0 0 18px;height:18px;border-radius:9px;
   display:flex;align-items:center;justify-content:center;
   background:var(--bg);color:var(--text-fainter);
   font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;
 }
-.chip .nm{flex:1 1 auto;min-width:0;text-align:center;
-  font-family:var(--mono);font-size:var(--t-sm);font-weight:700;color:var(--text);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip.act{border-color:var(--route)}
-.chip.act .nm{color:var(--route)}
 .chip.act .ix{background:var(--route);color:#0a0e13}
 .chip.drag{border-color:var(--accent);background:var(--bg-2);opacity:.55}
 .chip.add{border-style:dashed;border-color:var(--border-strong);justify-content:center;padding:0 10px}
 .chip.add .nm{color:var(--accent-2)}
+.chiphint{padding:9px 0 2px;text-align:center;font-size:var(--t-2xs);
+  color:var(--text-fainter);letter-spacing:.02em}
+.chip.add .tx b{color:var(--accent-2);font-weight:600}
+.chip.add .tx{align-items:center}
 .chipempty{padding:18px 0;text-align:center;font-size:var(--t-sm);color:var(--text-fainter)}
 
 /* ---- NavLog leg cards ---- */
@@ -3224,6 +3388,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   padding:10px;margin-bottom:var(--gut);width:100%;text-align:left}
 .lgc.act{border-color:var(--route);background:rgba(240,165,0,.06)}
 .lgc.act .lgh b{color:var(--route)}
+/* Flown: recedes, and a rule down the left edge so the boundary between
+   what is behind you and what is ahead is visible while scrolling. */
+.lgc.past{opacity:.42;border-left:3px solid var(--border-strong)}
+.lgc.past .lgh b{color:var(--text-2)}
+.lgh .done{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--text-fainter);
+  border:1px solid var(--border-strong);border-radius:4px;padding:1px 6px}
 .lgh .now{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:#0a0e13;background:var(--route);border-radius:4px;padding:2px 6px}
 .lgh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
@@ -4617,6 +4788,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 </div>
 
 <!-- Radio: frequencies in route order -->
+<!-- Dropped pin: long press anywhere on the map -->
+<div class="gpsov" id="pinWin">
+  <div class="gpswin">
+    <div class="gpsh">
+      <span class="t"><b>POINT</b> &middot; <span id="pinTtl">dropped pin</span></span>
+      <button class="gpsx" id="pinX" aria-label="Close">&times;</button>
+    </div>
+    <div class="qkbody" id="pinBody"></div>
+  </div>
+</div>
+
 <!-- Terrain window: shading reference altitude and margin -->
 <div class="gpsov" id="terrWin">
   <div class="gpswin">
@@ -5002,7 +5184,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v140';
+  var VERSION = 'v145';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -5013,7 +5195,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      at the top, with the other primitives. */
   var TAB_MQ = window.matchMedia('(min-width:600px)');
   /* read by closeAll, which runs long before their own code */
-  var fqWin = null, terrWin = null;
+  var fqWin = null, terrWin = null, pinWin = null;
 
   var $  = function(s){ return document.querySelector(s); };
   var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -5092,6 +5274,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (chView) chView.classList.remove('on');
     if (fqWin) fqWin.classList.remove('on');
     if (terrWin) terrWin.classList.remove('on');
+    if (pinWin) pinWin.classList.remove('on');
     if (fqEd) fqEd.classList.remove('on');
     if (shEd) shEd.classList.remove('on');
     if (actsEd) actsEd.classList.remove('on');
@@ -6164,6 +6347,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
     return (Math.atan2(y, x) * R2D + 360) % 360;
   }
+  /* A point at fraction f along the great circle from a to b. The route
+     line has to follow the same path the distances are measured on. */
+  function gcPoint(a, b, f){
+    var p1 = a.lat * D2R, l1 = a.lon * D2R, p2 = b.lat * D2R, l2 = b.lon * D2R;
+    var dl = l2 - l1, dp = p2 - p1;
+    var h = Math.sin(dp / 2) * Math.sin(dp / 2)
+          + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+    var d = 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+    if (d < 1e-9) return [a.lat, a.lon];        /* coincident points */
+    var A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
+    var x = A * Math.cos(p1) * Math.cos(l1) + B * Math.cos(p2) * Math.cos(l2);
+    var y = A * Math.cos(p1) * Math.sin(l1) + B * Math.cos(p2) * Math.sin(l2);
+    var z = A * Math.sin(p1) + B * Math.sin(p2);
+    return [Math.atan2(z, Math.sqrt(x * x + y * y)) * R2D, Math.atan2(y, x) * R2D];
+  }
+
   function interp(a, b, f){
     return { lat: a.lat + (b.lat - a.lat) * f, lon: a.lon + (b.lon - a.lon) * f };
   }
@@ -6321,10 +6520,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       h += '<button class="chip' + (i === toWpt ? ' act' : '') + (i === dragI ? ' drag' : '')
          + '" data-ci="' + i + '">'
          + '<span class="ix">' + (i + 1) + '</span>'
-         + '<span class="nm">' + label(p) + '</span></button>';
+         + '<span class="tx"><b>' + label(p) + '</b>'
+         +   (p.nm && p.nm !== p.id ? '<i>' + esc(p.nm) + '</i>' : '')
+         + '</span></button>';
     });
-    h += '<button class="chip add" id="chipAdd"><span class="nm">+ Add</span></button>';
+    h += '<button class="chip add" id="chipAdd"><span class="tx"><b>+ Add</b></span></button>';
     h += '</div>';
+    if (ROUTE.length > 1){
+      h += '<div class="chiphint">Hold a point to drag it into a new order</div>';
+    }
     return h;
   }
 
@@ -6333,10 +6537,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     var T = totals();
     if (!T.legs.length) return '<div class="chipempty">Add at least two points.</div>';
     return T.legs.map(function(l, i){
-      var clr = (l.hi == null) ? null : AC.alt - l.hi, now = (i === toWpt - 1);
-      return '<button class="lgc' + (now ? ' act' : '') + '" data-li="' + i + '">'
+      /* Past, flying, to come - three states, not two. A leg you have
+         already flown reads the same as one ahead of you otherwise, and
+         its ETA and fuel are history rather than a plan. */
+      var clr = (l.hi == null) ? null : AC.alt - l.hi;
+      var now = (i === toWpt - 1), past = (i < toWpt - 1);
+      var cls = now ? ' act' : past ? ' past' : '';
+      var tag = now  ? '<span class="now">Flying</span>'
+              : past ? '<span class="done">Flown</span>'
+              :        '<span>Leg ' + (i + 1) + '</span>';
+      return '<button class="lgc' + cls + '" data-li="' + i + '">'
         + '<div class="lgh"><b>' + label(l.a) + ' \u2192 ' + label(l.b) + '</b>'
-        + (now ? '<span class="now">Flying</span>' : '<span>Leg ' + (i + 1) + '</span>') + '</div>'
+        + tag + '</div>'
         + '<div class="lgg">'
         +   '<div><span class="k">Track</span><span class="v">' + Math.round(trkBetween(l.a, l.b)) + '\u00b0</span></div>'
         +   '<div><span class="k">Dist</span><span class="v">' + l.nm.toFixed(1) + '</span></div>'
@@ -6514,13 +6726,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      Long-press 260ms to pick up, then drag. Move handlers live on
      `document` so the live re-render can replace the chip nodes
      under the finger without killing the gesture.               */
-  var dragI = -1, dragTimer = null, dragFrom = null, dragging = false, dragJustEnded = false;
+  var dragI = -1, dragTimer = null, dragFrom = null, dragging = false,
+      dragJustEnded = false, dragToPt = null;
 
   function dragStart(e, i){
     var t = e.touches[0];
     dragFrom = [t.clientX, t.clientY];
     dragTimer = setTimeout(function(){
-      dragging = true; dragI = i; drawFpl();
+      dragging = true; dragI = i;
+      /* hold the ACTIVE point, not its index - reordering must not move
+         the "to" marker onto whatever lands in that slot */
+      dragToPt = ROUTE[toWpt] || null;
+      drawFpl();
       if (navigator.vibrate) navigator.vibrate(8);
     }, 260);
     document.addEventListener('touchmove', dragMove, { passive:false });
@@ -6530,7 +6747,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   function dragMove(e){
     var t = e.touches[0];
     if (!dragging){
-      if (Math.abs(t.clientX - dragFrom[0]) > 8 || Math.abs(t.clientY - dragFrom[1]) > 8) dragEnd();
+      /* 8px cancelled on ordinary finger jitter during the hold, so the
+         gesture often never armed. 14 is still well under a deliberate
+         scroll. */
+      if (Math.abs(t.clientX - dragFrom[0]) > 14 || Math.abs(t.clientY - dragFrom[1]) > 14) dragEnd();
       return;
     }
     e.preventDefault();
@@ -6542,6 +6762,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
           ROUTE.splice(k, 0, ROUTE.splice(dragI, 1)[0]);
           dragI = k;
           drawFpl();
+          renderMap();            /* the leg lines follow as you drag */
         }
         break;
       }
@@ -6552,7 +6773,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     document.removeEventListener('touchmove', dragMove);
     document.removeEventListener('touchend', dragEnd);
     document.removeEventListener('touchcancel', dragEnd);
-    if (dragging){ dragging = false; dragI = -1; dragJustEnded = true; drawFpl(); }
+    if (dragging){
+      dragging = false; dragI = -1; dragJustEnded = true;
+      /* Persist. Without this the new order lived only in memory and
+         came back in the old order on the next load. */
+      if (dragToPt){
+        var at = ROUTE.indexOf(dragToPt);
+        if (at >= 0) toWpt = at;
+      }
+      dragToPt = null;
+      saveRoute();
+      drawFpl(); renderMap(); drawActy();
+    }
   }
 
   /* The scrubber repaints the SVG on every move, which detaches the
@@ -6709,7 +6941,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       +  '<div class="trsafe"><span class="k">Lowest safe for this route</span>'
       +    '<span class="v" id="terrSafe"></span></div>'
       +  '<div class="profstats" id="terrStats"></div>'
-      +  '<div class="cnote">Terrain in this shell is a model, not survey data. In the real '
+      +  '<div class="cnote">Terrain is Terrarium elevation data, not survey data. '
       +  'build this reads the Terrarium tiles. Lowest safe is the highest point on track plus '
       +  'your clearance setting, rounded up to the next 500 ft, and takes no account of '
       +  'corridor width, obstacles or MSA. Advisory only.</div>';
@@ -6803,16 +7035,22 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       + '<div><span class="k">At</span><span class="v">' + hiD.toFixed(1) + ' nm</span></div>';
   }
 
-  function drawTerr(){
-    $('#terrBody').innerHTML = terrHTML();
+  /* Root is a parameter so the landscape HUD panel shares this exact
+     wiring. It used to inject terrHTML() and stop - no terrPaint(), no
+     step buttons, no scrubber - so in landscape the chart box, the
+     cruise value, lowest-safe and every stat came up blank. */
+  function drawTerr(root){
+    root = root || $('#terrBody');
+    if (!root) return;
+    root.innerHTML = terrHTML();
     terrPaint();
-    $$('#terrBody .trstep button').forEach(function(b){
+    Array.prototype.slice.call(root.querySelectorAll('.trstep button')).forEach(function(b){
       b.addEventListener('click', function(){
         AC.alt = Math.max(1000, Math.min(20000, AC.alt + parseInt(b.getAttribute('data-alt'), 10)));
         saveSet(); terrPaint(); drawFpl();
       });
     });
-    var box = $('#terrBox'); if (!box) return;
+    var box = root.querySelector('#terrBox'); if (!box) return;
     function at(cx){
       var r = box.getBoundingClientRect();
       profScrub = Math.max(0, Math.min(1, (cx - r.left) / r.width));
@@ -7021,6 +7259,172 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       b.addEventListener('click', function(){ copyText(b.getAttribute('data-f')); });
     });
   }
+  /* ---- Dropped pin ---------------------------------------------------
+     Long press the map and you get the place, not just a coordinate:
+     where it is, how high the ground is there, what it is near, and how
+     far it is from you - then what you can do with it. */
+  var PIN = null;
+
+  function pinElev(lat, lon){
+    /* read the terrain tile cache rather than fetching - if the tile is
+       not decoded yet we say so instead of guessing */
+    if (!terrLayer || !terrLayer._tc || !LMAP) return null;
+    var z = Math.round(LMAP.getZoom());
+    for (var k in terrLayer._tc){
+      var pr = k.split(':'), tx = +pr[0], ty = +pr[1], tz = +pr[2];
+      if (tz !== Math.min(z, TERR_MAXNATIVE)) continue;
+      var n = Math.pow(2, tz);
+      var wx = (lon + 180) / 360 * n;
+      var sy = Math.sin(lat * D2R);
+      var wy = (0.5 - Math.log((1 + sy) / (1 - sy)) / (4 * Math.PI)) * n;
+      if (Math.floor(wx) !== tx || Math.floor(wy) !== ty) continue;
+      var el = terrLayer._tc[k].el, side = Math.round(Math.sqrt(el.length));
+      var px = Math.floor((wx - tx) * side), py = Math.floor((wy - ty) * side);
+      var v = el[py * side + px];
+      return (v == null || !isFinite(v)) ? null : Math.round(v * M2FT);
+    }
+    return null;
+  }
+
+  function pinNearest(lat, lon){
+    var best = null, bd = 1e9, from = { lat:lat, lon:lon };
+    DB.forEach(function(p){
+      if (typeof p.lat !== 'number') return;
+      var d = nmBetween(from, p);
+      if (d < bd){ bd = d; best = p; }
+    });
+    return best ? { p:best, nm:bd, brg:trkBetween(from, best) } : null;
+  }
+
+  function pinHTML(){
+    if (!PIN) return '';
+    var lat = PIN.lat, lon = PIN.lon;
+    var el = pinElev(lat, lon), near = pinNearest(lat, lon);
+
+    var h = '<div class="pinco">'
+          + '<button class="c" data-pinc="' + ddm(lat, true) + ' ' + ddm(lon, false) + '">'
+          +   ddm(lat, true) + '<span>&nbsp;</span>' + ddm(lon, false) + '</button>'
+          + '<button class="d" data-pinc="' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '">'
+          +   lat.toFixed(5) + ', ' + lon.toFixed(5) + '</button>'
+          + '</div>';
+
+    h += '<div class="pinfacts">'
+      +    '<div><span class="k">Ground</span><span class="v">'
+      +      (el == null ? '\u2014' : el.toLocaleString() + '\'') + '</span></div>'
+      +    '<div><span class="k">From you</span><span class="v">'
+      +      (GPSFIX ? Math.round(trkBetween(GPSFIX, PIN)) + '\u00b0 / '
+                       + nmBetween(GPSFIX, PIN).toFixed(1) + ' nm' : '\u2014') + '</span></div>'
+      +  '</div>';
+
+    if (near){
+      h += '<div class="pinnear"><span class="k">Nearest</span>'
+        +  '<b>' + esc(near.p.lb || near.p.id) + '</b>'
+        +  '<span class="n">' + esc(near.p.nm || '') + '</span>'
+        +  '<u>' + String(Math.round(near.brg)).padStart(3,'0') + '\u00b0 / '
+        +    near.nm.toFixed(1) + ' nm</u></div>';
+    }
+    if (el == null){
+      h += '<div class="cnote" style="padding:0 var(--edge) 8px">Ground elevation needs the '
+        +  'terrain tile for this spot to be loaded. Turn terrain on, or pan here at a closer '
+        +  'zoom, and reopen.</div>';
+    }
+
+    h += '<div class="pinacts">'
+      +    '<button data-pina="add">Add to end of route</button>'
+      +    '<button data-pina="next">Insert as next point</button>'
+      +    '<button data-pina="dct">Direct to here</button>'
+      +    '<button data-pina="save">Save as my waypoint</button>'
+      +  '</div>';
+
+    h += '<div class="cnote" style="padding:10px var(--edge) 0">A dropped pin is a position you '
+      +  'picked off the map, not a surveyed point. Advisory only.</div>';
+    return h;
+  }
+
+  function pinName(){
+    /* PIN 1, PIN 2 ... skipping any already taken */
+    var n = 1;
+    while (dbById('PIN ' + n)) n++;
+    return 'PIN ' + n;
+  }
+
+  function drawPinWin(){
+    if (!pinWin || !pinWin.classList.contains('on') || !PIN) return;
+    var b = $('#pinBody');
+    b.innerHTML = pinHTML();
+    Array.prototype.slice.call(b.querySelectorAll('[data-pinc]')).forEach(function(x){
+      x.addEventListener('click', function(){ copyText(x.getAttribute('data-pinc')); });
+    });
+    Array.prototype.slice.call(b.querySelectorAll('[data-pina]')).forEach(function(x){
+      x.addEventListener('click', function(){ pinAction(x.getAttribute('data-pina')); });
+    });
+  }
+
+  function pinAction(a){
+    if (!PIN) return;
+    var pt = { id:pinName(), nm:'Dropped pin', lat:PIN.lat, lon:PIN.lon, cat:'mine' };
+    if (a === 'save'){
+      DB.push(pt); saveMarks(); renderMap();
+      toast('Saved as ' + pt.id);
+      closePinWin(); return;
+    }
+    if (a === 'add'){ ROUTE.push(pt); }
+    else if (a === 'next'){ ROUTE.splice(Math.min(toWpt, ROUTE.length), 0, pt); }
+    else if (a === 'dct'){
+      DB.push(pt); saveMarks();
+      directTo(pt); closePinWin(); return;
+    }
+    saveRoute(); drawFpl(); renderMap(); drawActy();
+    toast(a === 'add' ? 'Added to route' : 'Inserted as next');
+    closePinWin();
+  }
+
+  /* Long press on the map. Cancelled by any real movement so it never
+     fires mid-pan, and by a second finger so it never fires mid-pinch.
+     Leaflet's own contextmenu covers the desktop right-click. */
+  function wireMapLongPress(){
+    var el = $('#lmap'); if (!el || !LMAP) return;
+    var t0 = null, from = null, moved = false;
+    function cancel(){ if (t0){ clearTimeout(t0); t0 = null; } }
+    el.addEventListener('touchstart', function(e){
+      if (e.touches.length !== 1){ cancel(); return; }
+      var t = e.touches[0];
+      from = [t.clientX, t.clientY]; moved = false;
+      cancel();
+      t0 = setTimeout(function(){
+        t0 = null;
+        if (moved) return;
+        var pt = LMAP.containerPointToLatLng(
+          L.point(from[0] - el.getBoundingClientRect().left,
+                  from[1] - el.getBoundingClientRect().top));
+        if (navigator.vibrate) navigator.vibrate(10);
+        openPinWin(pt.lat, ((pt.lng + 540) % 360) - 180);
+      }, 500);
+    }, { passive:true });
+    el.addEventListener('touchmove', function(e){
+      if (!from) return;
+      var t = e.touches[0];
+      if (e.touches.length > 1 ||
+          Math.abs(t.clientX - from[0]) > 12 || Math.abs(t.clientY - from[1]) > 12){
+        moved = true; cancel();
+      }
+    }, { passive:true });
+    el.addEventListener('touchend', cancel, { passive:true });
+    el.addEventListener('touchcancel', cancel, { passive:true });
+    LMAP.on('contextmenu', function(e){
+      openPinWin(e.latlng.lat, ((e.latlng.lng + 540) % 360) - 180);
+    });
+  }
+
+  function openPinWin(lat, lon){
+    closeAll();
+    PIN = { lat:lat, lon:lon };
+    pinWin = pinWin || $('#pinWin');
+    pinWin.classList.add('on');
+    drawPinWin();
+  }
+  function closePinWin(){ if (pinWin) pinWin.classList.remove('on'); }
+
   /* ---- Terrain window ----------------------------------------------
      Red is at or above your reference, amber within the margin below it.
      The reference is yours to set, because the terrain you care about is
@@ -7211,6 +7615,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   }
   $('#fqWinX').addEventListener('click', closeFqWin);
   $('#terrWinX').addEventListener('click', closeTerrWin);
+  $('#pinX').addEventListener('click', closePinWin);
+  $('#pinWin').addEventListener('click', function(e){
+    if (e.target === $('#pinWin')) closePinWin();
+  });
   $('#terrWin').addEventListener('click', function(e){
     if (e.target === $('#terrWin')) closeTerrWin();
   });
@@ -11750,7 +12158,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
         +    String(Math.round(it.b)).padStart(3, '0') + '\u00b0</span></span></button>';
     });
     return h + '<div class="cnote">Distance and bearing are from the centre of the map view. '
-      + 'In the real build this is own-ship position. Green, blue or red dot is the parsed '
+      + 'Green, blue or red dot is the parsed '
       + 'flight category where a METAR exists.</div>';
   }
 
@@ -13521,11 +13929,37 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       });
     }
 
-    /* ---- route legs ---- */
+    /* ---- route legs ------------------------------------------------
+       Was one straight polyline through every point. A straight line in
+       Web Mercator is a RHUMB line, but every number the app gives you -
+       track, distance, ETE - is great circle. So the line drawn was not
+       the path being described: 54 m off over AYNZ-AYGA, 168 m over
+       AYNZ-AYMH, 699 m over AYPY-AYMH. Zoomed out that is nothing;
+       zoomed in it is a few hundred pixels of disagreement between the
+       line and the fix it should pass through.
+
+       Each leg is now interpolated along the great circle, and drawn in
+       its own state - flown, flying, still to come - so the map says the
+       same thing the NavLog does. */
     if (LAYERS.route && ROUTE.length > 1){
-      var lls = ROUTE.map(function(p){ return [p.lat, p.lon]; });
-      L.polyline(lls, { color:'#f0a500', weight:2, opacity:.9, interactive:false,
-                        lineJoin:'round', lineCap:'round' }).addTo(G.leg);
+      for (var li = 0; li < ROUTE.length - 1; li++){
+        var a = ROUTE[li], b = ROUTE[li + 1];
+        var segNm = nmBetween(a, b);
+        /* a point every ~5 nm, so the curve is smooth without flooding
+           short legs with vertices */
+        var steps = Math.max(2, Math.min(64, Math.ceil(segNm / 5)));
+        var pts = [];
+        for (var t = 0; t <= steps; t++) pts.push(gcPoint(a, b, t / steps));
+
+        var past = (li < toWpt - 1), act = (li === toWpt - 1);
+        L.polyline(pts, {
+          color:   past ? '#8a6a20' : '#f0a500',
+          weight:  act ? 3.5 : 2,
+          opacity: past ? .45 : .9,
+          dashArray: past ? '6 5' : null,
+          interactive:false, lineJoin:'round', lineCap:'round'
+        }).addTo(G.leg);
+      }
     }
 
     /* ---- declutter ------------------------------------------------
@@ -13836,7 +14270,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
   function hudPanelHTML(k){
     if (k === 'rad')  return hudFreqHTML();
-    if (k === 'terr') return terrHTML();
+    /* 'terr' is handled by drawTerr(), which wires as well as builds */
     if (k === 'fpl'){
       return hudFplTab === 'route'  ? routeHTML()
            : hudFplTab === 'navlog' ? navlogHTML()
@@ -13894,7 +14328,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       tabs.style.display = 'none'; tabs.innerHTML = '';
     }
     var pb = $('#hudPanelBody');
-    pb.innerHTML = hudPanelHTML(hudPanelKey);
+    if (hudPanelKey === 'terr'){
+      /* same builder and the same wiring the portrait panel gets */
+      drawTerr(pb);
+    } else {
+      pb.innerHTML = hudPanelHTML(hudPanelKey);
+    }
     pb.classList.toggle('cols', hudPanelKey === 'layers');
     /* the fade is a scroll hint - drop it when nothing is clipped */
     requestAnimationFrame(function(){
@@ -14028,6 +14467,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
        so Leaflet moves and scales it exactly as it does the tiles. Four
        builds of transform mirroring are deleted here. */
     LMAP.on('move zoom', function(){ nmxMoves++; });
+    wireMapLongPress();
 
     var raster = { updateWhenIdle:true, updateWhenZooming:false, keepBuffer:1,
                    errorTileUrl:NMX_BLANK, maxZoom:19 };
