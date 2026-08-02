@@ -22,6 +22,156 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v174 2026-08-02 The map jumped while you were zooming it.
+
+                       GPS Follow recentres on every fix, about once a
+                       second, and it did that with no idea whether you
+                       were in the middle of a gesture. Pinch to zoom, a
+                       fix lands, the map is yanked back to the aircraft
+                       under your fingers. Sometimes, because it only
+                       happens when a fix arrives inside the gesture -
+                       which at 1 Hz is most of them but not all.
+
+                       The custom one-finger zoom already held its own
+                       RENDERS off with a flag, but that flag is local to
+                       the map setup and the follow code never saw it. And
+                       Leaflet's own pinch and drag were not covered at
+                       all. There is one shared answer now: any touch on
+                       the map, and any Leaflet zoom or drag, marks the
+                       map busy for 600 ms. Follow picks up again on the
+                       next fix after your finger leaves.
+
+                       Centred - the one-shot recentre - now keeps its
+                       flag until it actually gets to use it, instead of
+                       spending it on a frame that was thrown away.
+
+                       And a deadband. Sitting on the pad the fix wanders
+                       a few metres every second, and every one of those
+                       was a pan. Under six pixels is noise, not travel.
+                       That is the twitch you would have seen with the
+                       aircraft parked.
+       v173 2026-08-02 Notes on waypoints, bulk delete, and the
+                       calculator reorder is findable.
+
+                       NOTES were only ever on the airfield card, but
+                       they are keyed by point id and a personal waypoint
+                       has one - so the waypoint window now carries the
+                       same block over the same store rather than growing
+                       a second kind of note living somewhere else. One
+                       builder, two hosts, as with everything else.
+
+                       Bulk delete in My waypoints. A cloud pull brings
+                       down whatever is on the desktop and removing them
+                       one at a time through the action window is six
+                       taps each. Select replaces the favourite star with
+                       a tick box - the star is not what you are doing in
+                       that mode - and the delete arms once before it
+                       fires, then disarms itself after four seconds. A
+                       delete that stays armed is a delete waiting for a
+                       knee.
+
+                       Calculator tabs: reordering was long press only,
+                       which works and which nobody finds - you said so
+                       yourself. There is an Edit now. It turns the strip
+                       into a reorder strip with a left and a right arrow
+                       on each tab, and tapping a tab does nothing while
+                       it is on, so tools cannot be switched by accident
+                       while being rearranged. The long press still works
+                       for anyone who learned it.
+
+                       And the note at the foot of the airfield card said
+                       weather, procedures and NOTAMs were demo
+                       placeholders, and that the coordinates of fixes
+                       and villages were too. None of that is true any
+                       more: live METAR, ENR 4.3 procedures with
+                       published minima, a NOTAM tab that says it carries
+                       none, AIP fixes. A note that understates the data
+                       is as wrong as one that overstates it. Fourth of
+                       these found this week.
+       v172 2026-08-02 The leg you are flying now reads as the leg you
+                       are flying now.
+
+                       Three states were already there. Flown was
+                       unmistakable - dim, dashed. But flying and still-
+                       to-come were the same colour at the same opacity,
+                       separated by a pixel and a half of line weight.
+                       That is the distinction you most need at a glance
+                       and it was carrying the least signal of the three.
+
+                       The active leg now gets a dark casing under it and
+                       a lighter amber on top. Casing is what a paper
+                       chart does: it lifts the line off whatever is
+                       behind it - satellite imagery, terrain shading,
+                       the pink of an airway - without needing a colour
+                       that then has to compete with all three. To-come
+                       drops a little in opacity so the ranking reads
+                       flown, to come, flying.
+
+                       Also, mirror.py only ever looked one way. Every
+                       property .gpsov set had to be set on .ted, but not
+                       the reverse - so the SHEET could carry a max-height
+                       and a scrolling body while the WINDOW carried
+                       neither, which is exactly what happened and what
+                       v171 had to fix by hand. It is symmetric now for
+                       the properties that decide whether a thing fits on
+                       the screen. Run against v152 it reports all three
+                       missing properties. A mirror that only looks one
+                       way is a window.
+       v171 2026-08-02 The point window ran off both ends of the screen.
+
+                       .gpswin had no maximum height. Taller than the
+                       phone and it grew past it in BOTH directions -
+                       centred in the backdrop, clipped top and bottom,
+                       with the title cut off above and the advisory line
+                       cut off below, and no way to reach either because
+                       nothing scrolled. It has been like that since the
+                       window shell was written; it only showed once the
+                       head grew a second coordinate, a facts grid and a
+                       nearest-point line.
+
+                       It is a flex column now: header fixed, body
+                       scrolls, capped at what the backdrop leaves after
+                       the safe areas. Exactly the shape .tedw has had
+                       all along, which is the argument for the mirror
+                       rule - one of the two had it right and they were
+                       supposed to be the same component.
+
+                       All six windows get it: waypoint, dropped pin,
+                       terrain, GPS, the quick editor and fuel.
+
+                       Some bulk out of the head as well. The two
+                       coordinates are not equals - the DDM is the one
+                       you read out, the decimal is the one you paste -
+                       so they are one box with a quieter second line
+                       rather than two slabs of the same weight. And the
+                       ground note said in three lines what it says in
+                       one.
+       v170 2026-08-02 The layers menu is grouped, and one layer was
+                       called the opposite of what it is.
+
+                       The overlay list was fifteen switches in one run,
+                       in the order they happened to be written. It is
+                       now grouped by what the thing IS: Aerodromes,
+                       places you can land. Points, things you navigate
+                       by. Airspace, who owns the air and who you call.
+                       Routes, the lines between them. Weather. You go to
+                       the heading first and the switch second, which is
+                       the difference between reading a menu and scanning
+                       one.
+
+                       A layer added to OVERLAYS but not to a group still
+                       renders, under Other, rather than disappearing
+                       from the menu - which is exactly what would have
+                       happened the first time someone added one in one
+                       place and not the other.
+
+                       And the layer labelled "Controlled airspace" draws
+                       CTAFZ: common traffic advisory areas, which are
+                       UNCONTROLLED. It sat in the list two rows above
+                       Control zones and Terminal areas, which are the
+                       controlled ones. Opposite meanings, two taps
+                       apart, in a menu you read in the air. It is CTAF
+                       zones now.
        v169 2026-08-02 The FPL panel took the height of the screen
                        rather than the height of its contents.
 
@@ -3693,6 +3843,36 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   border:1px solid rgba(127,179,213,.55);border-radius:999px;padding:2px 7px}
 .dgrlb{color:#f0506e}
 .dgrlb.ax{opacity:.8;font-style:italic}
+/* Calculator tab strip, and its reorder mode. The arrows only exist in
+   edit mode, so the strip stays a strip the rest of the time. */
+.csegbar{display:flex;align-items:center;gap:8px}
+.csegbar .cseg{flex:1 1 auto;min-width:0}
+.lnk{flex:0 0 auto;background:none;border:0;padding:4px 2px;
+  font-size:var(--t-xs);font-weight:600;color:var(--accent-2)}
+.lnk[disabled]{opacity:.35}
+.cseg.editing{display:flex;gap:6px;flex-wrap:wrap}
+.cedit{display:inline-flex;align-items:center;gap:2px;
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  background:var(--bg-2);padding:2px 4px}
+.cedit b{font-size:var(--t-xs);font-weight:600;color:var(--text);padding:0 2px}
+.cedit .mv{width:26px;height:26px;background:none;border:0;
+  font-size:16px;line-height:1;color:var(--accent)}
+.cedit .mv[disabled]{opacity:.25;color:var(--text-fainter)}
+/* My waypoints: select mode */
+.mnrow .pk{flex:0 0 auto;width:22px;height:22px;border-radius:5px;
+  border:1px solid var(--border-strong);display:flex;align-items:center;
+  justify-content:center;font-size:13px;color:var(--bg)}
+.mnrow .pk.on{background:var(--accent);border-color:var(--accent)}
+.mnrow.picked{background:rgba(255,176,32,.06);border-color:var(--accent)}
+.mnbulk{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:12px}
+.mnbulk .danger{flex:0 0 auto;height:var(--mod-a);padding:0 16px;
+  border-radius:var(--radius);background:var(--bg);
+  border:1px solid rgba(240,80,110,.5);color:var(--bad);
+  font-size:var(--t-sm);font-weight:700}
+.mnbulk .danger.arm{background:var(--bad);color:#0a0e13;border-color:var(--bad)}
+.mnbulk .danger[disabled]{opacity:.4}
+
 /* MBZ label: the three things the zone is - who, on what, between what.
    Violet, the colour the circle is drawn in. */
 .mbzchip{position:absolute;transform:translate(-50%,-50%);display:flex;
@@ -3884,12 +4064,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 /* the quick-edit window: same shell as the GPS readout */
 /* ---- Terrain window --------------------------------------------- */
 /* ---- Dropped pin ------------------------------------------------- */
-.pinco{padding:12px var(--edge) 4px;display:grid;gap:6px}
+/* Two coordinate formats, but they are not equals: the DDM is the one
+   you read out and the decimal is the one you paste. One box, the second
+   line quieter and tighter, instead of two slabs of the same weight. */
+.pinco{padding:10px var(--edge) 4px;display:grid;gap:0}
 .pinco button{width:100%;text-align:center;background:var(--inset);
-  border:1px solid var(--border-strong);border-radius:var(--radius);padding:9px 10px;
+  border:1px solid var(--border-strong);
   font-family:var(--mono);color:var(--text)}
-.pinco .c{font-size:var(--t-md);font-weight:700;letter-spacing:.02em}
-.pinco .d{font-size:var(--t-sm);color:var(--text-2)}
+.pinco .c{padding:8px 10px 6px;border-radius:var(--radius) var(--radius) 0 0;
+  border-bottom:0;font-size:var(--t-md);font-weight:700;letter-spacing:.02em}
+.pinco .d{padding:5px 10px 6px;border-radius:0 0 var(--radius) var(--radius);
+  font-size:var(--t-xs);color:var(--text-2)}
 .pinfacts{display:flex;gap:var(--gut);padding:6px var(--edge) 4px}
 .pinfacts > div{flex:1 1 0;padding:9px 11px;border-radius:var(--radius);background:var(--bg-2)}
 .pinfacts .k{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
@@ -3999,7 +4184,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .twhi .v.warn{color:var(--bad)}
 #terrWinBody .cnote{padding-left:var(--edge);padding-right:var(--edge)}
 
-.qkbody{padding:4px 0 0}
+.qkbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;padding:4px 0 8px}
 /* the text field carried the old bottom-sheet's 12px gutter; in the
    window it should sit on the same --edge as everything else */
 .qkbody .tedpage{padding:18px var(--edge) 14px}
@@ -4724,19 +4910,27 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    Proportions taken from the live desktop component: panel width
    as the reference, everything centred, coordinates dominant.     */
 .gpsov{position:fixed;inset:0;z-index:1200;display:none;
-  align-items:center;justify-content:center;padding:16px;
+  align-items:center;justify-content:center;
+  padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
   background:rgba(3,5,8,.72);
   -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .gpsov.on{display:flex}
+/* The window had no maximum height. Taller than the screen and it grew
+   past it in BOTH directions - centred, clipped, with the title cut off
+   the top and the advisory line cut off the bottom, and no way to reach
+   either. It is a flex column now: header fixed, body scrolls, capped at
+   the space the backdrop leaves. Same shape as .tedw, which has had it
+   right all along. */
 .gpswin{
-  width:100%;max-width:400px;
+  width:100%;max-width:400px;max-height:100%;
+  display:flex;flex-direction:column;
   background:var(--panel);border:1px solid var(--border-strong);
   border-radius:12px;overflow:hidden;
   box-shadow:0 18px 46px rgba(0,0,0,.7);
 }
 .gpsh{
   display:flex;align-items:center;gap:8px;
-  height:var(--mod-b);padding:0 6px 0 14px;
+  flex:0 0 var(--mod-b);height:var(--mod-b);padding:0 6px 0 14px;
   background:var(--bg-2);border-bottom:1px solid var(--border);
 }
 .gpsh .t{
@@ -6189,7 +6383,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v169-ROT';
+  var VERSION = 'v175-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -7594,7 +7788,7 @@ var PROC_META={
       + '<button class="dbtn" data-hb="alt">' + AC.alt.toLocaleString() + '\'</button></div>'
       + '<div class="drow">'
       + '<button class="dbtn" data-hb="proc">Procedure</button>'
-      + '<button class="dbtn" data-hb="ats">Routes (' + ATS_ROUTES.length + ')</button>'
+      + '<button class="dbtn" data-hb="ats">Routes (' + PNG_ROUTES.length + ')</button>'
       + '<button class="dbtn" data-hb="etd">ETD ' + (ETD_MIN == null ? 'set' : clock(0)) + '</button></div>';
     if (!ROUTE.length){
       h += '<div class="chipempty">No route. Tap Add to build one.</div>';
@@ -8539,13 +8733,8 @@ var PROC_META={
     } catch(_){ toast('No compass on this device \u2014 using track up'); rotMode = 'track'; rotApply(); }
   }
 
-  /* Every divIcon gets its content wrapped so the label can be turned
-     back upright while the map turns. Done in one place rather than at
-     nine call sites, and it means anything added later is covered.
-
-     The aircraft is the deliberate exception: it is drawn rotated to its
-     own track, so letting it turn WITH the map is what makes it point up
-     the screen in track-up, which is the whole point. */
+  /* Every divIcon is wrapped so the label can be turned back upright
+     while the map turns. The aircraft is the deliberate exception. */
   (function wrapIcons(){
     if (typeof L === 'undefined' || !L.divIcon) return;
     var orig = L.divIcon;
@@ -8881,6 +9070,16 @@ var PROC_META={
     return out;
   }
 
+  /* Bulk delete. A cloud pull can bring down thirty waypoints from the
+     desktop and removing them one at a time through the action window is
+     six taps each. Select mode replaces the favourite star with a tick
+     box - the star is not what you are doing in this mode - and the
+     delete arms once before it fires, because there is no undo. */
+  var mineSelOn = false, mineSel = {}, mineDelArm = false, mineDelTmr = null;
+  function mineSelClear(){
+    mineSelOn = false; mineSel = {}; mineDelArm = false;
+    if (mineDelTmr){ clearTimeout(mineDelTmr); mineDelTmr = null; }
+  }
   function mineHTML(){
     var all = DB.filter(function(p){ return p.cat === 'mine'; });
     var list = mineList();
@@ -8892,7 +9091,9 @@ var PROC_META={
     h += '<div class="hseg" style="margin-bottom:12px"><span class="grp">'
       +    '<button data-ms="dist"' + (mineSort === 'dist' ? ' class="on"' : '') + '>Nearest</button>'
       +    '<button data-ms="name"' + (mineSort === 'name' ? ' class="on"' : '') + '>By name</button>'
-      +  '</span></div>';
+      +  '</span>'
+      +  '<button id="mnSel" class="lnk">' + (mineSelOn ? 'Cancel' : 'Select') + '</button>'
+      +  '</div>';
 
     if (!all.length){
       return h + '<div class="cempty">No personal waypoints yet.<br>'
@@ -8902,15 +9103,32 @@ var PROC_META={
 
     h += '<div class="mnlist">';
     list.forEach(function(p){
-      h += '<button class="mnrow" data-mn="' + esc(p.id) + '">'
-        +    '<span class="st' + (isFav(p.id) ? ' on' : '') + '">'
-        +      (isFav(p.id) ? '\u2605' : '\u2606') + '</span>'
+      var picked = !!mineSel[p.id];
+      h += '<button class="mnrow' + (mineSelOn && picked ? ' picked' : '') + '" data-mn="'
+        +    esc(p.id) + '">'
+        +    (mineSelOn
+             ? '<span class="pk' + (picked ? ' on' : '') + '">' + (picked ? '\u2713' : '') + '</span>'
+             : '<span class="st' + (isFav(p.id) ? ' on' : '') + '">'
+               + (isFav(p.id) ? '\u2605' : '\u2606') + '</span>')
         +    '<span class="tx"><b>' + esc(p.lb || p.id) + '</b>'
         +      '<i>' + esc(p.nm || ddm(p.lat, true) + ' ' + ddm(p.lon, false)) + '</i></span>'
         +    '<span class="d">' + (p._d == null ? '' : p._d.toFixed(0) + '<u>nm</u>') + '</span>'
         +  '</button>';
     });
     h += '</div>';
+
+    if (mineSelOn){
+      var n = Object.keys(mineSel).length;
+      h += '<div class="mnbulk">'
+        +    '<button id="mnAll" class="lnk">'
+        +      (n === list.length ? 'Select none' : 'Select all ' + list.length) + '</button>'
+        +    '<button id="mnDel" class="danger' + (mineDelArm ? ' arm' : '') + '"'
+        +      (n ? '' : ' disabled') + '>'
+        +      (n === 0 ? 'Delete'
+                       : mineDelArm ? 'Tap again to delete ' + n
+                                    : 'Delete ' + n) + '</button>'
+        +  '</div>';
+    }
 
     h += '<div class="cnote" style="margin-top:14px">' + all.length + ' waypoint'
       +  (all.length === 1 ? '' : 's') + ', held on this device and included in cloud sync. '
@@ -8995,6 +9213,7 @@ var PROC_META={
       +    actRow('data-mna','rename','rename','Rename\u2026')
       +  '</div>';
     h += '<div class="agrp danger">' + actRow('data-mna','del','del','Delete') + '</div>';
+    h += notesBlockHTML(p.id);
     h += '<div class="cnote" style="padding:10px var(--edge) 0">A personal waypoint is a '
       +  'position you saved, not a surveyed point. Advisory only.</div>';
     return h;
@@ -9012,6 +9231,7 @@ var PROC_META={
     Array.prototype.slice.call(b.querySelectorAll('[data-ptc]')).forEach(function(x){
       x.addEventListener('click', function(){ copyText(x.getAttribute('data-ptc')); });
     });
+    wireNotesBlock(b);
     Array.prototype.slice.call(b.querySelectorAll('[data-mna]')).forEach(function(x){
       x.addEventListener('click', function(){ mineAction(x.getAttribute('data-mna')); });
     });
@@ -9072,9 +9292,54 @@ var PROC_META={
     Array.prototype.slice.call(el.querySelectorAll('[data-mn]')).forEach(function(b2){
       b2.addEventListener('click', function(e){
         var id = b2.getAttribute('data-mn');
+        if (mineSelOn){
+          if (mineSel[id]) delete mineSel[id]; else mineSel[id] = 1;
+          mineDelArm = false;
+          drawMine();
+          return;
+        }
         if (e.target.classList.contains('st')){ toggleFav(id); drawMine(); return; }
         openMineWin(id);
       });
+    });
+    var sel = el.querySelector('#mnSel');
+    if (sel) sel.addEventListener('click', function(){
+      if (mineSelOn) mineSelClear(); else { mineSelOn = true; mineSel = {}; }
+      drawMine();
+    });
+    var all = el.querySelector('#mnAll');
+    if (all) all.addEventListener('click', function(){
+      var list = mineList();
+      if (Object.keys(mineSel).length === list.length) mineSel = {};
+      else list.forEach(function(p){ mineSel[p.id] = 1; });
+      mineDelArm = false;
+      drawMine();
+    });
+    var del = el.querySelector('#mnDel');
+    if (del) del.addEventListener('click', function(){
+      var ids = Object.keys(mineSel);
+      if (!ids.length) return;
+      if (!mineDelArm){
+        /* arm, and disarm itself after four seconds - a delete that
+           stays armed is a delete waiting for a knee */
+        mineDelArm = true;
+        mineDelTmr = setTimeout(function(){ mineDelArm = false; drawMine(); }, 4000);
+        drawMine();
+        return;
+      }
+      /* Spliced out in place rather than rebuilt with filter and
+         reassigned: anything holding a reference to the array keeps
+         pointing at the live one. The single delete does the same. */
+      ids.forEach(function(id){
+        for (var i = DB.length - 1; i >= 0; i--){
+          if (DB[i].cat === 'mine' && DB[i].id === id) DB.splice(i, 1);
+        }
+        removeFav(id);
+      });
+      saveMarks();
+      mineSelClear();
+      drawMine(); drawFpl(); renderMap();
+      toast(ids.length + ' waypoint' + (ids.length === 1 ? '' : 's') + ' deleted');
     });
   }
   function wireMine(el){ wireMineBody(el); }
@@ -9164,9 +9429,8 @@ var PROC_META={
         +    near.nm.toFixed(1) + ' nm</u></div>';
     }
     if (el == null){
-      h += '<div class="cnote" style="padding:0 var(--edge) 8px">Ground elevation needs the '
-        +  'terrain tile for this spot to be loaded. Turn terrain on, or pan here at a closer '
-        +  'zoom, and reopen.</div>';
+      h += '<div class="cnote" style="padding:0 var(--edge) 8px">Ground needs a terrain tile '
+        +  'here \u2014 turn terrain on and reopen.</div>';
     }
     return h;
   }
@@ -11124,22 +11388,20 @@ var PROC_META={
         +  chartsFor(f.id).length + ' plates for ' + f.id + '</button>';
     }
 
-    if (f.id){
-      var mine = notesFor(f.id);
-      h += '<div class="csec">My notes' + (mine.length ? ' (' + mine.length + ')' : '') + '</div>'
-        +  '<div class="cnotes">'
-        +  mine.map(function(n){
-             return '<button class="row" data-cn="' + n.id + '"><b>' + esc(n.ttl || 'Untitled')
-                  + '</b><span>' + noteAge(n.ts) + '</span></button>';
-           }).join('')
-        +  '<button class="add" data-cnadd="' + f.id + '">Add a note for ' + f.id + '</button>'
-        +  '</div>';
-    }
+    if (f.id) h += notesBlockHTML(f.id);
 
+    /* This said weather, procedures and NOTAMs were demo placeholders,
+       and that the coordinates of fixes and villages were too. None of
+       it is true: the weather is live METAR, the procedures are ENR 4.3
+       with published minima where the pack has them, the NOTAM tab now
+       says plainly that it carries none, and the fixes are AIP
+       coordinates. A note that understates the data is as wrong as one
+       that overstates it - this is the fourth of these found this week. */
     h += '<div class="cnote">Coordinates, distance, bearing and sun times are computed. '
-      +  (fi ? 'Elevation, runways and frequencies come from the live NM Plotter dataset. '
-              + 'Weather, procedures and NOTAMs are demo placeholders in this shell. '
-            : 'Coordinates for fixes, villages and personal waypoints are demo placeholders. ')
+      +  (fi ? 'Elevation, runways and frequencies come from the NM Plotter dataset, weather '
+              + 'from the live METAR, procedures from AIP ENR 4.3. '
+            : 'Fixes are AIP coordinates; strips and villages are OurAirports-derived, not AIP; '
+              + 'personal waypoints are your own. ')
       +  'Not for navigation.</div>';
     return h;
   }
@@ -11757,6 +12019,35 @@ var PROC_META={
     h += '<div class="cnote">' + esc(m.src || 'AIP PNG')
       +  ' \u00b7 advisory \u00b7 fly the plate, not this.</div>';
     return h;
+  }
+
+  /* The notes block, built once and used by both hosts. Notes were only
+     ever on the airfield card, but they are keyed by point id and a
+     personal waypoint has one - so the waypoint window can carry the
+     same block over the same store rather than growing a second kind of
+     note that lives somewhere else. */
+  function notesBlockHTML(id){
+    var mine = notesFor(id);
+    return '<div class="csec">My notes' + (mine.length ? ' (' + mine.length + ')' : '') + '</div>'
+         + '<div class="cnotes">'
+         + mine.map(function(n){
+             return '<button class="row" data-cn="' + n.id + '"><b>' + esc(n.ttl || 'Untitled')
+                  + '</b><span>' + noteAge(n.ts) + '</span></button>';
+           }).join('')
+         + '<button class="add" data-cnadd="' + esc(id) + '">Add a note for ' + esc(id) + '</button>'
+         + '</div>';
+  }
+  function wireNotesBlock(root){
+    Array.prototype.slice.call(root.querySelectorAll('[data-cn]')).forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation(); openNote(b.getAttribute('data-cn'));
+      });
+    });
+    Array.prototype.slice.call(root.querySelectorAll('[data-cnadd]')).forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation(); openNote(null, b.getAttribute('data-cnadd'));
+      });
+    });
   }
 
   function cardProc(f){
@@ -12472,7 +12763,9 @@ var PROC_META={
      Every route carries its own AIP edition; they are NOT all the same
      edition, which is why the date is shown per route.
      ============================================================ */
-  var ATS_ROUTES = [{"rd":"H401","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"LELID","a":-8.91109,"o":147.11942},{"n":"GUARI","a":-8.125,"o":146.98},{"n":"NZ","a":-6.57,"o":146.70799},{"n":"ALBUP","a":-5.21167,"o":145.77667},{"n":"BOGIA","a":-4.40355,"o":144.73198},{"n":"DOTUB","a":-3.58333,"o":143.67667},{"n":"EMLEN","a":-3.13137,"o":142.48773},{"n":"VNO","a":-2.6789,"o":141.30299}],"segs":[{"t":344,"d":33,"a":"8500"},{"t":344,"d":47,"a":"14000"},{"t":344,"d":94,"a":"14000"},{"t":320,"d":98,"a":"16000"},{"t":303,"d":79,"a":"7800"},{"t":303,"d":80,"a":"7800"},{"t":287,"d":76,"a":"7300"},{"t":287,"d":76,"a":"8400"}]},{"rd":"H404","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"OKTUX","a":-4.30026,"o":147.07103},{"n":"MOE","a":-2.06142,"o":147.42599}],"segs":[{"t":4,"d":138,"a":"16000"},{"t":4,"d":136,"a":"3000"}]},{"rd":"H405","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"DUKIS","a":-8.12226,"o":147.10843},{"n":"LARID","a":-6.73667,"o":146.99833},{"n":"NZ","a":-6.57,"o":146.70799}],"segs":[{"t":350,"d":80,"a":"15300"},{"t":349,"d":83,"a":"15300"},{"t":295,"d":20,"a":"6300"}]},{"rd":"H407","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"KAMUL","a":-8.18626,"o":146.73463},{"n":"SAKTO","a":-8.70286,"o":146.74289}],"segs":[{"t":174,"d":97,"a":"14000"},{"t":173,"d":31,"a":"14400"}]},{"rd":"H408","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"WESFI","a":-6.55044,"o":146.40752},{"n":"BEMGO","a":-6.53246,"o":146.24222}],"segs":[{"t":268,"d":18,"a":"11000"},{"t":268,"d":10,"a":"11000"}]},{"rd":"H409","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"MUKIK","a":-6.37456,"o":146.18645},{"n":"KANTU","a":-6.22239,"o":145.77736},{"n":"MUDIX","a":-6.07833,"o":145.39},{"n":"YABAL","a":-5.94897,"o":144.8071},{"n":"IKERU","a":-5.83833,"o":144.30833},{"n":"PAPTI","a":-5.6148,"o":142.76914},{"n":"OKT","a":-5.4099,"o":141.319}],"segs":[{"t":285,"d":33,"a":"8000"},{"t":285,"d":26,"a":"12500"},{"t":285,"d":25,"a":"14000/12500"},{"t":278,"d":36,"a":"15800"},{"t":278,"d":30,"a":"15800"},{"t":274,"d":93,"a":"15000/16400"},{"t":273,"d":88,"a":"15000"}]},{"rd":"H410","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"AVLIX","a":-6.61498,"o":147.85793},{"n":"ARAWE","a":-6.10479,"o":148.99879},{"n":"VATVO","a":-5.45833,"o":150.415},{"n":"ESNIV","a":-4.34667,"o":152.39833}],"segs":[{"t":87,"d":68,"a":"11000"},{"t":59,"d":75,"a":"3300"},{"t":59,"d":93,"a":"8300"},{"t":54,"d":136,"a":"9300"}]},{"rd":"H413","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"NZ","a":-6.57,"o":146.70799},{"n":"VIDOT","a":-6.84854,"o":146.35397},{"n":"EPKED","a":-7.96258,"o":145.77838}],"segs":[{"t":226,"d":27,"a":"6000"},{"t":201,"d":75,"a":"11000"}]},{"rd":"H414","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 18 MAY 2023","pts":[{"n":"ALBUP","a":-5.21167,"o":145.77667},{"n":"UGTOK","a":-6.12914,"o":146.09984},{"n":"MUKIK","a":-6.37456,"o":146.18645},{"n":"BEMGO","a":-6.53246,"o":146.24222},{"n":"VIDOT","a":-6.84854,"o":146.35397},{"n":"KAIFU","a":-8.22804,"o":146.64296},{"n":"SAKTO","a":-8.70286,"o":146.74289},{"n":"PY","a":-9.46105,"o":147.233}],"segs":[{"t":155,"d":57,"a":"15000"},{"t":154,"d":16,"a":"15000"},{"t":154,"d":10,"a":"14000"},{"t":154,"d":19,"a":"14000"},{"t":163,"d":85,"a":"14000"},{"t":163,"d":29,"a":"14000/13000"},{"t":142,"d":53,"a":"4000"}]},{"rd":"H421","cls":"Class A, C & F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 31 OCT 2024","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"RUPNO","a":-8.74557,"o":148.25419},{"n":"DAKNU","a":-6.99193,"o":149.91888},{"n":"BINNA","a":-5.92049,"o":150.92685},{"n":"ESNIV","a":-4.34667,"o":152.39833},{"n":"RENEB","a":-3.04482,"o":152.62642}],"segs":[{"t":49,"d":75,"a":"13700"},{"t":37,"d":144,"a":"3600"},{"t":37,"d":88,"a":"9200"},{"t":37,"d":129,"a":"9500"},{"t":4,"d":79,"a":"7900"}]},{"rd":"H526","cls":"Class A/C/F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 2023\u201325","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"ENTOG","a":-9.40594,"o":147.88919},{"n":"RUPNO","a":-8.74557,"o":148.25419}],"segs":[]},{"rd":"H529","cls":"Class A/C/F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 2023\u201325","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"COWRY","a":-7.65474,"o":148.66515},{"n":"VATVO","a":-5.45833,"o":150.415},{"n":"LEMUP","a":-4.27286,"o":151.50365},{"n":"RENEB","a":-3.04482,"o":152.62642}],"segs":[]},{"rd":"H532","cls":"Class A/C/F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 2023\u201325","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"KAPKI","a":-10.24861,"o":148.29556},{"n":"KALKO","a":-10.315,"o":150.36167}],"segs":[]},{"rd":"H539","cls":"Class A/C/F","lo":"SFC","up":"FL450","ed":"ENR 3.1 \u00b7 2023\u201325","pts":[{"n":"PY","a":-9.46105,"o":147.233},{"n":"STARF","a":-9.12656,"o":146.7253},{"n":"EMPRA","a":-8.70577,"o":146.09686},{"n":"KIBAV","a":-7.42833,"o":144.24833},{"n":"BOSVI","a":-6.77236,"o":142.75922},{"n":"PASDU","a":-6.12167,"o":141.28667}],"segs":[]}];
+  /* ATS_ROUTES removed in v175: a fourteen-route copy of the airways,
+     written before the full ninety-nine were lifted in v162, and a second
+     source of truth for the same data. */
 
   /* nearest distance from a point to any fix on a route */
   function atsNear(r, here){
@@ -12505,7 +12798,13 @@ var PROC_META={
              ? { lat:ship.lat, lon:ship.lon }
              : { lat:(VIEW.n + VIEW.s) / 2, lon:(VIEW.w + VIEW.e) / 2 };
 
-    var rows = ATS_ROUTES.map(function(r){
+    /* PNG_ROUTES, not ATS_ROUTES. This view had its own copy of the
+       airways - fourteen of them, written before the full set was lifted
+       in v162 - so the map drew 99 and the list offered 14, and the 85
+       missing ones could be seen and not chosen. The fourteen were a
+       strict subset with identical points and identical segments, so
+       nothing here changes except that the other 85 now exist. */
+    var rows = PNG_ROUTES.map(function(r){
       return { r:r, d:atsNear(r, here), m:atsMatch(r) };
     });
     /* routes that fit the plan first, then by distance */
@@ -12514,15 +12813,19 @@ var PROC_META={
       return a.d - b.d;
     });
 
-    var h = '<div class="cnote" style="margin-bottom:12px">Published ATS routes near you. '
+    var SHOW = 12;
+    var h = '<div class="cnote" style="margin-bottom:12px">The ' + Math.min(SHOW, rows.length)
+          + ' of ' + rows.length + ' published ATS routes nearest you. '
           + 'A route that already links two points in your plan is highlighted and can be '
           + 'inserted into that leg. Advisory only \u2014 check levels and the AIP edition '
           + 'before you file or fly one.</div>';
 
-    rows.slice(0, 12).forEach(function(x){
+    rows.slice(0, SHOW).forEach(function(x){
       var r = x.r;
       h += '<button class="atrow' + (x.m ? ' match' : '') + '" data-ats="' + r.rd + '">'
-        +  '<span class="top"><span class="rd">' + r.rd + '</span>'
+        +  '<span class="top"><span class="rd">' + r.rd
+        +  (r.tier === 'U' ? ' <i style="font-style:normal;color:#9a86c0">UPPER</i>' : '')
+        +  '</span>'
         +  '<span class="lim">' + r.lo + ' \u2013 ' + r.up + '</span>'
         +  '<span class="near">' + x.d.toFixed(0) + ' NM</span></span>'
         +  '<div class="pts">' + r.pts.map(function(p){ return p.n; }).join(' \u203a ') + '</div>'
@@ -12562,7 +12865,7 @@ var PROC_META={
 
   function useAts(rd){
     var r = null;
-    ATS_ROUTES.forEach(function(x){ if (x.rd === rd) r = x; });
+    PNG_ROUTES.forEach(function(x){ if (x.rd === rd) r = x; });
     if (!r) return;
     var m = atsMatch(r);
 
@@ -13473,11 +13776,31 @@ var PROC_META={
     try { localStorage.setItem('nmp.iphone.calcorder', JSON.stringify(CALC_ORDER)); } catch(_){ }
   }
 
+  /* Reordering was long-press only, which works and which nobody finds.
+     An explicit Edit turns the strip into a reorder strip: each tab gets
+     a left and a right arrow and tapping the tab itself does nothing, so
+     there is no way to change tools by accident while rearranging them.
+     The long press still works for anyone who already learned it. */
+  var calcEdit = false;
   function calcHTML(){
-    var h = '<div class="cseg">' + CALC_ORDER.map(function(k){
-      return '<button data-cg="' + k + '"' + (calcTab === k ? ' class="on"' : '') + '>'
-           + CALC_SEGS[k] + '</button>';
-    }).join('') + '</div>';
+    var h = '<div class="csegbar">'
+          + '<div class="cseg' + (calcEdit ? ' editing' : '') + '">'
+          + CALC_ORDER.map(function(k, i){
+              if (!calcEdit){
+                return '<button data-cg="' + k + '"' + (calcTab === k ? ' class="on"' : '')
+                     + '>' + CALC_SEGS[k] + '</button>';
+              }
+              return '<span class="cedit">'
+                   + '<button class="mv" data-cmv="' + k + '|-1"'
+                   + (i === 0 ? ' disabled' : '') + '>\u2039</button>'
+                   + '<b>' + CALC_SEGS[k] + '</b>'
+                   + '<button class="mv" data-cmv="' + k + '|1"'
+                   + (i === CALC_ORDER.length - 1 ? ' disabled' : '') + '>\u203a</button>'
+                   + '</span>';
+            }).join('')
+          + '</div>'
+          + '<button id="calcEd" class="lnk">' + (calcEdit ? 'Done' : 'Edit') + '</button>'
+          + '</div>';
 
     /* full width, under the tabs, above whichever tool is showing */
     h += '<button class="cvbtn" data-cg="conv">Minutes \u2194 decimal hours</button>';
@@ -13714,6 +14037,22 @@ var PROC_META={
     var body = el.querySelector('.vbody');
     /* long press a tab to move it left - the reorder needs no extra
        chrome, and a stray long press does nothing harmful */
+    var eb = body.querySelector('#calcEd');
+    if (eb) eb.addEventListener('click', function(){
+      calcEdit = !calcEdit; redrawCalc(el);
+    });
+    Array.prototype.forEach.call(body.querySelectorAll('[data-cmv]'), function(b){
+      b.addEventListener('click', function(){
+        var p = b.getAttribute('data-cmv').split('|');
+        var i = CALC_ORDER.indexOf(p[0]), d = parseInt(p[1], 10);
+        var j = i + d;
+        if (i < 0 || j < 0 || j >= CALC_ORDER.length) return;
+        CALC_ORDER.splice(j, 0, CALC_ORDER.splice(i, 1)[0]);
+        saveCalcOrder();
+        if (navigator.vibrate) navigator.vibrate(6);
+        redrawCalc(el);
+      });
+    });
     Array.prototype.forEach.call(body.querySelectorAll('.cseg [data-cg]'), function(b){
       var t0 = null;
       function cancel(){ if (t0){ clearTimeout(t0); t0 = null; } }
@@ -15481,10 +15820,6 @@ var PROC_META={
   function inCtrl(name, val){
     return '<input class="fin" data-set="' + name + '" type="text" inputmode="decimal" value="' + val + '">';
   }
-  function swiCtrl(name, on){
-    return '<span class="swi' + (on ? ' on' : '') + '" data-swi="' + name + '"><i></i></span>';
-  }
-
   function drawSet(){
     $('#setBody').innerHTML =
         '<div class="csec" style="margin-top:0">Aircraft</div>'
@@ -15732,7 +16067,11 @@ var PROC_META={
       d:'<path d="M12 21.2s6.4-5.9 6.4-10.6a6.4 6.4 0 1 0-12.8 0C5.6 15.3 12 21.2 12 21.2z"/><circle cx="12" cy="10.4" r="2.2"/>' },
     route:  { t:'Active route',
       d:'<circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="6" r="2.4"/><path d="M6.9 16.3L17.1 7.7"/>' },
-    airspace:{ t:'Controlled airspace',
+    /* This draws CTAFZ - common traffic advisory areas, which are
+       UNCONTROLLED. It was labelled "Controlled airspace" and sat in the
+       menu directly above Control zones and Terminal areas, which are
+       the controlled ones. Two taps apart, opposite meanings. */
+    airspace:{ t:'CTAF zones',
       d:'<path d="M12 3.4l7.4 4.3v8.6L12 20.6 4.6 16.3V7.7z"/>' },
     danger: { t:'Danger &amp; restricted',
       d:'<path d="M12 3.6L21 19.4H3z"/><path d="M12 10v4.2"/><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none"/>' },
@@ -15782,6 +16121,27 @@ var PROC_META={
      treatments that change how the map is drawn rather than what
      data sits on it. Right column: data layers. */
   var MAP_OVERLAYS = ['terrain', 'labels'];
+  /* The overlay menu was one run of fifteen switches in the order they
+     happened to be written. Grouped by what the thing IS, so you go to
+     the heading first and the switch second:
+
+       Aerodromes  places you can land
+       Points      things you navigate by
+       Airspace    who owns the air and who you call
+       Routes      lines drawn between them
+       Weather     what it is doing
+
+     Anything in OVERLAYS but missing from a group still renders, under
+     Other, rather than silently vanishing from the menu - which is what
+     would otherwise happen the first time a layer is added here and not
+     there. */
+  var OV_GROUPS = [
+    ['Aerodromes', ['fields', 'strips']],
+    ['Points',     ['navaid', 'fixes', 'enroute', 'mine']],
+    ['Airspace',   ['ctlz', 'ctla', 'airspace', 'mbz', 'danger']],
+    ['Routes',     ['route', 'ats', 'atsu']],
+    ['Weather',    ['wxcat']]
+  ];
   var OVERLAYS = [
     ['fields', true], ['strips', true], ['fixes',  true], ['enroute', true], ['mine',  true],
     ['route',  true], ['airspace', true], ['ctlz', true], ['ctla', true],
@@ -17157,10 +17517,27 @@ var PROC_META={
         for (var t = 0; t <= steps; t++) pts.push(gcPoint(a, b, t / steps));
 
         var past = (li < toWpt - 1), act = (li === toWpt - 1);
+        /* Flown, flying, still to come. Flown was already unmistakable -
+           dim and dashed. Flying and to-come were the same colour at the
+           same opacity, separated by a pixel and a half of line weight,
+           which is the distinction you most need and the one carrying
+           the least signal.
+
+           The leg being flown now gets a dark casing under it and a
+           lighter amber on top. Casing is what a paper chart does: it
+           lifts the line off whatever is behind it - satellite imagery,
+           terrain shading, the pink of an airway - without needing a
+           colour that then has to compete with all three. */
+        if (act){
+          L.polyline(pts, {
+            color:'#0a0e13', weight:7, opacity:.55,
+            interactive:false, lineJoin:'round', lineCap:'round'
+          }).addTo(G.leg);
+        }
         L.polyline(pts, {
-          color:   past ? '#8a6a20' : '#f0a500',
-          weight:  act ? 3.5 : 2,
-          opacity: past ? .45 : .9,
+          color:   past ? '#8a6a20' : (act ? '#ffd166' : '#f0a500'),
+          weight:  act ? 4 : 2,
+          opacity: past ? .45 : (act ? 1 : .85),
           dashArray: past ? '6 5' : null,
           interactive:false, lineJoin:'round', lineCap:'round'
         }).addTo(G.leg);
@@ -17288,15 +17665,32 @@ var PROC_META={
     });
     $('#popL').innerHTML = l;
 
-    var r = '<div class="psec">Overlays</div>';
-    OVERLAYS.forEach(function(o){
-      var k = o[0], ok = o[1];
-      r += '<div class="prow" data-ov="' + k + '"' + (ok ? '' : ' style="opacity:.4"') + '>'
-        +  '<span class="ck">' + (ok && layOn(k) ? tick : '') + '</span>'
-        +  '<span class="lb">' + LAYER_META[k].t + '</span>'
-        +  (ok ? '' : '<span class="nod">no data</span>')
-        +  '</div>';
+    var avail = {};
+    OVERLAYS.forEach(function(o){ avail[o[0]] = o[1]; });
+    function ovRow(k){
+      if (!LAYER_META[k]) return '';
+      var ok = !!avail[k];
+      return '<div class="prow" data-ov="' + k + '"' + (ok ? '' : ' style="opacity:.4"') + '>'
+           + '<span class="ck">' + (ok && layOn(k) ? tick : '') + '</span>'
+           + '<span class="lb">' + LAYER_META[k].t + '</span>'
+           + (ok ? '' : '<span class="nod">no data</span>')
+           + '</div>';
+    }
+    var r = '', placed = {};
+    OV_GROUPS.forEach(function(g){
+      var rows = '';
+      g[1].forEach(function(k){
+        if (!avail.hasOwnProperty(k)) return;   /* not an overlay any more */
+        placed[k] = 1;
+        rows += ovRow(k);
+      });
+      if (rows) r += '<div class="psec">' + g[0] + '</div>' + rows;
     });
+    var left = OVERLAYS.filter(function(o){ return !placed[o[0]]; });
+    if (left.length){
+      r += '<div class="psec">Other</div>';
+      left.forEach(function(o){ r += ovRow(o[0]); });
+    }
     $('#popR').innerHTML = r;
 
     $$('#popL .prow').forEach(function(el){
@@ -17359,6 +17753,43 @@ var PROC_META={
     return Math.min(0.5, (320 + var_mb() + 20) / w);   /* panel + tab bar width */
   }
   function var_mb(){ return 52; }   /* --mod-b + tab padding, approx px */
+  /* ---- is the map under a finger right now? --------------------------
+     GPS Follow recentres on every fix, about once a second, and it did it
+     with no idea whether you were in the middle of a gesture. Pinch to
+     zoom, a fix lands, the map is yanked back to the aircraft mid-pinch.
+     That is the jump.
+
+     The custom one-finger zoom already held its own renders off with a
+     flag, but that flag is local to the map setup and the follow code
+     never saw it - and Leaflet's own pinch and drag were never covered at
+     all. This is the shared answer: any touch on the map, and any
+     Leaflet zoom or drag, marks the map busy for 600 ms afterwards. */
+  var mapTouchAt = 0;
+  function mapBusy(){
+    if (Date.now() - mapTouchAt < 600) return true;
+    try {
+      if (LMAP && LMAP._animatingZoom) return true;
+      if (LMAP && LMAP.dragging && LMAP.dragging.moving && LMAP.dragging.moving()) return true;
+    } catch(_){ }
+    return false;
+  }
+  function mapBusyWatch(){
+    var host = document.getElementById('map');
+    if (host && !host._busyWatch){
+      host._busyWatch = true;
+      ['touchstart','touchmove','touchend','touchcancel'].forEach(function(ev){
+        host.addEventListener(ev, function(){ mapTouchAt = Date.now(); },
+                              { passive:true, capture:true });
+      });
+    }
+    if (LMAP && !LMAP._busyWatch){
+      LMAP._busyWatch = true;
+      ['zoomstart','zoom','zoomend','dragstart','drag','dragend'].forEach(function(ev){
+        LMAP.on(ev, function(){ mapTouchAt = Date.now(); });
+      });
+    }
+  }
+
   function centreOn(lat, lon){
     /* This only ever rewrote VIEW, which the real map does not read -
        so every caller that thought it was centring the map (GPS
@@ -17366,7 +17797,17 @@ var PROC_META={
     if (LMAP){
       var bb = LMAP.getBounds();
       var shift = (bb.getEast() - bb.getWest()) * freqCovers() / 2;
-      LMAP.panTo([lat, lon + shift], { animate:false });
+      var want = [lat, lon + shift];
+      /* Deadband. Sitting on the pad the fix wanders a few metres every
+         second and every one of those was a pan. Under six pixels of
+         movement is noise, not travel, and panning for it is what makes
+         a stationary map twitch. */
+      try {
+        var a = LMAP.latLngToContainerPoint(want);
+        var b = LMAP.latLngToContainerPoint(LMAP.getCenter());
+        if (Math.abs(a.x - b.x) < 6 && Math.abs(a.y - b.y) < 6) return;
+      } catch(_){ }
+      LMAP.panTo(want, { animate:false });
       return;
     }
     var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
@@ -17655,6 +18096,7 @@ var PROC_META={
     } catch(err){ LMAP = null; fail('Map failed to start: ' + (err && err.message)); return; }
 
     document.getElementById('map').classList.add('live');
+    mapBusyWatch();
 
     /* Re-parent the overlay layer into a Leaflet pane. Panes are
        children of the map pane, which Leaflet translates on drag, so
@@ -17973,9 +18415,15 @@ var PROC_META={
                acc:GPSFIX.acc };
       /* Follow recentres continuously; Centred recentres once, on the
          first fix after the button was pressed. */
-      if (follow) centreOn(GPSFIX.lat, GPSFIX.lon);
-      else if (locCentreOnFix){ centreOn(GPSFIX.lat, GPSFIX.lon); }
-      locCentreOnFix = false;
+      /* Not while you are touching it. Follow picks up again on the
+         next fix after your finger leaves, and Centred keeps its
+         one-shot flag until it actually gets to use it rather than
+         spending it on a frame that was thrown away. */
+      if (follow){
+        if (!mapBusy()) centreOn(GPSFIX.lat, GPSFIX.lon);
+      } else if (locCentreOnFix){
+        if (!mapBusy()){ centreOn(GPSFIX.lat, GPSFIX.lon); locCentreOnFix = false; }
+      }
 
       try { recLog(GPSFIX); } catch(_){ }
 
@@ -18196,7 +18644,6 @@ var PROC_META={
     }
     return list;
   }
-  function terrTileCount(maxZ){ return terrTileList(maxZ).length; }
   function fmtBytes(b){
     var mb = b / 1048576;
     return mb >= 1024 ? (mb / 1024).toFixed(2) + ' GB' : Math.round(mb) + ' MB';

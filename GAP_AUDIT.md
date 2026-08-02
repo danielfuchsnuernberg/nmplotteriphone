@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v169 · 2 Aug 2026**
+**Status as of v175 · 2 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,12 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v175 | **Whole-file survey** (`survey.js`: dead functions, undefined calls, orphan `data-` hooks, unstyled classes, framing phrases, storage keys, unread datasets, silent catches). **Found:** two airway datasets — the map drew all 99 `PNG_ROUTES` while the Routes view read a 14-route `ATS_ROUTES` copy, so 85 airways were visible but unselectable. Single source now; copy deleted. Two dead functions removed. Everything else clean. |
+| v174 | **Bug found:** GPS Follow recentred on every fix with no idea a gesture was in progress, so a fix landing mid-pinch yanked the map back — the zoom "jump". One shared busy test now covers touches on the map plus Leaflet's own zoom and drag (600 ms tail); Follow resumes on the next fix after the finger leaves; Centred keeps its one-shot flag until it is used. Plus a 6 px deadband, so a parked aircraft's GPS wander stops panning the map. |
+| v173 | **Waypoint notes** (same NOTES store as the card, one builder two hosts), **bulk delete** in My waypoints (tick boxes, arm-then-fire, self-disarming), **calculator tab Edit mode** with arrows replacing the undiscoverable long press. **Stale framing removed:** the card footnote called weather, procedures, NOTAMs and fix coordinates "demo placeholders" — all four now real. |
+| v172 | Active leg now reads as active: dark casing under a lighter amber, to-come dropped slightly. Flown/flying/to-come differ in colour, weight and opacity. **Gate fixed:** `mirror.py` only checked one direction, which is why `.tedw` could carry a max-height and scrolling body for versions while `.gpswin` had neither. Symmetric now for layout properties; catches all three when run against v152. |
+| v171 | **Bug found:** `.gpswin` had no max-height, so a modal taller than the phone grew past it in both directions — title clipped above, advisory line clipped below, nothing scrollable. All six windows are now flex columns with a fixed header and a scrolling body, capped at the safe-area box. `.tedw` had it right all along. Coordinate block tightened to one box. |
+| v170 | Layers menu grouped into Aerodromes / Points / Airspace / Routes / Weather, with an Other fallback so a layer added to `OVERLAYS` but not to a group cannot vanish. **Mislabel found:** the layer named "Controlled airspace" draws CTAFZ — *uncontrolled* advisory areas — and sat two rows above Control zones and Terminal areas. Renamed CTAF zones. |
 | v169 | **FPL panel takes the height its content needs**, up to the grip's ceiling, eased over 140 ms. It was fixed at 72% of available height — on an iPad that left a third of the screen empty between the last route chip and the fuel strip. The grip can no longer be dragged past the content. |
 | v168 | Terrain shading altitude is a slider (500–20,000 in hundreds, 30 px thumb in a 44 px strip) instead of four ± buttons. Readout and legend follow the thumb live without rebuilding the window; shading repaints throttled during the drag and once on release. |
 | v167 | Home-screen icon: a real PNG mark (amber leg between two square waypoint markers) replacing the SVG letter-N, which iOS never reliably rendered. Page title no longer says "iPhone Layout Demo". |
