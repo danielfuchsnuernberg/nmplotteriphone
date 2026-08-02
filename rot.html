@@ -22,6 +22,29 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v180 2026-08-02 A real checklist broke the parser on its first
+                       line, which is what real data is for.
+
+                       The separators were one regex with an alternation,
+                       so it split at the leftmost separator of ANY kind.
+                       Given an actual BK117 start line -
+
+                         N1 - 10% ... Push Power forward
+
+                       - it split at the hyphen inside "N1 - 10%" and
+                       made the item "N1" with everything else as the
+                       action. Same for HYD Switch 1 - 2, PITCH OFF - ON,
+                       Idle - Flight, and the EPU line that begins with a
+                       hyphen.
+
+                       Each separator is now tried across the whole line
+                       before the next is considered: dots, then tabs,
+                       then a spaced hyphen. Dots and tabs are deliberate
+                       marks; a spaced hyphen is a guess, and a guess must
+                       not beat a deliberate mark. And a line that OPENS
+                       with a hyphen is an aside rather than an item with
+                       an action, which is how P2-LAW writes its EPU
+                       reminder. Regression cases taken straight from it.
        v179 2026-08-02 CHECKLISTS, two kinds, because you carry two.
 
                        A LIST is text you own: sections, items, actions.
@@ -6645,7 +6668,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v179-ROT';
+  var VERSION = 'v180-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -9131,7 +9154,21 @@ var PROC_META={
         return;
       }
       if (!cur){ cur = { t:'', items: [] }; sec.push(cur); }
-      var m = line.match(/^(.*?)(?:\s*\.{2,}\s*|\t+|\s+-\s+)(.*)$/);
+      /* Separators in order of authority, each tried across the WHOLE
+         line before the next is considered. One regex with an alternation
+         does not do that: it splits at the leftmost separator of ANY
+         kind, so a real BK117 line -
+
+           N1 - 10% ... Push Power forward
+
+         - split at the hyphen in "N1 - 10%" and made the item "N1".
+         Dots and tabs are deliberate separators; a spaced hyphen is a
+         guess, and a guess must never beat a deliberate mark. */
+      var m = line.match(/^(.*?)\s*\.{2,}\s*(.*)$/)
+           || line.match(/^([^\t]*)\t+(.*)$/)
+           /* a line that OPENS with a hyphen is an aside, not an item
+              with an action - P2-LAW writes its EPU reminder that way */
+           || (/^\s*-/.test(line) ? null : line.match(/^(.*?)\s+-\s+(.*)$/));
       if (m && m[2].trim()) cur.items.push({ t:m[1].trim(), a:m[2].trim() });
       else cur.items.push({ t:line.trim(), a:'' });
     });
