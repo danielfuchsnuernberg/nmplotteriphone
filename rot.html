@@ -22,6 +22,40 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v191 2026-08-02 Four from the iPad, all layout.
+
+                       THE FPL PANEL WAS STILL SLICING ITS CHIPS, and the
+                       content measurement was never the problem. FPL_MIN
+                       was a flat 250, and on a tablet the fuel strip, the
+                       tab row and the grip come to more than 200 of that
+                       between them - leaving under 40 px of body, which
+                       is less than one route chip. The floor is now the
+                       panel's own furniture plus one comfortable row,
+                       measured, and it applies to the drag as well.
+
+                       THE ROUTE CHIP SHEET was the last one in the app
+                       still rendering as a bare list of words. It now has
+                       the same rows, icons and grouping as everything
+                       else, under the v184 rule: headed groups, and the
+                       destructive action as the last row of the group it
+                       acts on. Move up and Move down only appear where
+                       there is somewhere to move to, and Remove only when
+                       the route can afford it.
+
+                       THE MEASURE CHIP AND THE FREQUENCY WINDOW were both
+                       claiming the same space - one centred over the map,
+                       one anchored right. The chip is now centred over
+                       what is LEFT of the map, which is the same idea the
+                       card focus uses.
+
+                       AND THE LEG CARD'S REMOVE ROW WAS ESCAPING THE
+                       CARD. An .agrp has rounded corners and no clip, so
+                       a child's border - the heavier rule over a
+                       destructive row - painted across the corner and out
+                       of the card. Groups clip their children now, the
+                       tablet sheet clips its contents, and the sheet body
+                       carries enough bottom padding that the last row is
+                       never flush against the edge.
        v190 2026-08-02 The FPL panel could not be dragged down any more,
                        and was clipping its last row. Both mine, both
                        from v169.
@@ -4739,6 +4773,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    equally weighted, including the destructive one. */
 .asec{padding:14px var(--edge) 5px;font-size:var(--t-2xs);font-weight:700;
   letter-spacing:.11em;text-transform:uppercase;color:var(--text-fainter)}
+/* Clip to the rounded box. Without this a child's border - the heavier
+   rule over a destructive row - paints across the corner and, in a sheet
+   that is not clipping, straight out of the card. */
+.agrp{overflow:hidden}
 .agrp{margin:0 var(--edge);border:1px solid var(--border);border-radius:var(--radius);
   background:var(--bg-2);overflow:hidden}
 .agrp + .agrp{margin-top:var(--gut)}
@@ -4765,7 +4803,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       never pushes its own actions off the bottom.
    -------------------------------------------------------------------- */
 .dgrbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;padding-bottom:10px}
+  overscroll-behavior:contain;padding-bottom:16px}
 .arow.dgr{border-top:1px solid var(--border-strong)}
 .arow.dgr .l{color:var(--bad)}
 .arow.dgr .i{color:var(--bad)}
@@ -5769,6 +5807,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   .tedw.tedw{
     max-width:560px;                    /* .gpswin: 400, wider for lists */
     max-height:100%;                    /* fits the padded box       */
+    overflow:hidden;                    /* nothing escapes the card  */
     border:1px solid var(--border-strong);   /* .gpswin: all sides   */
     border-radius:12px;                 /* .gpswin: 12px            */
     box-shadow:0 18px 46px rgba(0,0,0,.7);   /* .gpswin: same        */
@@ -7076,7 +7115,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v190-ROT';
+  var VERSION = 'v191-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -8887,10 +8926,7 @@ var PROC_META={
     var body = $('#fplBody');
     if (!body) return FPL_MIN;
     var chrome = 0;
-    ['#fplStrip', '#dropFpl .dtabs', '#fplGrip'].forEach(function(sel){
-      var el = document.querySelector(sel);
-      if (el) chrome += el.getBoundingClientRect().height;
-    });
+    chrome = fplChromeH();
     /* scrollHeight is the full content height whatever the panel is
        currently clipped to, which is exactly the number wanted. The
        allowance is 10 rather than 2: a row's bottom margin can fall
@@ -8898,16 +8934,35 @@ var PROC_META={
        chip in half - which is exactly what it was doing. */
     return Math.ceil(body.scrollHeight + chrome + 10);
   }
+  /* The floor has to clear the panel's OWN furniture. FPL_MIN was a flat
+     250, and on a tablet the fuel strip, the tab row and the grip come to
+     more than 200 of that between them - leaving under 40 px of body,
+     which is less than one route chip. That is why the chips were being
+     sliced in half whatever the content measurement said. The floor is
+     now the chrome plus one comfortable row. */
+  function fplChromeH(){
+    var c = 0;
+    ['#fplStrip', '#dropFpl .dtabs', '#fplGrip'].forEach(function(sel){
+      var el = document.querySelector(sel);
+      if (el) c += el.getBoundingClientRect().height;
+    });
+    return c;
+  }
+  function fplFloor(){
+    return Math.max(FPL_MIN, Math.round(fplChromeH() + 120));
+  }
   function sizeDrop(){
     var top  = $('#chrome').getBoundingClientRect().bottom;
     var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
     fplMax = Math.max(FPL_MIN, window.innerHeight - top - tabH - 10);
+    var floor = Math.min(fplFloor(), fplMax);
     var set = Math.round(fplFrac * fplMax);
     /* Set by hand: exactly what you dragged. Never touched: what the
-       content needs, capped by the default fraction. */
+       content needs, capped by the default fraction. Either way, never
+       below the floor. */
     var h = fplHand
-      ? Math.max(FPL_MIN, Math.min(fplMax, set))
-      : Math.max(FPL_MIN, Math.min(fplMax, set, fplWantH()));
+      ? Math.max(floor, Math.min(fplMax, set))
+      : Math.max(floor, Math.min(fplMax, set, fplWantH()));
     drop.style.top = top + 'px';
     drop.style.height = h + 'px';
   }
@@ -8919,8 +8974,9 @@ var PROC_META={
       var startY = clientY, startH = drop.getBoundingClientRect().height;
       grip.classList.add('on');
       drop.classList.add('sizing');        /* no easing while a finger is on it */
+      var floor = Math.min(fplFloor(), fplMax);
       function move(y){
-        var h = Math.max(FPL_MIN, Math.min(fplMax, startH + (y - startY)));
+        var h = Math.max(floor, Math.min(fplMax, startH + (y - startY)));
         drop.style.height = h + 'px';
         fplFrac = h / fplMax;
       }
@@ -9512,6 +9568,20 @@ var PROC_META={
     if (!el) return;
     if (!measOn){ el.classList.remove('on'); el.innerHTML = ''; return; }
     el.classList.add('on');
+    /* The chip is centred over the map, and the frequency window is
+       anchored right - centred over the whole map put them on top of each
+       other. Centre it over what is LEFT instead, the same idea the card
+       focus uses. */
+    var pan = document.querySelector('#fqWin.on, .card.on, .pop.on');
+    var host = document.getElementById('map');
+    var off = 0;
+    if (pan && host){
+      try {
+        var pr = pan.getBoundingClientRect(), mr = host.getBoundingClientRect();
+        if (pr.left > mr.left && pr.left < mr.right) off = (mr.right - pr.left) / 2;
+      } catch(_){ }
+    }
+    el.style.transform = 'translateX(calc(-50% - ' + Math.round(off) + 'px))';
     var n = measPts.length;
     var last = '';
     if (n >= 2){
@@ -10584,6 +10654,8 @@ var PROC_META={
     save:   '<path d="M5.5 4.5h9L18.5 8.5v11h-13z"/><path d="M8.5 4.5v5h6v-5"/>'
           + '<path d="M8.5 19.5v-6h7v6"/>',
     elev:   '<path d="M2.5 18.5h19"/><path d="M4.5 15.5l5-7.5 3.2 4.8 2.3-3.2 4.5 5.9z"/>',
+    up:     '<path d="M12 19V5"/><path d="M6 11l6-6 6 6"/>',
+    down:   '<path d="M12 5v14"/><path d="M6 13l6 6 6-6"/>',
     /* a leg with a chevron on it: the leg you are flying */
     fly:    '<path d="M3.5 17.5l17-11"/><path d="M13.5 6.5h7v7"/>'
   };
@@ -11457,18 +11529,23 @@ var PROC_META={
     wptW.classList.remove('tall');
     $('#wptTitle').textContent = label(p);
     $('#wptTop').innerHTML = '';
-    var rows = [
-      ['dct',  'Direct to here'],
-      ['ib',   'Insert point before'],
-      ['ia',   'Insert point after'],
-      ['up',   'Move up'],
-      ['dn',   'Move down'],
-      ['rm',   'Remove from route']
-    ];
-    $('#wptList').innerHTML = rows.map(function(r){
-      return '<button class="wrow' + (r[0] === 'rm' ? ' danger' : '') + '" data-a="' + r[0] + '">' + r[1] + '</button>';
-    }).join('');
-    $$('#wptList .wrow').forEach(function(b){
+    /* Built with the same rows, icons and grouping as every other sheet
+       in the app - it was the last one still rendering as a bare list of
+       words. The v184 rule applies: headed groups, and the destructive
+       action is the last row of the group it acts on. */
+    $('#wptList').innerHTML =
+        '<div class="asec">Go</div><div class="agrp">'
+      +   actRow('data-a','dct','dct','Direct to here')
+      + '</div>'
+      + '<div class="asec">Route</div><div class="agrp">'
+      +   actRow('data-a','ib','add','Insert point before')
+      +   actRow('data-a','ia','next','Insert point after')
+      +   (i > 0 ? actRow('data-a','up','up','Move up') : '')
+      +   (i < ROUTE.length - 1 ? actRow('data-a','dn','down','Move down') : '')
+      +   (ROUTE.length > 2
+           ? actRow('data-a','rm','del','Remove from route', { cls:'dgr' }) : '')
+      + '</div>';
+    $$('#wptList .arow').forEach(function(b){
       b.addEventListener('click', function(){
         var a = b.getAttribute('data-a');
         if (a === 'dct'){ if (directTo(p)) closeWpt(); return; }

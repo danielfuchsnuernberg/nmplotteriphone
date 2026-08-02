@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v190 · 2 Aug 2026**
+**Status as of v191 · 2 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v191 | Four iPad layout faults: FPL floor was a flat 250 while the panel's own chrome exceeded 200 (chips sliced) — floor now measured as chrome + one row, drag included; route chip sheet rebuilt with icons and headed groups; measure chip centred over the uncovered map so it stops colliding with the frequency window; `.agrp` and the tablet sheet now clip, so the leg card's remove row cannot escape. |
 | v190 | **Regression fixed (mine, from v169):** the FPL grip could no longer be dragged past the content height, and the panel clipped its last row. Cap removed — the grip runs to full height again; once dragged, the hand-set height wins permanently. Clipping had two causes: a 2 px allowance (a row's bottom margin falls outside `scrollHeight`) and measuring in the same tick as the redraw. |
 | v189 | **Fuel and phone per field** — free text you own, same idea as user frequencies; shown on the card and the airport page, listed in the summary only when set. **Holds** now carry their frame (°M/°T) and the Use-GPS-track suggestion is converted before storing; the entry logic needed no change because it works on differences. |
 | v188 | **Bug found:** the follow deadband was six PIXELS, and a pixel is a distance that changes with zoom — wide out it suppressed everything, zoomed in it was a few metres, so GPS wander cleared it on every fix and the map jittered close in. Deadband now in both units (6 px AND 10 m of real movement). Corrections over 60 px glide over 0.35 s instead of teleporting. |

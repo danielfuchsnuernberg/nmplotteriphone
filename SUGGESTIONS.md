@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v190 · 2 Aug 2026**.
+Status as of **v191 · 2 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -119,3 +119,7 @@ against it
 | Holds in the frame you fly | v189 | Courses labelled M or T; GPS suggestion converted |
 | Zoom-in jitter | v188 | Deadband in metres as well as pixels |
 | FPL panel drag cap and clipped row | v190 | My regression from v169; grip free again, hand-set height wins |
+| FPL floor smaller than its own chrome | v191 | Measured floor: chrome + one row |
+| Route chip sheet was a bare word list | v191 | Icons, headed groups, v184 rule |
+| Measure chip under the frequency window | v191 | Centred over what is left of the map |
+| Leg card's remove row escaping the card | v191 | Groups clip their children; tablet sheet clips |
