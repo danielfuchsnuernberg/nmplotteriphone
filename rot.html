@@ -22,6 +22,48 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v198 2026-08-03 Full is 540, and it belongs to the aircraft.
+
+                       The wheel ran to 1,200 kg, which is a number you
+                       cannot load into a BK117, and Full meant the top of
+                       the wheel rather than the top of the tank.
+
+                       Usable fuel is a field on the AIRCRAFT now, not a
+                       constant in the app - the fleet holds three
+                       airframes and a full tank is not the same figure
+                       twice. It defaults to 540, sits in Settings under
+                       the registration it belongs to, and travels with
+                       the profile when you switch.
+
+                       The wheel stops there, Full means it, and the
+                       clamp on save uses the same reader - one function,
+                       so the three cannot disagree about how much the
+                       aircraft holds.
+       v197 2026-08-03 A wheel for the fuel, the card from a route point,
+                       and a panel that opens showing the plan.
+
+                       FUEL ON BOARD IS ON THE WHEEL now, with the
+                       altitude and the ETD. A figure you dial is quicker
+                       than a figure you type with one hand, which is why
+                       those two are on one already.
+
+                       THE CARD FROM A ROUTE POINT. Tapping a point in
+                       the plan gave you the six things you can DO to it
+                       and no way to look at it - the field's frequencies,
+                       runways, weather and procedures were three
+                       navigations away from the plan that uses them.
+                       There is an Open the card row now, under Go, and
+                       it opens the point's own card over the map.
+
+                       AND THE PANEL OPENED TOO SHORT. v191 gave the
+                       floor the panel's own furniture plus a row, but
+                       the six header buttons sit INSIDE the body and
+                       nothing counted them - so the first thing you saw
+                       was a route point sliced in half. They are
+                       measured now, because they wrap differently on a
+                       phone and a tablet, and the floor leaves room for
+                       two route rows rather than one. A plan you cannot
+                       see two points of is not showing you a plan.
        v196 2026-08-03 Hold-to-reorder stopped working, and it was the
                        scrolling that took it.
 
@@ -7295,7 +7337,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v196-ROT';
+  var VERSION = 'v198-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -7446,7 +7488,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      default is worse than a blank, since a blank cannot be mistaken for
      a figure. null means "not entered", and everything that reads them
      dashes rather than computing from a guess. */
-  var AC  = { reg:'P2-LAW', type:'BK117', tas:120, burn:220, fob:null, resMin:30, alt:9500 };
+  /* fuelMax is the usable fuel of THIS airframe - 540 kg on the BK117.
+     It belongs to the aircraft, not to the app, because the fleet can
+     hold three of them and a full tank is not the same figure twice. */
+  var AC  = { reg:'P2-LAW', type:'BK117', tas:120, burn:220, fob:null, resMin:30,
+              alt:9500, fuelMax:540 };
   var SET = { clr:1000, labels:'auto', coordFmt:'ddm', crs:'mag' };  /* route line lives in LAYERS */
   var SET_KEY = 'nmp.iphone.set', savedEtd = null;
   (function(){
@@ -9170,8 +9216,22 @@ var PROC_META={
     });
     return c;
   }
+  /* The floor has to clear the panel's furniture AND the block that sits
+     at the top of its body - six header buttons in two rows - or the
+     first thing the panel shows is a route point cut in half. Measured,
+     because the buttons wrap differently on a phone and a tablet, plus
+     room for two route rows rather than one: a plan you cannot see two
+     points of is not showing you a plan. */
+  function fplHeadH(){
+    var h = 0;
+    Array.prototype.forEach.call(
+      document.querySelectorAll('#fplBody > .drow'), function(el){
+        h += el.getBoundingClientRect().height + 8;
+      });
+    return h;
+  }
   function fplFloor(){
-    return Math.max(FPL_MIN, Math.round(fplChromeH() + 120));
+    return Math.max(FPL_MIN, Math.round(fplChromeH() + fplHeadH() + 190));
   }
   function sizeDrop(){
     var top  = $('#chrome').getBoundingClientRect().bottom;
@@ -11755,9 +11815,11 @@ var PROC_META={
        in the app - it was the last one still rendering as a bare list of
        words. The v184 rule applies: headed groups, and the destructive
        action is the last row of the group it acts on. */
+    var wp = ROUTE[i] || {};
     $('#wptList').innerHTML =
         '<div class="asec">Go</div><div class="agrp">'
       +   actRow('data-a','dct','dct','Direct to here')
+      +   actRow('data-a','card','show','Open the card')
       + '</div>'
       + '<div class="asec">Route</div><div class="agrp">'
       +   actRow('data-a','ib','add','Insert point before')
@@ -11770,7 +11832,17 @@ var PROC_META={
     $$('#wptList .arow').forEach(function(b){
       b.addEventListener('click', function(){
         var a = b.getAttribute('data-a');
-        if (a === 'dct'){ if (directTo(p)) closeWpt(); return; }
+        if (a === 'card'){
+        /* the point's own card, over the map, with the plan left open
+           behind it - the panel is where you came from */
+        closeWpt();
+        var cp = ROUTE[i];
+        if (!cp) return;
+        goTo('map');
+        if (cp.id && dbById(cp.id)) openCard(cp.id); else openCardPoint(cp);
+        return;
+      }
+      if (a === 'dct'){ if (directTo(p)) closeWpt(); return; }
         if (a === 'ib'){ closeWpt(); openAdd(i); return; }
         if (a === 'ia'){ closeWpt(); openAdd(i + 1); return; }
         if (a === 'up' && i > 0){ ROUTE.splice(i - 1, 0, ROUTE.splice(i, 1)[0]); }
@@ -15014,6 +15086,44 @@ var PROC_META={
       qkPaintVal();
     }
 
+    if (what === 'fob'){
+      /* Kilos in tens: 0 to 1,200 covers a BK117 with room over it, and
+         a tens step is finer than anyone reads a gauge. Quick buttons for
+         the coarse work, the wheel for the last figure - the same shape
+         as the ETD. */
+      /* The wheel stops at the tank. Offering 1,200 kg on an aircraft
+         that holds 540 is offering a number you cannot load. */
+      var fmax = fuelMaxKg();
+      var kg = [], k2;
+      for (k2 = 0; k2 <= fmax; k2 += 10) kg.push(k2);
+      if (kg[kg.length - 1] !== fmax) kg.push(fmax);
+      var seedKg = (AC.fob == null) ? Math.round(fmax / 20) * 10
+                                    : Math.round(AC.fob / 10) * 10;
+      var idx = Math.max(0, kg.indexOf(Math.min(fmax, Math.max(0, seedKg))));
+      if (idx < 0) idx = 0;
+      var F = buildWheel('kg', kg, idx, 'kg', function(v){ return String(v); });
+      wheels.appendChild(F.wrap);
+      refs.kg = F.w;
+      [['\u2212 100', -100], ['+ 100', 100], ['Full', 'max'], ['Clear', null]]
+        .forEach(function(q){
+          var b = document.createElement('button');
+          b.type = 'button'; b.textContent = q[0];
+          b.addEventListener('click', function(){
+            if (q[1] === null){ qkWheelVals.kg = null; qkEd.classList.remove('on');
+                                AC.fob = null; saveSet(); drawFpl(); drawFuel();
+                                toast('Fuel on board cleared'); return; }
+            var cur2 = qkWheelVals.kg == null ? seedKg : qkWheelVals.kg;
+            var want = (q[1] === 'max') ? fmax : cur2 + q[1];
+            want = Math.max(0, Math.min(fmax, Math.round(want / 10) * 10));
+            if (kg.indexOf(want) < 0) want = fmax;
+            refs.kg.__goto(kg.indexOf(want), true);
+          });
+          quick.appendChild(b);
+        });
+      requestAnimationFrame(function(){ refs.kg.__goto(refs.kg.__idx, false); });
+      return;
+    }
+
     if (what === 'etd'){
       var hh = [], mm = [], i;
       for (i = 0; i < 24; i++) hh.push(i);
@@ -15090,7 +15200,11 @@ var PROC_META={
     $('#qkTtl').textContent = cfg[0].toUpperCase();   /* the window header is mono caps */
     /* a heading is continuous, so it gets a wheel like the ETD rather
        than a keyboard - 234 is quicker to dial than to type in flight */
-    var dial = (what === 'alt' || what === 'etd' || what.indexOf('hold:') === 0);
+    /* Fuel joins the wheel. A figure you dial is quicker than a figure
+       you type with one hand, which is the whole reason the altitude and
+       the ETD are on one. */
+    var dial = (what === 'alt' || what === 'etd' || what === 'fob'
+                || what.indexOf('hold:') === 0);
     $('#qkText').classList.toggle('off', dial);
     $('#qkDial').classList.toggle('on', dial);
     if (dial){
@@ -15170,15 +15284,21 @@ var PROC_META={
        means "I have not told you", which is not the same as zero, and the
        whole panel is built to say so rather than guess. */
     if (qkWhat === 'fob'){
-      var fv = $('#qkIn').value.trim();
-      if (!fv){
-        AC.fob = null; saveSet(); qkEd.classList.remove('on');
-        drawFpl(); drawFuel(); toast('Fuel on board cleared');
-        return;
-      }
-      var fk = parseFloat(fv.replace(/[^\d.]/g, ''));
-      if (!isFinite(fk) || fk < 0 || fk > 5000){ toast('Fuel in kg, 0 to 5,000'); return; }
-      AC.fob = Math.round(fk);
+      /* Fuel is a dial, so it reads the WHEEL - never the text box. It
+         used to fall through to the keyboard path when the wheel had not
+         reported a value yet, which meant whatever happened to be left in
+         that input became the fuel on board. A stale figure is worse than
+         no figure, and fuel is the last place to accept one.
+
+         Clamped and rounded on the way out as well as in: the wheel only
+         offers tens, but a value read back from a half-scrolled wheel is
+         not one of them. */
+      var wEl = document.querySelector('#qkWheels [data-whl="kg"]');
+      var raw = qkWheelVals.kg;
+      if (raw == null && wEl && wEl.__list) raw = wEl.__list[wEl.__idx];
+      if (raw == null){ toast('Pick a figure on the wheel'); return; }
+      var wk = Math.round(Number(raw) / 10) * 10;
+      AC.fob = Math.max(0, Math.min(fuelMaxKg(), isFinite(wk) ? wk : 0));
       saveSet(); qkEd.classList.remove('on');
       drawFpl(); drawFuel();
       toast('Fuel on board ' + AC.fob + ' kg');
@@ -17531,7 +17651,7 @@ var PROC_META={
      the same class of lie as a checklist remembering yesterday's ticks. */
   var FLEET_KEY = 'nmp.iphone.fleet';
   var FLEET = null, acId = null;
-  var AC_FIELDS = ['reg', 'type', 'tas', 'burn', 'resMin', 'alt'];
+  var AC_FIELDS = ['reg', 'type', 'tas', 'burn', 'resMin', 'alt', 'fuelMax'];
 
   function fleetLoad(){
     try {
@@ -17576,7 +17696,9 @@ var PROC_META={
     var src = copy ? fleetById(acId) : null;
     var p = { id:'ac' + Date.now().toString(36) };
     AC_FIELDS.forEach(function(k){
-      p[k] = src ? src[k] : ({ reg:'', type:'', tas:120, burn:220, resMin:30, alt:9500 })[k];
+      p[k] = src ? src[k]
+                 : ({ reg:'', type:'', tas:120, burn:220, resMin:30,
+                      alt:9500, fuelMax:540 })[k];
     });
     if (src) p.reg = '';
     FLEET.push(p); acId = p.id; fleetApply(p.id); fleetSave();
@@ -17586,6 +17708,12 @@ var PROC_META={
     FLEET = FLEET.filter(function(p){ return p.id !== acId; });
     acId = FLEET[0].id; fleetApply(acId); fleetSave();
     return true;
+  }
+  /* One reader, so the wheel, the clamp and the label cannot disagree
+     about how much this aircraft holds. */
+  function fuelMaxKg(){
+    var v = Number(AC.fuelMax);
+    return (isFinite(v) && v >= 50 && v <= 5000) ? Math.round(v / 10) * 10 : 540;
   }
   function fleetHTML(){
     var h = '<div class="fleetbar">';
@@ -18304,6 +18432,8 @@ var PROC_META={
       + setRow('Cruise TAS', 'kt', inCtrl('tas', AC.tas))
       + setRow('Fuel burn', 'kg per hour', inCtrl('burn', AC.burn))
       + setRow('Fuel on board', 'kg \u00b7 set per flight', inCtrl('fob', AC.fob == null ? '' : AC.fob))
+      + setRow('Usable fuel', 'kg, full tanks',
+               inCtrl('fuelMax', AC.fuelMax == null ? '' : AC.fuelMax))
       + setRow('Reserve', 'minutes', segCtrl('resMin', [[15,'15'],[30,'30'],[45,'45'],[60,'60']], AC.resMin))
       + (FLEET.length > 1
          ? '<button class="setgo setgo-del" id="acDel">Remove this aircraft<span class="ch">\u00d7</span></button>'

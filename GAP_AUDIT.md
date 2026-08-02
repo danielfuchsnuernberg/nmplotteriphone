@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v196 · 3 Aug 2026**
+**Status as of v198 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,8 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v198 | **Usable fuel is now a per-aircraft field** (default 540 kg, BK117) rather than a constant — the fleet holds three airframes and a full tank is not the same figure twice. The wheel stops at the tank, Full means it, and the save clamp uses the same reader. |
+| v197 | Fuel on board moved to a wheel (tens, 0–1,200 kg, quick steps, Clear for unknown) and now reads only the wheel — it could previously fall through to whatever was left in the text box. **Open the card** added to the route-point sheet. FPL floor now measures the header block inside the body, so the panel no longer opens with a route point sliced in half. |
 | v196 | **Bug found:** hold-to-reorder was dead. The panel body became a scrolling container in v169, iOS claims the gesture and fires `touchcancel`, which was wired straight to `dragEnd` — so the 260 ms hold never armed. Chips now set `touch-action:none`, and a cancel before the hold arms only stands the timer down. Third v169-era regression. |
 | v195 | The FPL panel now stays open behind the windows it launches (registration, type, altitude, ETD); Procedure and Routes still take it, being whole views. **Fuel on arrival is now the button that sets fuel on board** — same `AC.fob` the Fuel view uses, blank clears to unknown rather than zero. Header wiring moved to one delegated listener. |
 | v194 | **Bug found:** the frequency list carried a third, invisible ordering (a majors-first "rank") inside its two groups, so the alphabet restarted partway down with nothing on screen explaining it — it read as no sorting at all. Rank removed; two groups only, each with a heading and a count. |
