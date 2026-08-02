@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v167 · 2 Aug 2026**
+**Status as of v168 · 2 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v168 | Terrain shading altitude is a slider (500–20,000 in hundreds, 30 px thumb in a 44 px strip) instead of four ± buttons. Readout and legend follow the thumb live without rebuilding the window; shading repaints throttled during the drag and once on release. |
 | v167 | Home-screen icon: a real PNG mark (amber leg between two square waypoint markers) replacing the SVG letter-N, which iOS never reliably rendered. Page title no longer says "iPhone Layout Demo". |
 | v166 | **Bug found:** Show on map was dead on every recorded flight. Two faults stacked — the sheet's action rows were wired after the recorded-track branch had already returned, so they had no handler at all; and the saved track was drawn by mapping the whole fix list, which threw on the null gap markers *inside* `renderMap` and took the map render down with it. Now drawn per segment, nulls filtered before fitBounds, header reads Recorded flight. |
 | v165 | **Approach minima** — `PROC_META` lifted verbatim (5 procedures, all AYPY), verified identical to v262. Procedure tab rebuilt: procedures derived from the ENR 4.3 fixes, so all five fields with published approaches show theirs; minima shown where carried, stated plainly where not. **Fabricated data removed:** the NOTAM tab was rendering three hardcoded NOTAMs — serials, date ranges, one closing a runway to night ops — for any field with a FIELD_INFO entry. |
