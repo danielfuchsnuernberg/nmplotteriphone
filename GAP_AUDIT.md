@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v175 · 2 Aug 2026**
+**Status as of v190 · 2 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,21 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v190 | **Regression fixed (mine, from v169):** the FPL grip could no longer be dragged past the content height, and the panel clipped its last row. Cap removed — the grip runs to full height again; once dragged, the hand-set height wins permanently. Clipping had two causes: a 2 px allowance (a row's bottom margin falls outside `scrollHeight`) and measuring in the same tick as the redraw. |
+| v189 | **Fuel and phone per field** — free text you own, same idea as user frequencies; shown on the card and the airport page, listed in the summary only when set. **Holds** now carry their frame (°M/°T) and the Use-GPS-track suggestion is converted before storing; the entry logic needed no change because it works on differences. |
+| v188 | **Bug found:** the follow deadband was six PIXELS, and a pixel is a distance that changes with zoom — wide out it suppressed everything, zoomed in it was a few metres, so GPS wander cleared it on every fix and the map jittered close in. Deadband now in both units (6 px AND 10 m of real movement). Corrections over 60 px glide over 0.35 s instead of teleporting. |
+| v187 | Closing a card, leg or zone sheet re-centres the subject in the now-full map — the last focused subject is remembered and the same focus runs again on every close path. Guard: a subject panned off the map since opening is left where it is. |
+| v186 | More sheet capped at 340 px (was 59%, most of an iPad). Views grouped Flying / Planning / Data with an Other fallback; **Edit** now reorders within a group and hides views, both persisted, and hosts the six layout editors moved out of Settings. **Aircraft profiles**: a fleet with per-airframe reg/type/cruise/burn/reserve/altitude; fuel on board deliberately excluded as it belongs to the flight. |
+| v185 | **Mag var** on the point window, airport page and leg card, computed from WMM at that position. **Bug found:** opening a card panned the map to keep the subject in sight, but Follow dragged it straight back on the next fix — the "snaps back to centre" behaviour. Focusing now drops Follow to Centred, with the locate button and a toast saying so. |
+| v184 | **The sheet rule**, written into the stylesheet: facts first; every action group headed; a destructive action is the last row of the group it acts on, not a group of its own; units beside the number, not under it; the body scrolls. Applied to the leg card and the waypoint window, which both had a floating unheaded delete box. |
+| v183 | **Keep the subject in sight.** Opening a card, leg, airway or airspace sheet now pans the map so the subject sits in the middle of the part the panel is *not* covering. Panels are measured, not assumed; the trim side is chosen by which leaves the most map area (a full-width bottom sheet and a right-hand side panel resolve correctly). Never zooms; no-ops within 4 px. |
+| v182 | **Full-screen airport page.** Picking a field from Airports opens it as a page — header (ident, name, town, coordinates, first/last light), a summary of what is actually held (elevation, runways, procedures, latest weather, airspace, all frequencies), and the same five tabs. One card, two hosts: the tab bodies and their wiring are shared, `wireCardBody(sel, f)` replacing six blocks that named `#cardBody`. Show on map hands the field to the side card. |
+| v181 | **Magnetic courses via the World Magnetic Model.** WMM2025 official coefficients (NOAA/NCEI + BGS, from the published COF file) with secular variation; declination computed from lat/lon/date anywhere. Validated against an independent implementation at 12 points across PNG, Australia, Peru, the equator and both poles — worst disagreement 0.0002°. Settings switch Magnetic/True, magnetic default, every course carries °M or °T. AIP tracks, METAR wind and hold courses deliberately not rotated. |
+| v180 | **Bug found by real data:** the checklist parser used one regex with an alternation, so it split at the leftmost separator of any kind — `N1 - 10% ... Push Power forward` split at the hyphen and made the item `N1`. Separators are now tried in order of authority (dots, tab, spaced hyphen) across the whole line, and a line opening with a hyphen is an aside. Regression cases taken from P2-LAW. |
+| v179 | **Checklists** — two kinds. A **list** you own, edited as text (sections with `#`, actions after dots/tab/spaced hyphen), re-parsed on save. A **PDF** stored whole in IndexedDB (new `files` store, db v2) and opened in the system viewer rather than drawn inline. Text size A−/A+ 70–200%, remembered. Ticks deliberately not persisted. |
+| v178 | **Route leg card** — tap a leg (18 px hit line) for distance, course, highest ground and lowest safe, plus Fly this leg / Direct to leg end / Remove leg end. Course is **true** (no variation data exists in this build); **Lowest safe** replaces ForeFlight's Mountainous yes/no, which would need a designated-area chart we don't hold. |
+| v177 | My notes block ran to the window edge while ROUTE and WAYPOINT beside it were inset — the card body pads itself, the point-window body does not. Block is wrapped; the wrapper takes the `--edge` inset in the window only. |
+| v176 | **Measure tool** (ruler on the rail; great-circle segments, per-leg bearing/distance, running total, marker pane locked out while measuring) and **waypoint library** (browse the cloud, held rows untickable, pull only what you tick). **Copy route struck off, not built:** the flight sheet has had Duplicate since it was written. |
 | v175 | **Whole-file survey** (`survey.js`: dead functions, undefined calls, orphan `data-` hooks, unstyled classes, framing phrases, storage keys, unread datasets, silent catches). **Found:** two airway datasets — the map drew all 99 `PNG_ROUTES` while the Routes view read a 14-route `ATS_ROUTES` copy, so 85 airways were visible but unselectable. Single source now; copy deleted. Two dead functions removed. Everything else clean. |
 | v174 | **Bug found:** GPS Follow recentred on every fix with no idea a gesture was in progress, so a fix landing mid-pinch yanked the map back — the zoom "jump". One shared busy test now covers touches on the map plus Leaflet's own zoom and drag (600 ms tail); Follow resumes on the next fix after the finger leaves; Centred keeps its one-shot flag until it is used. Plus a 6 px deadband, so a parked aircraft's GPS wander stops panning the map. |
 | v173 | **Waypoint notes** (same NOTES store as the card, one builder two hosts), **bulk delete** in My waypoints (tick boxes, arm-then-fire, self-disarming), **calculator tab Edit mode** with arrows replacing the undiscoverable long press. **Stale framing removed:** the card footnote called weather, procedures, NOTAMs and fix coordinates "demo placeholders" — all four now real. |
@@ -121,13 +136,12 @@ a picker over an empty set.
 
 ~~**GPX export**~~ — **done, v164**.
 
-**Measure tool** — I probed for this and got a false positive from my own
-changelog text. It is genuinely absent.
+~~**Measure tool**~~ — **done, v176**.
 
 **Weight and balance** — dropped from the list at Danny's request; he has a
 separate app for it.
 
-**Waypoint library** (cloud waypoint browser) and the **copy-route modal**.
+~~**Waypoint library**~~ — **done, v176**. ~~Copy-route~~ — already existed as Duplicate.
 
 **Village pin**, **MBZ editor**, **Open-Meteo model weather**.
 

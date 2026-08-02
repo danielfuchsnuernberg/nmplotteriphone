@@ -22,6 +22,69 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v190 2026-08-02 The FPL panel could not be dragged down any more,
+                       and was clipping its last row. Both mine, both
+                       from v169.
+
+                       THE DRAG CAP. v169 stopped the grip going past
+                       what the content needed, reasoning that stretching
+                       a panel into empty space was pointless. It is not
+                       pointless: a panel you can pull down is a map you
+                       can see less of and a plan you can see more of, and
+                       that is a choice. The cap is gone - the grip runs
+                       to the full height again, as it did before.
+
+                       And once the grip has been used the height is
+                       YOURS. The content measurement stops overriding it,
+                       permanently, because a panel that silently
+                       re-shrinks after you have set it is worse than one
+                       that was never adjustable. Untouched, it still
+                       sizes itself to the tab, which is what fixed the
+                       iPad's empty field.
+
+                       THE CLIPPED ROW, two causes at once. The allowance
+                       over the measured content was two pixels, and a
+                       row's bottom margin can fall outside scrollHeight -
+                       being two pixels short cuts the last chip in half.
+                       Ten now. And the measurement ran in the same tick
+                       as the redraw, reading a body that had not been
+                       laid out yet and coming back short; it waits a
+                       frame.
+       v189 2026-08-02 Fuel and a phone number, and holds in the frame
+                       you actually fly.
+
+                       FUEL AND CONTACT. Frequencies solved this shape of
+                       problem already: the pack carries what the AIP
+                       publishes, and everything else is yours to add.
+                       Nobody publishes the drum stock at a bush strip or
+                       the number of the man with the key, but you know
+                       both, and they belong on the card rather than in
+                       your head.
+
+                       Free text on purpose. A fuel row that forced a
+                       choice from a list would be wrong the first time
+                       the answer is "Jet A1, drums, ring ahead". Clearing
+                       a value removes the record rather than storing an
+                       empty string, so a field you have never touched
+                       leaves nothing behind. It shows on the card and on
+                       the airport page, and the page summary lists it
+                       only when it is actually set - the row is never
+                       claimed from data the pack does not have.
+
+                       HOLDS. You said it plainly: in the aircraft you
+                       look at a number and turn to it, you do not convert
+                       anything. So the hold panel works in the frame you
+                       fly - the courses now carry their own suffix, M or
+                       T, matching the setting.
+
+                       Nothing needed rotating, and that is worth writing
+                       down: the entry logic works entirely on the
+                       DIFFERENCE between your track and the inbound
+                       course, and a difference is the same in either
+                       frame. The one thing that did need fixing was the
+                       Use GPS track button - GPS track is true, so the
+                       figure is converted before it is stored rather
+                       than quietly mixing the two frames in one panel.
        v188 2026-08-02 The zoom jump was a deadband measured in the wrong
                        unit.
 
@@ -4343,6 +4406,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:var(--bg-2);border:1px solid var(--border-strong);
   font-size:var(--t-2xs);font-weight:700;color:var(--text-muted)}
 .sedit button[disabled]{opacity:.3}
+/* Your own details for a field: same row shape as a frequency, because
+   they are the same idea - what the pack does not carry, you do. */
+.fldblk{margin-top:2px}
+.fldrow{width:100%;display:flex;align-items:baseline;gap:12px;text-align:left;
+  padding:10px 0;border-bottom:1px solid var(--border)}
+.fldrow .k{flex:0 0 34%;font-size:var(--t-sm);color:var(--text-2)}
+.fldrow .v{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fldrow .v.dim{color:var(--text-fainter)}
 .fleetbar{display:flex;flex-wrap:wrap;gap:6px;padding:2px var(--edge) 10px}
 .fchip{height:32px;padding:0 12px;border-radius:16px;background:var(--bg-2);
   border:1px solid var(--border-strong);font-family:var(--mono);
@@ -7004,7 +7076,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v188-ROT';
+  var VERSION = 'v190-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -8660,8 +8732,15 @@ var PROC_META={
       });
     }
     if (fplTab === 'profile'){ profPaint(); wireScrub(); }
-    /* the content just changed, so the height it needs has too */
-    if (drop && drop.classList.contains('on')) sizeDrop();
+    /* The content just changed, so the height it needs has too - but
+       measured on the next frame. Measuring in the same tick reads a
+       body that has not been laid out yet and comes back short, which is
+       the other half of why the last row was being clipped. */
+    if (drop && drop.classList.contains('on')){
+      requestAnimationFrame(function(){
+        try { if (drop.classList.contains('on')) sizeDrop(); } catch(_){ }
+      });
+    }
     renderMap();
   }
 
@@ -8764,12 +8843,23 @@ var PROC_META={
 
   /* ---- FPL open / tabs / tools ---- */
   var drop = $('#dropFpl');
-  var FPL_KEY = 'nmp.iphone.fplh', FPL_MIN = 250, fplMax = 400;
+  var FPL_KEY = 'nmp.iphone.fplh', FPL_HAND_KEY = 'nmp.iphone.fplhand';
+  var FPL_MIN = 250, fplMax = 400;
+  /* Has the grip been used? Once you have set a height by hand it is
+     yours, and nothing computed gets to override it. */
+  var fplHand = (function(){
+    try { return localStorage.getItem(FPL_HAND_KEY) === '1'; } catch(_){ return false; }
+  })();
   var fplFrac = (function(){
     try{ var v = parseFloat(localStorage.getItem(FPL_KEY)); if (v > 0.2 && v <= 1) return v; }catch(e){}
     return 0.72;
   })();
-  function saveFplH(){ try{ localStorage.setItem(FPL_KEY, String(fplFrac)); }catch(e){} }
+  function saveFplH(){
+    try{
+      localStorage.setItem(FPL_KEY, String(fplFrac));
+      localStorage.setItem(FPL_HAND_KEY, fplHand ? '1' : '0');
+    }catch(e){}
+  }
 
   /* The panel takes the height its CONTENT needs, up to the ceiling the
      grip sets. It used to take the ceiling always - 72% of whatever was
@@ -8783,9 +8873,16 @@ var PROC_META={
      twelve cards. Height now follows the tab, eased over 140 ms so it
      reads as the panel settling rather than jumping.
 
-     The grip still owns the maximum. It cannot be dragged past what the
-     content needs, because a panel that stretches into nothing and then
-     snaps back on release is worse than one that stops. */
+     v190: and the grip is FREE again. v169 capped the drag at what the
+     content needed, on the reasoning that stretching a panel into empty
+     space is pointless. It is not pointless - a panel you can pull down
+     is a map you can see less of and a plan you can see more of, and
+     that is a choice, not a mistake. The cap is gone.
+
+     Once the grip has been used, the height is YOURS: the content
+     measurement stops overriding it, permanently, because a panel that
+     silently re-shrinks after you have set it is worse than one that
+     was never adjustable. */
   function fplWantH(){
     var body = $('#fplBody');
     if (!body) return FPL_MIN;
@@ -8795,15 +8892,22 @@ var PROC_META={
       if (el) chrome += el.getBoundingClientRect().height;
     });
     /* scrollHeight is the full content height whatever the panel is
-       currently clipped to, which is exactly the number wanted */
-    return Math.ceil(body.scrollHeight + chrome + 2);
+       currently clipped to, which is exactly the number wanted. The
+       allowance is 10 rather than 2: a row's bottom margin can fall
+       outside scrollHeight, and being two pixels short cuts the last
+       chip in half - which is exactly what it was doing. */
+    return Math.ceil(body.scrollHeight + chrome + 10);
   }
   function sizeDrop(){
     var top  = $('#chrome').getBoundingClientRect().bottom;
     var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
     fplMax = Math.max(FPL_MIN, window.innerHeight - top - tabH - 10);
-    var ceil = Math.round(fplFrac * fplMax);
-    var h = Math.max(FPL_MIN, Math.min(fplMax, ceil, fplWantH()));
+    var set = Math.round(fplFrac * fplMax);
+    /* Set by hand: exactly what you dragged. Never touched: what the
+       content needs, capped by the default fraction. */
+    var h = fplHand
+      ? Math.max(FPL_MIN, Math.min(fplMax, set))
+      : Math.max(FPL_MIN, Math.min(fplMax, set, fplWantH()));
     drop.style.top = top + 'px';
     drop.style.height = h + 'px';
   }
@@ -8815,10 +8919,8 @@ var PROC_META={
       var startY = clientY, startH = drop.getBoundingClientRect().height;
       grip.classList.add('on');
       drop.classList.add('sizing');        /* no easing while a finger is on it */
-      /* the ceiling for THIS drag: never past what the content needs */
-      var dragCap = Math.max(FPL_MIN, Math.min(fplMax, fplWantH()));
       function move(y){
-        var h = Math.max(FPL_MIN, Math.min(dragCap, startH + (y - startY)));
+        var h = Math.max(FPL_MIN, Math.min(fplMax, startH + (y - startY)));
         drop.style.height = h + 'px';
         fplFrac = h / fplMax;
       }
@@ -8827,6 +8929,7 @@ var PROC_META={
       function end(){
         grip.classList.remove('on');
         drop.classList.remove('sizing');
+        fplHand = true;                     /* your height from here on */
         saveFplH();
         document.removeEventListener('touchmove', tm);
         document.removeEventListener('touchend', end);
@@ -12772,6 +12875,7 @@ var PROC_META={
         +  chartsFor(f.id).length + ' plates for ' + f.id + '</button>';
     }
 
+    if (f.id) h += fldBlockHTML(f.id);
     if (f.id) h += notesBlockHTML(f.id);
 
     /* This said weather, procedures and NOTAMs were demo placeholders,
@@ -13515,6 +13619,7 @@ var PROC_META={
      same markup, so the wiring had to stop naming #cardBody. */
   function wireCardBody(sel, f){
     wireCopy(sel);
+    wireFldBlock(sel);
     $$(sel + ' [data-cn]').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); openNote(b.getAttribute('data-cn')); });
     });
@@ -15011,6 +15116,74 @@ var PROC_META={
      Radio panel alongside the published entries. This is the gap the
      AIP cannot fill - bush strips and company frequencies.
      ============================================================ */
+  /* ---- Your own details for a field ---------------------------------
+     Frequencies solved this shape of problem already: the pack carries
+     what the AIP publishes, and everything else is yours to add. Fuel and
+     a phone number are the same - nobody publishes the drum stock at a
+     bush strip or the number of the man who has the key, but you know
+     both, and they belong on the card rather than in your head.
+
+     Kept deliberately as free text. A fuel row that forces a choice from
+     a list would be wrong the first time the answer is "Jet A1, drums,
+     ring ahead". */
+  var FLD_KEY = 'nmp.iphone.fielddetails';
+  var MYFLD = (function(){
+    try { var o = JSON.parse(localStorage.getItem(FLD_KEY)); if (o) return o; } catch(_){ }
+    return {};
+  })();
+  function saveMyFld(){
+    try { localStorage.setItem(FLD_KEY, JSON.stringify(MYFLD)); } catch(_){ }
+  }
+  function fldDetail(id, k){
+    var r = MYFLD[id];
+    return (r && r[k]) ? r[k] : '';
+  }
+  function setFldDetail(id, k, v){
+    if (!MYFLD[id]) MYFLD[id] = {};
+    v = String(v == null ? '' : v).trim();
+    if (v) MYFLD[id][k] = v; else delete MYFLD[id][k];
+    if (!Object.keys(MYFLD[id]).length) delete MYFLD[id];
+    saveMyFld();
+  }
+  var FLD_ROWS = [['fuel', 'Fuel', 'Jet A1 \u00b7 drums \u00b7 ring ahead'],
+                  ['phone', 'Phone', '+675 ...']];
+  /* one builder, both hosts - the card's Info tab and the airport page */
+  function fldBlockHTML(id){
+    if (!id) return '';
+    var h = '<div class="csec">Fuel and contact</div><div class="fldblk">';
+    FLD_ROWS.forEach(function(r){
+      var v = fldDetail(id, r[0]);
+      h += '<button class="fldrow" data-fld="' + esc(id) + '|' + r[0] + '">'
+        +  '<span class="k">' + r[1] + '</span>'
+        +  '<span class="v' + (v ? '' : ' dim') + '">' + (v ? esc(v) : 'not set') + '</span>'
+        +  '</button>';
+    });
+    h += '</div><div class="cnote">Yours, not published. Nobody publishes the drum stock at a '
+      +  'strip or the number of the man with the key \u2014 but you know both.</div>';
+    return h;
+  }
+  function wireFldBlock(sel){
+    $$(sel + ' [data-fld]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var p = b.getAttribute('data-fld').split('|');
+        var row = FLD_ROWS.filter(function(r){ return r[0] === p[1]; })[0];
+        openFldEd(p[0], p[1], row ? row[1] : p[1], row ? row[2] : '');
+      });
+    });
+  }
+  var fldEd = null;
+  function openFldEd(id, key, label, ph){
+    fldEd = { id:id, key:key };
+    $('#noteEdTtl').textContent = label + ' \u00b7 ' + id;
+    $('#noteTtl').value = fldDetail(id, key);
+    $('#noteTtl').placeholder = ph || '';
+    $('#noteAp').value = id;
+    $('#noteTxt').value = '';
+    $('#noteDel').style.visibility = 'hidden';
+    noteEd.classList.add('on');
+  }
+
   var FREQ_KEY = 'nmp.iphone.freqs';
   var MYFREQ = (function(){
     try{ var o = JSON.parse(localStorage.getItem(FREQ_KEY)); if (o) return o; }catch(e){}
@@ -16420,7 +16593,11 @@ var PROC_META={
     clearTimeout(noteDelArm); noteDelArm = null;
     noteEd.classList.add('on');
   }
-  function closeNote(){ noteEd.classList.remove('on'); refreshNotesView(); }
+  function closeNote(){
+    fldEd = null;
+    var t = $('#noteTtl'); if (t) t.placeholder = '';
+    noteEd.classList.remove('on'); refreshNotesView();
+  }
   function refreshNotesView(){
     var v = viewCache['notes'];
     if (v){ v.querySelector('.vbody').innerHTML = notesHTML(); wireNotes(v); }
@@ -16429,6 +16606,18 @@ var PROC_META={
   $('#noteEdClose').addEventListener('click', closeNote);
 
   $('#noteSave').addEventListener('click', function(){
+    /* the same editor serves the field details - one field, saved to the
+       field rather than to the notes list */
+    if (fldEd){
+      setFldDetail(fldEd.id, fldEd.key, $('#noteTtl').value);
+      var was = fldEd; fldEd = null;
+      noteEd.classList.remove('on');
+      $('#noteTtl').placeholder = '';
+      try { drawCard(); } catch(_){ }
+      try { if (apPage) rerenderAirports(viewCache['airports']); } catch(_){ }
+      toast('Saved');
+      return;
+    }
     var ap  = $('#noteAp').value.trim().toUpperCase();
     var ttl = $('#noteTtl').value.trim();
     var txt = $('#noteTxt').value;
@@ -16662,6 +16851,10 @@ var PROC_META={
     var zs = f.id ? zonesAt(f, AC.alt) : [];
     if (zs.length) rows.push(['Airspace', zs.map(function(z){ return z.id; }).join(', ')]);
     rows.push(['Mag var', crsVarTxt(f.lat, f.lon)]);
+    FLD_ROWS.forEach(function(r){
+      var v = fldDetail(f.id, r[0]);
+      if (v) rows.push([r[1], v]);
+    });
 
     var freqs = f.id ? allFreqFor(f.id) : [];
     var h = '<div class="apsum"><div class="apcol">';
@@ -16766,6 +16959,7 @@ var PROC_META={
       });
     });
     wireCardBody('#apBody', f);
+    wireFldBlock('#apBody');
     wireCopy('.aphead');
   }
 
@@ -18932,22 +19126,25 @@ var PROC_META={
       +      '<button data-h="dirin"' + (HOLD.dirIn ? ' class="on"' : '') + '>Inbound</button>'
       +      '<button data-h="dirout"' + (!HOLD.dirIn ? ' class="on"' : '') + '>Outbound</button>'
       +    '</span>'
-      +    '<button class="hval" data-h="crs">' + String(HOLD.inb).padStart(3,'0') + '<u>\u00b0</u></button></div>'
+      +    '<button class="hval" data-h="crs">' + String(HOLD.inb).padStart(3,'0')
+      +      '<u>\u00b0' + (SET.crs === 'mag' ? 'M' : 'T') + '</u></button></div>'
       +    '<div class="hseg" style="margin-top:10px"><span class="grp">'
       +      '<button data-h="tl"' + (HOLD.turns === 'L' ? ' class="on"' : '') + '>Left turns</button>'
       +      '<button data-h="tr"' + (HOLD.turns === 'R' ? ' class="on"' : '') + '>Right turns</button>'
       +    '</span></div>'
       +    '<div class="hquad">Hold ' + holdQuadrant() + ' of the fix, inbound '
-      +      String(holdInbound()).padStart(3,'0') + '\u00b0</div>'
+      +      String(holdInbound()).padStart(3,'0') + '\u00b0'
+      +      (SET.crs === 'mag' ? 'M' : 'T') + '</div>'
       +  '</div>';
 
     h += '<div class="hcard"><div class="hseg">'
       +    '<span class="hlab">Your track to the fix</span>'
-      +    '<button class="hval" data-h="trk">' + String(HOLD.trk).padStart(3,'0') + '<u>\u00b0</u></button>'
+      +    '<button class="hval" data-h="trk">' + String(HOLD.trk).padStart(3,'0')
+      +      '<u>\u00b0' + (SET.crs === 'mag' ? 'M' : 'T') + '</u></button>'
       +  '</div>'
       +  (GPSFIX && GPSFIX.trk != null && GPSFIX.gs > 15
           ? '<button class="e6btn" style="margin-top:10px" data-h="gps">Use GPS track \u00b7 '
-            + String(Math.round(GPSFIX.trk)).padStart(3,'0') + '\u00b0</button>' : '')
+            + crsTxt(GPSFIX.trk, GPSFIX.lat, GPSFIX.lon) + '</button>' : '')
       +  '</div>';
 
     h += holdDiagramHTML();
@@ -19122,7 +19319,16 @@ var PROC_META={
       dirout: function(){ HOLD.dirIn = false; },
       tl:     function(){ HOLD.turns = 'L'; },
       tr:     function(){ HOLD.turns = 'R'; },
-      gps:    function(){ if (GPSFIX && GPSFIX.trk != null) HOLD.trk = Math.round(GPSFIX.trk) % 360; }
+      /* GPS track is TRUE. The hold works in the frame you type in, so
+         the offered figure is converted before it is stored - otherwise
+         pressing this button would quietly mix the two frames in one
+         panel. */
+      gps:    function(){
+        if (!GPSFIX || GPSFIX.trk == null) return;
+        var t = GPSFIX.trk;
+        if (SET.crs === 'mag') t = t - magDec(GPSFIX.lat, GPSFIX.lon, 0, new Date());
+        HOLD.trk = norm360(t);
+      }
     };
     Array.prototype.slice.call(el.querySelectorAll('[data-h]')).forEach(function(b){
       var k = b.getAttribute('data-h');
