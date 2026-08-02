@@ -22,6 +22,255 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v188 2026-08-02 The zoom jump was a deadband measured in the wrong
+                       unit.
+
+                       v174 stopped the map twitching by refusing to
+                       re-centre for less than six pixels of movement.
+                       That fixed it at the zoom it was tested at and
+                       left it broken at the other end, because a pixel
+                       is a distance that CHANGES WITH ZOOM. Wide out,
+                       six pixels is the better part of a mile and
+                       nothing ever moves. Zoomed right in, six pixels is
+                       a few metres - so the GPS wander of a parked
+                       aircraft clears it on every single fix and the map
+                       jitters. Which is exactly what you described:
+                       only once you zoom in closer.
+
+                       The deadband is now in both units. Under six
+                       pixels is never worth a pan, and under ten metres
+                       of real movement is never worth a pan whatever the
+                       zoom. Ten metres is inside civilian GPS noise; it
+                       is not travel.
+
+                       And a large correction glides instead of
+                       teleporting. Instant is right for the small steady
+                       corrections of flight - it is the big ones, after
+                       a zoom or a pan has left the aircraft well off
+                       centre, that read as the map being snatched away.
+                       Over sixty pixels it animates over a third of a
+                       second.
+       v187 2026-08-02 Closing the card puts the subject in the middle.
+
+                       v183 moved the thing you tapped into the part of
+                       the map the panel was not covering. v185 then
+                       stopped Follow dragging it away. What neither did
+                       was the obvious other half: when the panel goes,
+                       the map is whole again, and the subject should
+                       move to the middle of it rather than staying up in
+                       the strip where the panel used to be.
+
+                       The last focused subject is remembered, and the
+                       close handlers - the X, a tap on the backdrop, the
+                       card's back button - re-run the same focus. With
+                       no panel to work around it lands dead centre, so
+                       the point or leg walks smoothly from the strip to
+                       the middle instead of being abandoned wherever the
+                       panel left it.
+
+                       One guard: if you have panned the subject off the
+                       map since opening it, nothing happens. Dragging it
+                       out of view is a decision, and hauling it back
+                       would undo one.
+       v186 2026-08-02 A fleet, a grouped More sheet, and an Edit button
+                       that edits.
+
+                       THE SHEET WAS 59% WIDE. Right on a phone, absurd
+                       on an iPad, where it was most of the screen for a
+                       list of fourteen short rows. Capped at 340.
+
+                       VIEWS ARE GROUPED by when you reach for them -
+                       Flying, Planning, Data - because fourteen rows in
+                       the order they were written is a list you read
+                       rather than scan. A view with no category still
+                       appears, under Other, so adding one can never make
+                       it disappear.
+
+                       EDIT NOW EDITS. It moves rows within their group
+                       and hides the ones you do not use, both remembered.
+                       It is also where the layout editors live - bottom
+                       bar, activity bar, layer rail, card actions, type
+                       scale, metrics. You were right that they made no
+                       sense under Settings: arranging the app is one
+                       job, and half of it was sitting beside the fuel
+                       burn. Settings keeps a line saying where they went.
+
+                       A FLEET. One registration was one aircraft too few
+                       - three airframes fly out of Lae and their
+                       checklists already differ, so their cruise figures
+                       will too. Each profile holds registration, type,
+                       cruise, burn, reserve and planned altitude, and
+                       switching swaps the lot. The aircraft you already
+                       had becomes profile one, so nothing needs
+                       re-typing.
+
+                       Fuel on board is deliberately NOT in a profile. It
+                       belongs to the flight, not the airframe, and
+                       carrying it across a switch would be a lie in the
+                       same class as a checklist that remembers
+                       yesterday's ticks.
+       v185 2026-08-02 Mag var on the cards, and the map stops being
+                       dragged back to the aircraft.
+
+                       MAG VAR. On the point window, the airport page and
+                       the leg card, computed from WMM at that position
+                       rather than assumed for the country. Lae reads
+                       5.0E, Cusco reads 7.5W, and the number moves as
+                       you move - which is the entire reason for carrying
+                       the model rather than a setting.
+
+                       AND THE SNAP. Opening a card pans the map to keep
+                       the subject in sight, but if the map was FOLLOWING
+                       the aircraft it dragged the view straight back on
+                       the next fix - a second after the pan, and again
+                       the moment the sheet closed. That is what read as
+                       the map re-centring itself for no reason.
+
+                       Going to look at something is going somewhere
+                       else. Follow now drops to Centred the moment a
+                       card pans the map, the locate button shows it, and
+                       a toast says so once. The map stays where it was
+                       put until you ask it to move. Tapping locate again
+                       resumes following.
+       v184 2026-08-02 The leg card read as three unrelated boxes, so
+                       the sheet finally got a written rule.
+
+                       It was being decided per sheet. The leg card ended
+                       up with a headed group of two actions, then a gap,
+                       then a bordered box holding one red row with no
+                       heading at all - which floats, because the eye
+                       cannot tell what it belongs to.
+
+                       THE RULE, now in the stylesheet where the next
+                       sheet will find it:
+
+                       1. Facts first, then actions.
+                       2. Every action group carries a header saying what
+                          it acts on.
+                       3. A destructive action is the LAST ROW OF THE
+                          GROUP IT ACTS ON, not a group of its own -
+                          under a heavier rule, in the warning colour.
+                          Removing the end point is something you do to
+                          the leg, so it sits under Leg.
+                       4. Units sit BESIDE the number. The stacked form
+                          exists for the fuel grid, where two figures for
+                          the same quantity are compared; "84.8" over
+                          "nm" is not a comparison, it is a line break.
+                          That alone took about 40 px off every fact row.
+                       5. The body scrolls. A sheet grows to its content
+                          up to the height it is allowed and then
+                          scrolls; it never grows past the screen and
+                          never pushes its own actions off the bottom.
+
+                       Applied to the leg card and the waypoint window,
+                       which had the same floating delete box.
+       v183 2026-08-02 The thing you tapped stays where you can see it.
+
+                       Opening a card puts a panel over the map. On a
+                       phone that panel is most of the screen; on a
+                       tablet it is the right-hand third. Either way the
+                       point you just tapped was usually behind it, so
+                       you read about something you could no longer see.
+
+                       The map now pans so the subject sits in the middle
+                       of what is still VISIBLE - not the middle of the
+                       map, the middle of the part the panel is not
+                       covering. The panel is MEASURED rather than
+                       assumed, because these panels size themselves to
+                       their content and any assumed height would be
+                       wrong the first time one grew. It works out which
+                       edge each panel is anchored to and trims from that
+                       side, so it handles a bottom sheet on a phone and
+                       a side panel on a tablet without knowing which it
+                       is looking at.
+
+                       Airfields, dropped points, route legs, airways and
+                       airspace zones all do it. A leg centres on its
+                       middle so both ends stay in view where they fit.
+
+                       It never zooms. Changing scale while you are
+                       reading is its own kind of disorienting, and the
+                       zoom you had is the zoom you chose. It also does
+                       nothing when the subject is already within four
+                       pixels of where it should be, so opening a card
+                       for something already centred does not twitch the
+                       map.
+       v182 2026-08-02 The airport card gets the whole screen.
+
+                       It was only ever an overlay: a strip on the phone,
+                       a panel beside the map on a tablet. Everything the
+                       app knows about a field it drew into that. Picking
+                       a field from the Airports list now opens it as a
+                       page - ident, name, town, coordinates, first and
+                       last light, and a summary of what is actually held
+                       - with the same five tabs under it.
+
+                       ONE CARD, TWO HOSTS. The tab bodies are the same
+                       builders, and the wiring inside them is now one
+                       function rather than six blocks that all named
+                       #cardBody. Nothing is duplicated; the page adds a
+                       header and hands the rest over.
+
+                       Show on map moves the map to the field and opens
+                       the side card - the same field in the other host,
+                       which is the one you want in the air. The list is
+                       one screen back rather than one layer up.
+
+                       The summary carries only what the app HOLDS:
+                       elevation, runways with the longest surveyed
+                       length, procedures, latest weather, the airspace
+                       over it, and every frequency including your own.
+                       There is no Fuel row, because there is no fuel
+                       data in the pack, and a blank line labelled Fuel
+                       reads as "none available" rather than "not
+                       carried".
+
+                       Two columns on a tablet, one on a phone, by grid
+                       rather than by halves, so it reflows instead of
+                       squashing.
+       v181 2026-08-02 COURSES ARE MAGNETIC NOW, and the variation is
+                       computed rather than typed.
+
+                       Every course in this app was true, and said so,
+                       because there was no variation data in it. A single
+                       typed number would have covered PNG and been wrong
+                       the moment the app left it: Lae is about 5 degrees
+                       EAST, Perth is WEST, Peru is 4 to 8 degrees WEST.
+                       A constant cannot span Port Moresby, Darwin and
+                       Cusco - it would point the wrong way across a
+                       border and never say so.
+
+                       So this is the World Magnetic Model itself.
+                       WMM2025, epoch 2025.0, the official coefficients
+                       from NOAA/NCEI with the British Geological Survey,
+                       taken from the published COF file - not typed, not
+                       remembered. Declination is computed from latitude,
+                       longitude and today's date anywhere on earth, and
+                       drifts correctly year to year through the
+                       secular-variation terms.
+
+                       Validated against an independent implementation of
+                       the same model at twelve points - Lae, Port
+                       Moresby, Rabaul, Sydney, Darwin, Perth, Lima,
+                       Cusco, Iquitos, the equator and both polar
+                       regions. Worst disagreement 0.0002 degrees. Lae
+                       comes out 5.03 degrees east, which is the number
+                       I declined to quote from memory when you asked.
+
+                       Settings carries a Courses switch, Magnetic or
+                       True, and shows the variation where you are.
+                       Magnetic is the default now. Every course goes
+                       through one formatter, so the app cannot print
+                       magnetic in one panel and true in another, and
+                       every figure carries its own suffix - 284 degrees
+                       M or 290 degrees T, never a bare number.
+
+                       Deliberately NOT converted: published AIP data
+                       stays as published, the METAR wind stays true
+                       because that is how a METAR reports it, and the
+                       hold courses stay as you type them until holds get
+                       their own frame. Those are labelled where they
+                       appear rather than quietly rotated.
        v180 2026-08-02 A real checklist broke the parser on its first
                        line, which is what real data is for.
 
@@ -4049,6 +4298,59 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .mnbulk .danger.arm{background:var(--bad);color:#0a0e13;border-color:var(--bad)}
 .mnbulk .danger[disabled]{opacity:.4}
 
+/* The airport page: the card given the whole screen. Two columns on a
+   tablet, one on a phone - the summary is a grid rather than two fixed
+   halves, so it reflows instead of squashing. */
+.apbar{display:flex;align-items:center;gap:10px;padding-bottom:10px;
+  border-bottom:1px solid var(--border)}
+.apbar .lnk{background:none;border:0;padding:4px 2px;font-size:var(--t-xs);
+  font-weight:600;color:var(--accent-2)}
+.apstar{margin-left:auto;background:none;border:0;font-size:18px;color:var(--text-fainter)}
+.apstar.on{color:var(--accent)}
+.aphead{padding:14px 0 10px;border-bottom:1px solid var(--border)}
+.apid{font-family:var(--mono);font-size:var(--t-2xl);font-weight:700;color:var(--accent);
+  letter-spacing:.02em;line-height:1.05}
+.apnm{font-size:var(--t-lg);font-weight:700;color:var(--text);margin-top:2px}
+.apsub{font-size:var(--t-xs);color:var(--text-fainter);margin-top:2px}
+.apco{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-top:8px}
+.apco .cp{background:none;border:0;padding:0;font-family:var(--mono);
+  font-size:var(--t-sm);color:var(--text-2)}
+.apsun{font-size:var(--t-2xs);color:var(--text-fainter)}
+.apsum{display:grid;grid-template-columns:1fr;gap:0 22px;padding:12px 0 4px;
+  border-bottom:1px solid var(--border)}
+.apcol{min-width:0}
+.aprow{display:flex;align-items:baseline;gap:10px;padding:5px 0}
+.aprow .k{flex:0 0 40%;font-size:var(--t-xs);color:var(--text-fainter)}
+.aprow .k i{font-style:normal;font-size:var(--t-2xs);color:var(--accent);letter-spacing:.08em}
+.aprow .v{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text)}
+.aprow .v.mono{font-family:var(--mono);font-weight:700;color:var(--accent-2)}
+.aprow .v.dim{color:var(--text-fainter)}
+.aptabs{display:flex;gap:2px;padding:10px 0 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.aptabs button{flex:0 0 auto;height:var(--mod-a);padding:0 14px;border-radius:var(--radius);
+  background:none;border:0;font-size:var(--t-sm);font-weight:600;color:var(--text-fainter)}
+.aptabs button.on{background:var(--bg-2);color:var(--text)}
+.apbody{padding-top:6px}
+
+/* More sheet: categories, the edit strip, and the fleet chips. */
+.scat{padding:14px var(--edge) 6px;font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--text-fainter)}
+.srowwrap{display:flex;align-items:center;gap:6px;padding-right:var(--edge)}
+.srowwrap .srow{flex:1 1 auto;min-width:0}
+.srowwrap.off .srow{opacity:.4}
+.srowwrap .srow[disabled]{pointer-events:none}
+.sedit{flex:0 0 auto;display:flex;align-items:center;gap:4px}
+.sedit button{height:30px;min-width:30px;padding:0 7px;border-radius:6px;
+  background:var(--bg-2);border:1px solid var(--border-strong);
+  font-size:var(--t-2xs);font-weight:700;color:var(--text-muted)}
+.sedit button[disabled]{opacity:.3}
+.fleetbar{display:flex;flex-wrap:wrap;gap:6px;padding:2px var(--edge) 10px}
+.fchip{height:32px;padding:0 12px;border-radius:16px;background:var(--bg-2);
+  border:1px solid var(--border-strong);font-family:var(--mono);
+  font-size:var(--t-xs);font-weight:700;color:var(--text-muted)}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.fchip.add{font-family:var(--sans);font-size:var(--t-md);color:var(--accent-2)}
+.setgo.dgr{color:var(--bad)}
+
 /* Checklists. The runner scales with one em on the body, so A+ and A-
    move every line, box and action together rather than the text drifting
    out of its own row. */
@@ -4369,6 +4671,35 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   background:var(--bg-2);overflow:hidden}
 .agrp + .agrp{margin-top:var(--gut)}
 .agrp.prim{margin-top:12px;border-color:var(--accent);background:var(--accent)}
+/* ---- THE SHEET RULE -------------------------------------------------
+   Written down because it was being decided per sheet, and the leg card
+   came out looking like three unrelated boxes stacked in a column.
+
+   1. FACTS FIRST, then actions. Facts are .farow; actions are .arow in
+      an .agrp.
+   2. EVERY action group carries an .asec header saying what it acts on.
+      A group with no header floats: the eye cannot tell what it belongs
+      to, which is exactly how the delete box read.
+   3. A DESTRUCTIVE action is the LAST ROW OF THE GROUP IT ACTS ON, not
+      a group of its own. Removing a waypoint is a thing you do to the
+      leg, so it belongs in the leg's group, under a heavier rule and in
+      the warning colour.
+   4. UNITS SIT BESIDE THE NUMBER, not under it. The stacked form exists
+      for the fuel grid, where two figures for the same quantity are
+      being compared. "84.8" over "nm" is not a comparison, it is a line
+      break.
+   5. THE BODY SCROLLS. A sheet grows to its content up to the height it
+      is allowed and then scrolls; it never grows past the screen and it
+      never pushes its own actions off the bottom.
+   -------------------------------------------------------------------- */
+.dgrbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;padding-bottom:10px}
+.arow.dgr{border-top:1px solid var(--border-strong)}
+.arow.dgr .l{color:var(--bad)}
+.arow.dgr .i{color:var(--bad)}
+.faq.in{display:flex;align-items:baseline;justify-content:flex-end;gap:5px}
+.faq.in .l,.faq.in .k{display:inline;margin:0}
+.faq.in .k{font-size:var(--t-xs);font-weight:600;color:var(--text-fainter)}
 .agrp.danger{margin-top:14px}
 .arow{width:100%;display:flex;align-items:center;gap:12px;padding:0 13px;
   height:var(--mod-b);background:none;text-align:left}
@@ -5025,7 +5356,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 
 /* ---- Right sheet (More) ----------------------------------- */
 .sheet{
-  position:fixed;top:0;bottom:0;right:0;width:59%;z-index:1000;
+  /* 59% is right on a phone and absurd on an iPad, where it was most of
+     the screen for a list of fourteen short rows. Capped. */
+  position:fixed;top:0;bottom:0;right:0;width:59%;max-width:340px;z-index:1000;
   background:var(--panel);border-left:1px solid var(--border-strong);
   transform:translateX(100%);transition:transform .2s ease;
   display:flex;flex-direction:column;
@@ -5298,6 +5631,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    would have missed it entirely and left it on the phone layout.
    ============================================================ */
 @media (min-width:600px){
+  /* the summary goes to two columns where there is room for them */
+  .apsum{grid-template-columns:1fr 1fr}
+
   :root{
     --edge:22px;
     --mod-a:36px;
@@ -6324,7 +6660,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <button class="stile" id="stDl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
     <button class="stile" id="stSet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg><span class="lab">Settings</span></button>
   </div>
-  <div class="shead"><span class="k">Views</span><button class="a" id="editTabs">Edit</button></div>
+  <div class="shead"><span class="k">Views</span><button class="a" id="moreEditBtn">Edit</button></div>
   <div class="slist" id="moreList"></div>
   <div class="sver" id="sver"></div>
 </div>
@@ -6575,7 +6911,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <b id="dgrTitle">Area</b>
       <button class="x" id="dgrClose" aria-label="Close">&times;</button>
     </div>
-    <div id="dgrBody"></div>
+    <div id="dgrBody" class="dgrbody"></div>
   </div>
 </div>
 
@@ -6668,7 +7004,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v180-ROT';
+  var VERSION = 'v188-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -6814,7 +7150,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
      a figure. null means "not entered", and everything that reads them
      dashes rather than computing from a guess. */
   var AC  = { reg:'P2-LAW', type:'BK117', tas:120, burn:220, fob:null, resMin:30, alt:9500 };
-  var SET = { clr:1000, labels:'auto', coordFmt:'ddm' };   /* route line lives in LAYERS */
+  var SET = { clr:1000, labels:'auto', coordFmt:'ddm', crs:'mag' };  /* route line lives in LAYERS */
   var SET_KEY = 'nmp.iphone.set', savedEtd = null;
   (function(){
     try{
@@ -6826,8 +7162,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       }
     }catch(e){}
   })();
+  /* after the saved settings have been merged into AC, so the aircraft
+     already configured becomes profile one rather than being overwritten */
+  var FLEET_INIT = false;
   function saveSet(){
     try{ localStorage.setItem(SET_KEY, JSON.stringify({ AC:AC, SET:SET, etd:ETD_MIN })); }catch(e){}
+    /* the active profile is part of the same write - a registration typed
+       into Settings has to land on the aircraft it belongs to */
+    try{ if (FLEET) fleetSync(); }catch(e){}
   }
 
   /* ---- Airfield pack ------------------------------------------------
@@ -8955,12 +9297,13 @@ var PROC_META={
 
     function row(k, v, unit){
       return '<div class="farow"><span class="fanm">' + k + '</span>'
-           + '<span class="faq"><span class="l">' + v + '</span>'
+           + '<span class="faq in"><span class="l">' + v + '</span>'
            + (unit ? '<span class="k">' + unit + '</span>' : '') + '</span></div>';
     }
     var h = '<div class="tedlist">'
           + row('Distance', nm.toFixed(1), 'nm')
-          + row('Course', String(Math.round(crs)).padStart(3, '0') + '\u00b0', 'true')
+          + row('Course', crsTxt(crs, a.lat, a.lon), '')
+          + row('Mag var', crsVarTxt(a.lat, a.lon), '')
           + row('Highest ground', t.hi == null ? '\u2014' : t.hi.toLocaleString(),
                 t.hi == null ? '' : 'ft')
           + row('Lowest safe', safe == null ? '\u2014' : safe.toLocaleString(),
@@ -8977,17 +9320,18 @@ var PROC_META={
         +  ' ft clearance, rounded up to the next 500. Terrarium elevation, not survey data: '
         +  'no towers, no wires, no obstacles.</div>';
     }
+    /* One group, headed, with the destructive row last inside it -
+       removing the end point is something you do to THIS leg, so it
+       belongs under the leg's heading rather than in a box of its own. */
     h += '<div class="asec">Leg</div><div class="agrp">'
       +  actRow('data-lga','show','fly','Fly this leg')
       +  actRow('data-lga','dct','dct','Direct to ' + esc(label(b)))
+      +  (ROUTE.length > 2
+          ? actRow('data-lga','del','del',
+                   legDelArm ? 'Tap again to remove ' + esc(label(b))
+                             : 'Remove ' + esc(label(b)), { cls:'dgr' })
+          : '')
       +  '</div>';
-    if (ROUTE.length > 2){
-      h += '<div class="agrp danger">'
-        +  actRow('data-lga','del','del',
-                  legDelArm ? 'Tap again to remove ' + esc(label(b))
-                            : 'Remove ' + esc(label(b)) + ' from the route')
-        +  '</div>';
-    }
     $('#dgrTitle').textContent = label(a) + ' \u2192 ' + label(b);
     $('#dgrBody').innerHTML = '<div class="tedhint top">Leg ' + (i + 1) + ' of '
       + (ROUTE.length - 1) + ' \u00b7 ' + state + '</div>' + h;
@@ -8996,6 +9340,8 @@ var PROC_META={
     });
     closeAll();
     $('#dgrSheet').classList.add('on');
+    /* the middle of the leg, so both ends stay in view where they fit */
+    mapFocus((a.lat + b.lat) / 2, (a.lon + b.lon) / 2);
   }
 
   function legAction(a, i){
@@ -9067,7 +9413,7 @@ var PROC_META={
     var last = '';
     if (n >= 2){
       var a = measPts[n-2], b = measPts[n-1];
-      last = String(Math.round(trkBetween(a, b))).padStart(3, '0') + '\u00b0 \u00b7 '
+      last = crsTxt(trkBetween(a, b), a.lat, a.lon) + ' \u00b7 '
            + nmBetween(a, b).toFixed(1) + ' nm';
     }
     el.innerHTML =
@@ -9431,6 +9777,164 @@ var PROC_META={
     });
   }
   function wireChk(el){ wireChkBody(el); }
+
+  /* WMM2025 coefficients: epoch 2025.0, released 13 NOV 2024 by NOAA/NCEI
+     with the British Geological Survey. Taken from the official WMM_2025.COF
+     file, not typed and not remembered. Order n=1..12, m=0..n, four numbers
+     per term: g, h, g-dot, h-dot, in nT and nT/year. */
+  var WMM_EPOCH = 2025.0;
+  var WMM_C = [-29351.8,0,12,0,-1410.8,4545.4,9.7,-21.5,-2556.6,0,-11.6,0,2951.1,-3133.6,-5.2,-27.7,1649.3,-815.1,-8,-12.1,1361,0,-1.3,0,-2404.1,-56.6,-4.2,4,1243.8,237.5,0.4,-0.3,453.6,-549.5,-15.6,-4.1,895,0,-1.6,0,799.5,278.6,-2.4,-1.1,55.7,-133.9,-6,4.1,-281.1,212,5.6,1.6,12.1,-375.6,-7,-4.4,-233.2,0,0.6,0,368.9,45.4,1.4,-0.5,187.2,220.2,0,2.2,-138.7,-122.9,0.6,0.4,-142,43,2.2,1.7,20.9,106.1,0.9,1.9,64.4,0,-0.2,0,63.8,-18.4,-0.4,0.3,76.9,16.8,0.9,-1.6,-115.7,48.8,1.2,-0.4,-40.9,-59.8,-0.9,0.9,14.9,10.9,0.3,0.7,-60.7,72.7,0.9,0.9,79.5,0,-0,0,-77,-48.9,-0.1,0.6,-8.8,-14.4,-0.1,0.5,59.3,-1,0.5,-0.8,15.8,23.4,-0.1,0,2.5,-7.4,-0.8,-1,-11.1,-25.1,-0.8,0.6,14.2,-2.3,0.8,-0.2,23.2,0,-0.1,0,10.8,7.1,0.2,-0.2,-17.5,-12.6,0,0.5,2,11.4,0.5,-0.4,-21.7,-9.7,-0.1,0.4,16.9,12.7,0.3,-0.5,15,0.7,0.2,-0.6,-16.8,-5.2,-0,0.3,0.9,3.9,0.2,0.2,4.6,0,-0,0,7.8,-24.8,-0.1,-0.3,3,12.2,0.1,0.3,-0.2,8.3,0.3,-0.3,-2.5,-3.3,-0.3,0.3,-13.1,-5.2,0,0.2,2.4,7.2,0.3,-0.1,8.6,-0.6,-0.1,-0.2,-8.7,0.8,0.1,0.4,-12.9,10,-0.1,0.1,-1.3,0,0.1,0,-6.4,3.3,0,0,0.2,0,0.1,-0,2,2.4,0.1,-0.2,-1,5.3,-0,0.1,-0.6,-9.1,-0.3,-0.1,-0.9,0.4,0,0.1,1.5,-4.2,-0.1,0,0.9,-3.8,-0.1,-0.1,-2.7,0.9,-0,0.2,-3.9,-9.1,-0,-0,2.9,0,0,0,-1.5,0,-0,-0,-2.5,2.9,0,0.1,2.4,-0.6,0,-0,-0.6,0.2,0,0.1,-0.1,0.5,-0.1,-0,-0.6,-0.3,0,-0,-0.1,-1.2,-0,0.1,1.1,-1.7,-0.1,-0,-1,-2.9,-0.1,0,-0.2,-1.8,-0.1,0,2.6,-2.3,-0.1,0,-2,0,0,0,-0.2,-1.3,0,-0,0.3,0.7,-0,0,1.2,1,-0,-0.1,-1.3,-1.4,-0,0.1,0.6,-0,-0,-0,0.6,0.6,0.1,-0,0.5,-0.1,-0,-0,-0.1,0.8,0,0,-0.4,0.1,0,-0,-0.2,-1,-0.1,-0,-1.3,0.1,-0,0,-0.7,0.2,-0.1,-0.1];
+
+  /* ============================================================
+     MAGNETIC VARIATION
+
+     Every course in this app was true, and said so, because there was no
+     variation data in it. A single typed number would have been enough
+     for PNG and wrong the moment the app left it: Lae is about 5 degrees
+     EAST, Perth is west, Peru is 4 to 8 degrees WEST. A constant cannot
+     span that; it would silently point the wrong way across a border.
+
+     So this is the World Magnetic Model itself. WMM2025, epoch 2025.0,
+     the official coefficients from NOAA/NCEI and the British Geological
+     Survey - lifted from the published COF file, not typed and not
+     remembered. Declination is computed from latitude, longitude and the
+     date, anywhere on earth, and drifts correctly year to year through
+     the secular-variation terms.
+
+     The model is valid 2025.0 to 2030.0. Past that it still computes,
+     but the answer is an extrapolation and the app says so rather than
+     quietly serving a stale number.
+     ============================================================ */
+  var WMM_MAX = 12;
+  var wmmG = null, wmmH = null, wmmGd = null, wmmHd = null;
+  function wmmInit(){
+    if (wmmG) return;
+    wmmG = []; wmmH = []; wmmGd = []; wmmHd = [];
+    for (var i = 0; i <= WMM_MAX; i++){
+      wmmG.push(new Array(WMM_MAX + 1).fill(0));
+      wmmH.push(new Array(WMM_MAX + 1).fill(0));
+      wmmGd.push(new Array(WMM_MAX + 1).fill(0));
+      wmmHd.push(new Array(WMM_MAX + 1).fill(0));
+    }
+    var k = 0;
+    for (var n = 1; n <= WMM_MAX; n++){
+      for (var m = 0; m <= n; m++){
+        wmmG[n][m]  = WMM_C[k];
+        wmmH[n][m]  = WMM_C[k+1];
+        wmmGd[n][m] = WMM_C[k+2];
+        wmmHd[n][m] = WMM_C[k+3];
+        k += 4;
+      }
+    }
+  }
+
+  /* Decimal year from a Date, so the secular terms move with the calendar
+     rather than with whatever the file was built on. */
+  function wmmYear(d){
+    d = d || new Date();
+    var y = d.getUTCFullYear();
+    var start = Date.UTC(y, 0, 1), end = Date.UTC(y + 1, 0, 1);
+    return y + (d.getTime() - start) / (end - start);
+  }
+
+  /* Declination in degrees, positive EAST. Geodetic latitude and
+     longitude in degrees, altitude in km above the ellipsoid.
+     Spherical harmonic synthesis with Schmidt semi-normalised
+     associated Legendre functions, as the WMM technical report sets out. */
+  function magDec(latDeg, lonDeg, altKm, when){
+    wmmInit();
+    var t = wmmYear(when) - WMM_EPOCH;
+    var rad = Math.PI / 180;
+    var lat = latDeg * rad, lon = lonDeg * rad;
+    var h = (altKm == null) ? 0 : altKm;
+
+    /* WGS-84 to geocentric */
+    var a = 6378.137, f = 1 / 298.257223563, b = a * (1 - f);
+    var a2 = a * a, b2 = b * b;
+    var sinLat = Math.sin(lat), cosLat = Math.cos(lat);
+    var rc = a / Math.sqrt(1 - (2 * f - f * f) * sinLat * sinLat);
+    var p = (rc + h) * cosLat;
+    var z = (rc * b2 / a2 + h) * sinLat;
+    var r = Math.sqrt(p * p + z * z);
+    var sinPhi = z / r, cosPhi = p / r;          /* geocentric latitude */
+
+    var re = 6371.2;                              /* geomagnetic reference radius */
+    var ratio = re / r;
+
+    /* Schmidt semi-normalised associated Legendre functions and their
+       derivatives with respect to colatitude, by the standard recursion.
+       u = cos(colatitude) = sin(geocentric latitude); v = sin(colatitude). */
+    var u = sinPhi, v = cosPhi;
+    var P = [], dP = [];
+    for (var i = 0; i <= WMM_MAX; i++){
+      P.push(new Array(WMM_MAX + 1).fill(0));
+      dP.push(new Array(WMM_MAX + 1).fill(0));
+    }
+    P[0][0] = 1; dP[0][0] = 0;
+    for (var n = 1; n <= WMM_MAX; n++){
+      for (var m = 0; m <= n; m++){
+        if (m === n){
+          /* sectoral. The sqrt(2) at m=1 is the Kronecker factor that
+             makes these Schmidt SEMI-normalised rather than fully. */
+          var kf = Math.sqrt((2 * n - 1) / (2 * n)) * (n === 1 ? Math.SQRT2 : 1);
+          P[n][n]  = kf * v * P[n-1][n-1];
+          dP[n][n] = kf * (v * dP[n-1][n-1] + u * P[n-1][n-1]);
+        } else {
+          var d1 = Math.sqrt((n + m) * (n - m));
+          var p2 = (n - 2 >= m) ? P[n-2][m] : 0;
+          var d2 = (n - 2 >= m) ? Math.sqrt((n - 1 + m) * (n - 1 - m)) : 0;
+          var dp2 = (n - 2 >= m) ? dP[n-2][m] : 0;
+          P[n][m]  = (u * (2 * n - 1) * P[n-1][m] - d2 * p2) / d1;
+          dP[n][m] = (u * (2 * n - 1) * dP[n-1][m]
+                      - v * (2 * n - 1) * P[n-1][m] - d2 * dp2) / d1;
+        }
+      }
+    }
+
+    var X = 0, Y = 0, Z = 0;                      /* north, east, down */
+    var sinM = [], cosM = [];
+    for (var m3 = 0; m3 <= WMM_MAX; m3++){
+      sinM.push(Math.sin(m3 * lon));
+      cosM.push(Math.cos(m3 * lon));
+    }
+    for (var n3 = 1; n3 <= WMM_MAX; n3++){
+      var rr = Math.pow(ratio, n3 + 2);
+      for (var m4 = 0; m4 <= n3; m4++){
+        var g = wmmG[n3][m4] + t * wmmGd[n3][m4];
+        var hh = wmmH[n3][m4] + t * wmmHd[n3][m4];
+        var cs = g * cosM[m4] + hh * sinM[m4];
+        var sn = g * sinM[m4] - hh * cosM[m4];
+        X += rr * cs * dP[n3][m4];
+        Y += rr * m4 * sn * P[n3][m4] / (v || 1e-10);
+        Z -= rr * (n3 + 1) * cs * P[n3][m4];
+      }
+    }
+    /* rotate the geocentric field back to geodetic north */
+    var psi = Math.atan2(sinPhi, cosPhi) - lat;
+    var Xg = X * Math.cos(psi) - Z * Math.sin(psi);
+    var Yg = Y;
+    return Math.atan2(Yg, Xg) / rad;
+  }
+
+  /* One place decides how a course is written. Everything that prints a
+     navigation course goes through here, so the app cannot show magnetic
+     in one panel and true in another. */
+  function crsTxt(trueDeg, lat, lon){
+    if (trueDeg == null || isNaN(trueDeg)) return '\u2014';
+    var t = ((trueDeg % 360) + 360) % 360;
+    if (SET.crs !== 'mag') return String(Math.round(t) || 360).padStart(3, '0') + '\u00b0T';
+    var v = magDec(lat, lon, 0, new Date());
+    var m = ((t - v) % 360 + 360) % 360;
+    return String(Math.round(m) || 360).padStart(3, '0') + '\u00b0M';
+  }
+  /* the variation itself, for anywhere that wants to show it */
+  function crsVarTxt(lat, lon){
+    var v = magDec(lat, lon, 0, new Date());
+    return (Math.abs(v)).toFixed(1) + '\u00b0' + (v >= 0 ? 'E' : 'W');
+  }
+  function wmmStale(){
+    return wmmYear(new Date()) > WMM_EPOCH + 5;
+  }
 
   /* ============================================================
      MAP ROTATION - TEST BUILD ONLY
@@ -10036,8 +10540,9 @@ var PROC_META={
                isFav(p.id) ? 'In favourites' : 'Add to favourites',
                { fill:isFav(p.id), cls:isFav(p.id) ? 'on' : '' })
       +    actRow('data-mna','rename','rename','Rename\u2026')
+      +    actRow('data-mna','del','del','Delete', { cls:'dgr' })
       +  '</div>';
-    h += '<div class="agrp danger">' + actRow('data-mna','del','del','Delete') + '</div>';
+    /* same rule: the delete belongs to the waypoint group above it */
     h += notesBlockHTML(p.id);
     h += '<div class="cnote" style="padding:10px var(--edge) 0">A personal waypoint is a '
       +  'position you saved, not a surveyed point. Advisory only.</div>';
@@ -10242,15 +10747,19 @@ var PROC_META={
       +    '<div><span class="k">Ground</span><span class="v">'
       +      (el == null ? '\u2014' : el.toLocaleString() + '\'') + '</span></div>'
       +    '<div><span class="k">' + esc(fromK) + '</span><span class="v">'
-      +      (from ? String(Math.round(trkBetween(from, p))).padStart(3, '0') + '\u00b0 / '
+      +      (from ? crsTxt(trkBetween(from, p), from.lat, from.lon) + ' / '
                      + nmBetween(from, p).toFixed(1) + ' nm' : '\u2014') + '</span></div>'
+      /* Variation here, computed from the model rather than assumed for
+         the country - which is the whole point of carrying the model. */
+      +  '<div><span class="k">Mag var</span>'
+      +    '<span class="v">' + crsVarTxt(p.lat, p.lon) + '</span></div>'
       +  '</div>';
 
     if (near){
       h += '<div class="pinnear"><span class="k">Nearest</span>'
         +  '<b>' + esc(near.p.lb || near.p.id) + '</b>'
         +  '<span class="n">' + esc(near.p.nm || '') + '</span>'
-        +  '<u>' + String(Math.round(near.brg)).padStart(3,'0') + '\u00b0 / '
+        +  '<u>' + crsTxt(near.brg, lat, lon) + ' / '
         +    near.nm.toFixed(1) + ' nm</u></div>';
     }
     if (el == null){
@@ -12313,7 +12822,7 @@ var PROC_META={
       var ncat = wxCat(nr.raw);
       return '<div class="cnote" style="margin-bottom:12px">' + f.id
         + ' is not reporting. Nearest report is <b>' + nr.id + '</b>, '
-        + nr.d.toFixed(0) + ' nm ' + String(Math.round(trkBetween(f, nr.p))).padStart(3,'0')
+        + nr.d.toFixed(0) + ' nm ' + crsTxt(trkBetween(f, nr.p), f.lat, f.lon)
         + '\u00b0. This is that field\u2019s weather, not this one\u2019s.</div>'
         + '<div class="metar"><div class="hdr">'
         + '<span class="dot" style="background:' + ncat[1] + '"></span>'
@@ -12862,7 +13371,7 @@ var PROC_META={
   function procMinimaHTML(m){
     function row(k, v, unit){
       return '<div class="farow"><span class="fanm">' + k + '</span>'
-           + '<span class="faq"><span class="l">' + v + '</span>'
+           + '<span class="faq in"><span class="l">' + v + '</span>'
            + (unit ? '<span class="k">' + unit + '</span>' : '') + '</span></div>';
     }
     var h = '<div class="tedlist">';
@@ -13001,99 +13510,40 @@ var PROC_META={
     });
   }
 
-  function drawCard(){
-    var f = cardAdHoc || dbById(cardId); if (!f) return;
-    if (f.id && wxProxy() && !wxFresh(f.id)){
-      wxFetch([f.id].concat(wxIdsOfInterest()), function(){
-        if (card.classList.contains('on')) drawCard();
-        renderMap();
-      });
-    }
-    var fi = f.id ? FIELD_INFO[f.id] : null;
-    $('#cardIcao').textContent = f.id || label(f);
-    $('#cardName').textContent = f.nm;
-    /* Only claims what is published. No TWR frequency in the pack means
-       the pack does not carry one - it does not mean uncontrolled. */
-    var tw = twrFreq(f);
-    var twEl = $('#cardTwr');
-    twEl.textContent = tw ? ('TWR ' + tw) : '';
-    twEl.classList.toggle('on', !!tw);
-    $('#cardStar').classList.toggle('on', !!(f.id && isFav(f.id)));
-
-    var inRoute = ROUTE.some(function(p){ return p.id === f.id; });
-    $('#cardAct').innerHTML = CARD_CFG.filter(function(k){
-      return fi || !CARD_ACTS[k].fld;      /* aerodrome-only actions drop out elsewhere */
-    }).map(function(k){
-      var a = CARD_ACTS[k];
-      var lab = (k === 'add' && inRoute) ? 'In route' : a.t;   /* not 'label' - that shadows label() */
-      return '<button data-ca="' + k + '" style="color:' + a.c + '">' + lab + '</button>';
-    }).join('');
-
-    /* Only aerodromes have weather, runways, procedures and NOTAMs. */
-    /* tabs stay up for every point - each one says honestly what it has,
-       which reads better than the whole row vanishing on most fields */
-    var isFld = (f.cat === 'field' || f.cat === 'strip');
-    if (!isFld) cardTab = 'info';
-    $('#cardTabs').classList.toggle('off', !isFld);
-    $('#cardTabs').innerHTML = !isFld ? '' : CARD_TABS.map(function(t){
-      return '<button data-ct="' + t[0] + '"' + (cardTab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
-    }).join('');
-
-    var sub = $('#cardSub');
-    sub.classList.toggle('off', cardTab !== 'wx');
-    if (cardTab === 'wx'){
-      sub.innerHTML = WX_SUBS.map(function(s){
-        return '<button data-cs="' + s[0] + '"' + (cardSub === s[0] ? ' class="on"' : '') + '>' + s[1] + '</button>';
-      }).join('');
-    }
-
-    $('#cardBody').innerHTML =
-        cardIdentity(f, fi) + (
-        cardTab === 'info' ? cardInfo(f, fi)
-      : cardTab === 'wx'   ? cardWx(f, fi)
-      : cardTab === 'rwy'  ? cardRwy(f, fi)
-      : cardTab === 'proc' ? cardProc(f)
-      :                      cardNtm(f));
-
-    $$('#cardTabs button').forEach(function(b){
-      b.addEventListener('click', function(){ cardTab = b.getAttribute('data-ct'); drawCard(); });
-    });
-    $$('#cardSub button').forEach(function(b){
-      b.addEventListener('click', function(){ cardSub = b.getAttribute('data-cs'); drawCard(); });
-    });
-    $$('#cardAct button').forEach(function(b){
-      b.addEventListener('click', function(){ cardAction(b.getAttribute('data-ca'), f); });
-    });
-    wireCopy('#cardBody');
-    $$('#cardBody [data-cn]').forEach(function(b){
+  /* Every handler inside a card body, bound to whichever host is
+     showing it. The airport page is a second host for exactly the
+     same markup, so the wiring had to stop naming #cardBody. */
+  function wireCardBody(sel, f){
+    wireCopy(sel);
+    $$(sel + ' [data-cn]').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); openNote(b.getAttribute('data-cn')); });
     });
-    $$('#cardBody [data-cplate]').forEach(function(b){
+    $$(sel + ' [data-cplate]').forEach(function(b){
       b.addEventListener('click', function(e){
         e.stopPropagation(); openChart(b.getAttribute('data-cplate'));
       });
     });
-    $$('#cardBody [data-fqgo]').forEach(function(b){
+    $$(sel + ' [data-fqgo]').forEach(function(b){
       b.addEventListener('click', function(e){
         e.stopPropagation();
         fqField = b.getAttribute('data-fqgo');
         goTo('freq');
       });
     });
-    $$('#cardBody [data-chgo]').forEach(function(b){
+    $$(sel + ' [data-chgo]').forEach(function(b){
       b.addEventListener('click', function(e){
         e.stopPropagation();
         chField = b.getAttribute('data-chgo'); chTab = 'airport';
         goTo('charts');
       });
     });
-    $$('#cardBody [data-cnadd]').forEach(function(b){
+    $$(sel + ' [data-cnadd]').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); openNote(null, b.getAttribute('data-cnadd')); });
     });
 
     /* personal-waypoint editing */
     var delArmed = null;
-    $$('#cardBody [data-wp]').forEach(function(el){
+    $$(sel + ' [data-wp]').forEach(function(el){
       var w = el.getAttribute('data-wp');
 
       if (w === 'name'){
@@ -13165,6 +13615,72 @@ var PROC_META={
         });
       }
     });
+  }
+
+  function drawCard(){
+    var f = cardAdHoc || dbById(cardId); if (!f) return;
+    if (f.id && wxProxy() && !wxFresh(f.id)){
+      wxFetch([f.id].concat(wxIdsOfInterest()), function(){
+        if (card.classList.contains('on')) drawCard();
+        renderMap();
+      });
+    }
+    var fi = f.id ? FIELD_INFO[f.id] : null;
+    $('#cardIcao').textContent = f.id || label(f);
+    $('#cardName').textContent = f.nm;
+    /* Only claims what is published. No TWR frequency in the pack means
+       the pack does not carry one - it does not mean uncontrolled. */
+    var tw = twrFreq(f);
+    var twEl = $('#cardTwr');
+    twEl.textContent = tw ? ('TWR ' + tw) : '';
+    twEl.classList.toggle('on', !!tw);
+    $('#cardStar').classList.toggle('on', !!(f.id && isFav(f.id)));
+
+    var inRoute = ROUTE.some(function(p){ return p.id === f.id; });
+    $('#cardAct').innerHTML = CARD_CFG.filter(function(k){
+      return fi || !CARD_ACTS[k].fld;      /* aerodrome-only actions drop out elsewhere */
+    }).map(function(k){
+      var a = CARD_ACTS[k];
+      var lab = (k === 'add' && inRoute) ? 'In route' : a.t;   /* not 'label' - that shadows label() */
+      return '<button data-ca="' + k + '" style="color:' + a.c + '">' + lab + '</button>';
+    }).join('');
+
+    /* Only aerodromes have weather, runways, procedures and NOTAMs. */
+    /* tabs stay up for every point - each one says honestly what it has,
+       which reads better than the whole row vanishing on most fields */
+    var isFld = (f.cat === 'field' || f.cat === 'strip');
+    if (!isFld) cardTab = 'info';
+    $('#cardTabs').classList.toggle('off', !isFld);
+    $('#cardTabs').innerHTML = !isFld ? '' : CARD_TABS.map(function(t){
+      return '<button data-ct="' + t[0] + '"' + (cardTab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
+    }).join('');
+
+    var sub = $('#cardSub');
+    sub.classList.toggle('off', cardTab !== 'wx');
+    if (cardTab === 'wx'){
+      sub.innerHTML = WX_SUBS.map(function(s){
+        return '<button data-cs="' + s[0] + '"' + (cardSub === s[0] ? ' class="on"' : '') + '>' + s[1] + '</button>';
+      }).join('');
+    }
+
+    $('#cardBody').innerHTML =
+        cardIdentity(f, fi) + (
+        cardTab === 'info' ? cardInfo(f, fi)
+      : cardTab === 'wx'   ? cardWx(f, fi)
+      : cardTab === 'rwy'  ? cardRwy(f, fi)
+      : cardTab === 'proc' ? cardProc(f)
+      :                      cardNtm(f));
+
+    $$('#cardTabs button').forEach(function(b){
+      b.addEventListener('click', function(){ cardTab = b.getAttribute('data-ct'); drawCard(); });
+    });
+    $$('#cardSub button').forEach(function(b){
+      b.addEventListener('click', function(){ cardSub = b.getAttribute('data-cs'); drawCard(); });
+    });
+    $$('#cardAct button').forEach(function(b){
+      b.addEventListener('click', function(){ cardAction(b.getAttribute('data-ca'), f); });
+    });
+    wireCardBody('#cardBody', f);
   }
 
   /* ---- Direct To ---------------------------------------------------
@@ -13310,17 +13826,114 @@ var PROC_META={
   }
 
   var cardAdHoc = null, cardOpenTs = 0;
+  /* ============================================================
+     KEEP THE SUBJECT IN SIGHT
+
+     Opening a card puts a panel over the map. On a phone that panel is
+     most of the screen; on a tablet it is the right-hand third. Either
+     way the thing you just tapped is usually behind it, so you read
+     about a point you can no longer see.
+
+     This pans the map so the subject sits in the middle of whatever is
+     still VISIBLE - not the middle of the map, the middle of the part
+     the panel is not covering. It measures the panel rather than
+     assuming a size, because the panels here size themselves to their
+     content and a guess would be wrong the moment one grew.
+
+     It never zooms. Changing scale while you are reading is its own kind
+     of disorienting, and the zoom you had is the zoom you chose.
+     ============================================================ */
+  /* What was focused last, so it can be centred again when the panel
+     that was covering it goes away. Opening moves it into the visible
+     strip; closing moves it to the middle of the whole map. Either way
+     it stays under your eye rather than jumping somewhere else. */
+  var mapSubject = null;
+  function mapRefocus(){
+    if (!mapSubject || !LMAP) return;
+    /* If it has been panned off the map since, leave it alone - dragging
+       the subject out of view is a decision, and hauling it back would
+       undo it. */
+    try {
+      var p = LMAP.latLngToContainerPoint([mapSubject.lat, mapSubject.lon]);
+      var host = document.getElementById('map');
+      if (!host) return;
+      if (p.x < 0 || p.y < 0 || p.x > host.clientWidth || p.y > host.clientHeight){
+        mapSubject = null; return;
+      }
+    } catch(_){ return; }
+    mapFocus(mapSubject.lat, mapSubject.lon);
+  }
+
+  function mapFocus(lat, lon){
+    if (!LMAP || lat == null || lon == null) return;
+    mapSubject = { lat:lat, lon:lon };
+    /* two frames: the panel has to be laid out before it can be measured,
+       and one frame is not always enough for a height transition */
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      try {
+        var host = document.getElementById('map');
+        if (!host) return;
+        var m = host.getBoundingClientRect();
+        var top = m.top, bottom = m.bottom, left = m.left, right = m.right;
+        /* every overlay that can sit over the map, measured as it is */
+        var sels = ['.ted.on .tedw', '.card.on', '.drop.on', '.hud-panel.on',
+                    '#fqWin.on', '.pop.on'];
+        sels.forEach(function(sel){
+          var el = document.querySelector(sel);
+          if (!el) return;
+          var r = el.getBoundingClientRect();
+          if (r.width < 8 || r.height < 8) return;
+          if (r.right <= m.left || r.left >= m.right) return;
+          if (r.bottom <= m.top || r.top >= m.bottom) return;
+          /* Trim from whichever side leaves the most map. Comparing how
+             much each cut REMOVES does not work - a full-width bottom
+             sheet removes the entire width when read as a left or right
+             cut - so compare what each one LEAVES, in area. */
+          var w = right - left, hgt = bottom - top;
+          var opts = [
+            { a:(bottom - r.bottom) * w, f:function(){ top = Math.max(top, r.bottom); } },
+            { a:(r.top - top) * w,       f:function(){ bottom = Math.min(bottom, r.top); } },
+            { a:(right - r.right) * hgt, f:function(){ left = Math.max(left, r.right); } },
+            { a:(r.left - left) * hgt,   f:function(){ right = Math.min(right, r.left); } }
+          ];
+          opts.sort(function(x, y){ return y.a - x.a; });
+          if (opts[0].a > 0) opts[0].f();
+        });
+        if (bottom - top < 60 || right - left < 60) return;   /* nothing left to aim at */
+        var want = L.point((left + right) / 2 - m.left, (top + bottom) / 2 - m.top);
+        var have = LMAP.latLngToContainerPoint([lat, lon]);
+        var d = have.subtract(want);
+        if (Math.abs(d.x) < 4 && Math.abs(d.y) < 4) return;   /* already there */
+        LMAP.panBy(d, { animate:false });
+        /* Going to look at something is going somewhere else. If the map
+           was following the aircraft it would drag the view back to the
+           AIRCRAFT on the next fix, which is not the same as centring the
+           thing you tapped. Follow drops to Centred and the locate button
+           says so; the subject keeps the middle until you move the map
+           yourself. */
+        if (follow){
+          follow = false; locState = 1; locCentreOnFix = false;
+          try { locSync(); } catch(_){ }
+          toast('Follow off \u2014 map held here');
+        }
+      } catch(_){ }
+    }); });
+  }
+
   function openCard(id){
     cardOpenTs = Date.now();
     cardAdHoc = null; cardId = id; cardTab = 'info';
     sizeCard(); drawCard();
     card.classList.add('on');
+    var f = dbById(id);
+    if (f) mapFocus(f.lat, f.lon);
   }
   function openCardPoint(p){
     cardOpenTs = Date.now();
     cardAdHoc = p; cardId = null; cardTab = 'info';
     sizeCard(); drawCard();
     card.classList.add('on');
+    if (p) mapFocus(p.lat, p.lon);
   }
 
   /* ---- card shell: fixed height, resizable, persisted ---- */
@@ -13370,7 +13983,9 @@ var PROC_META={
   $$('.fld').forEach(function(f){
     f.addEventListener('click', function(){ openCard(f.getAttribute('data-fld')); });
   });
-  $('#cardBack').addEventListener('click', function(){ card.classList.remove('on'); });
+  $('#cardBack').addEventListener('click', function(){
+    card.classList.remove('on'); mapRefocus();
+  });
 
   /* Tap anywhere outside the card to dismiss it. Taps on a field dot
      pass through so they switch the card rather than closing it, and
@@ -15850,6 +16465,9 @@ var PROC_META={
   /* ---- Airports: nearest first, with the full list one tap away ---- */
   var npMode = 'near', apQuery = '', apShow = false;
   function airportsHTML(){
+    /* A field chosen from the list takes the whole view. The list is one
+       screen back, not one layer up. */
+    if (apPage) return apPageHTML();
     /* This view can be the opening tab, which runs before the map
        section has assigned VIEW and before search has loaded recents. */
     var V = (typeof VIEW !== 'undefined' && VIEW) ? VIEW
@@ -15939,6 +16557,7 @@ var PROC_META={
   }
 
   function wireAirports(el){
+    if (apPage){ apPageWire(el); return; }
     Array.prototype.forEach.call(el.querySelectorAll('.npseg button'), function(b){
       b.addEventListener('click', function(){
         npMode = b.getAttribute('data-np');
@@ -15946,7 +16565,11 @@ var PROC_META={
       });
     });
     Array.prototype.forEach.call(el.querySelectorAll('.nprow'), function(b){
-      b.addEventListener('click', function(){ openCard(b.getAttribute('data-ap')); });
+      /* the list hands over to the page, not to the overlay */
+      b.addEventListener('click', function(){
+        apPage = b.getAttribute('data-ap'); apTab = 'info';
+        rerenderAirports(el);
+      });
     });
 
     /* the reveal search input */
@@ -15986,6 +16609,166 @@ var PROC_META={
   }
 
   /* rebuild the whole airports body (bar + segments + list) */
+  /* ============================================================
+     THE AIRPORT PAGE
+
+     The card was only ever an overlay: a strip on the phone, a panel
+     beside the map on a tablet. Everything about a field it knows how to
+     draw, it drew into that. This is the same card given the whole
+     screen, which is where you read a field before you go rather than
+     while you fly.
+
+     ONE CARD, TWO HOSTS. The tab bodies are the same builders - info,
+     weather, runway, procedure, NOTAM - and the wiring inside them is
+     the same function. Nothing is duplicated; the page adds a header and
+     a summary above them and hands the rest straight over.
+
+     The summary is deliberately only what the app HOLDS. No fuel row,
+     because there is no fuel data in the pack and a blank line labelled
+     Fuel reads as "none available" rather than "not carried".
+     ============================================================ */
+  var apPage = null, apTab = 'info';
+
+  function apSumHTML(f, fi){
+    var rows = [];
+    if (fi && fi.elev != null) rows.push(['Elevation', fi.elev.toLocaleString() + "' MSL"]);
+    else if (typeof f.el === 'number') rows.push(['Elevation', f.el.toLocaleString() + "'"]);
+    var rws = rwyFor(f.id);
+    if (rws && rws.length){
+      var longest = null;
+      rws.forEach(function(r){
+        if (r.e && r.e.length === 4){
+          var m = rwyLenM(r);
+          if (longest == null || m > longest) longest = m;
+        }
+      });
+      rows.push(['Runways', rws.map(function(r){ return r.l + '/' + r.h; }).join(', ')
+                 + (longest ? ' \u00b7 ' + Math.round(longest).toLocaleString() + ' m' : '')]);
+    }
+    var pr = procsFor(f.id);
+    if (pr.length){
+      rows.push(['Procedures', pr.map(function(p){
+        return p.nm.replace(f.id + ' ', '');
+      }).join(', ')]);
+    }
+    var mx = f.id ? wxRaw(f.id) : null;
+    if (mx){
+      var cat = wxCat(mx), w = metarWind(mx);
+      rows.push(['Latest weather',
+        (cat ? cat + ' \u00b7 ' : '')
+        + (w ? (w.dir === null ? 'Variable' : String(w.dir).padStart(3, '0') + '\u00b0')
+               + ' at ' + w.kt + ' kt' : 'wind \u2014')]);
+    }
+    var zs = f.id ? zonesAt(f, AC.alt) : [];
+    if (zs.length) rows.push(['Airspace', zs.map(function(z){ return z.id; }).join(', ')]);
+    rows.push(['Mag var', crsVarTxt(f.lat, f.lon)]);
+
+    var freqs = f.id ? allFreqFor(f.id) : [];
+    var h = '<div class="apsum"><div class="apcol">';
+    if (!rows.length){
+      h += '<div class="aprow"><span class="k">On file</span><span class="v">'
+        +  'position only</span></div>';
+    }
+    rows.forEach(function(r){
+      h += '<div class="aprow"><span class="k">' + r[0] + '</span>'
+        +  '<span class="v">' + esc(r[1]) + '</span></div>';
+    });
+    h += '</div><div class="apcol">';
+    if (!freqs.length){
+      h += '<div class="aprow"><span class="k">Frequencies</span>'
+        +  '<span class="v dim">none on file</span></div>';
+    } else {
+      freqs.sort(function(a, b){ return fqRank(a.lb) - fqRank(b.lb); }).forEach(function(r){
+        h += '<div class="aprow"><span class="k">' + esc(freqLabel(f.id, r.lb))
+          +  (r.mine ? ' <i>MINE</i>' : '') + '</span>'
+          +  '<span class="v mono">' + esc(r.vl) + '</span></div>';
+      });
+    }
+    h += '</div></div>';
+    return h;
+  }
+
+  function apPageHTML(){
+    var f = dbById(apPage);
+    if (!f) return '<div class="cempty">That field is not in the database.</div>';
+    var fi = f.id ? FIELD_INFO[f.id] : null;
+    var isFld = (f.cat === 'field' || f.cat === 'strip');
+    if (!isFld) apTab = 'info';
+    var tw = sunTimes(f.lat, f.lon, new Date(), 96);
+
+    var h = '<div class="apbar">'
+          + '<button class="lnk" data-apa="back">\u2039 Airports</button>'
+          + '<button class="apstar' + (isFav(f.id) ? ' on' : '') + '" data-apa="star" '
+          +   'aria-label="Favourite">' + (isFav(f.id) ? '\u2605' : '\u2606') + '</button>'
+          + '<button class="lnk" data-apa="map">Show on map \u203a</button>'
+          + '</div>';
+
+    h += '<div class="aphead">'
+      +  '<div class="apid">' + esc(f.id) + '</div>'
+      +  '<div class="apnm">' + esc(f.nm || '') + '</div>'
+      +  '<div class="apsub">'
+      +    (f.mu && f.mu.toUpperCase() !== (f.nm || '').toUpperCase()
+            ? esc(f.mu) + ' \u00b7 ' : '')
+      +    (CAT_LABEL[f.cat] || '') + '</div>'
+      +  '<div class="apco"><button class="cp" data-cp="' + ddm(f.lat, true) + ' '
+      +    ddm(f.lon, false) + '">' + ddm(f.lat, true) + ' ' + ddm(f.lon, false)
+      +    '</button>'
+      +    (tw ? '<span class="apsun">First light ' + hhmmLocal(tw[0], 600)
+                + ' \u00b7 Last light ' + hhmmLocal(tw[1], 600) + '</span>' : '')
+      +  '</div>'
+      +  '</div>';
+
+    h += apSumHTML(f, fi);
+
+    h += '<div class="aptabs">' + (isFld ? CARD_TABS.map(function(t){
+      return '<button data-apt="' + t[0] + '"' + (apTab === t[0] ? ' class="on"' : '') + '>'
+           + t[1] + '</button>';
+    }).join('') : '') + '</div>';
+
+    h += '<div class="apbody" id="apBody">'
+      +  (apTab === 'info' ? cardInfo(f, fi)
+        : apTab === 'wx'   ? cardWx(f, fi)
+        : apTab === 'rwy'  ? cardRwy(f, fi)
+        : apTab === 'proc' ? cardProc(f)
+        :                    cardNtm(f))
+      +  '</div>';
+    return h;
+  }
+
+  function apPageWire(root){
+    var f = dbById(apPage);
+    Array.prototype.forEach.call(root.querySelectorAll('[data-apa]'), function(b){
+      b.addEventListener('click', function(){
+        var a = b.getAttribute('data-apa');
+        if (a === 'back'){ apPage = null; rerenderAirports(root); return; }
+        if (a === 'star'){ if (f && f.id) toggleFav(f.id); rerenderAirports(root); return; }
+        if (a === 'map'){
+          /* the same field, in the other host: the map moves to it and
+             the side card opens, which is the one you want in the air */
+          if (!f) return;
+          var id = f.id;
+          apPage = null;
+          /* put the view back on the list before leaving it, or coming
+             back lands on a page whose Back button is the only way out */
+          try { rerenderAirports(root); } catch(_){ }
+          goTo('map');
+          try {
+            if (LMAP) LMAP.setView([f.lat, f.lon], Math.max(LMAP.getZoom(), 11), { animate:false });
+          } catch(_){ }
+          openCard(id);
+          return;
+        }
+      });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-apt]'), function(b){
+      b.addEventListener('click', function(){
+        apTab = b.getAttribute('data-apt'); rerenderAirports(root);
+      });
+    });
+    wireCardBody('#apBody', f);
+    wireCopy('.aphead');
+  }
+
   function rerenderAirports(el){
     el.querySelector('.vbody').innerHTML = airportsHTML();
     wireAirports(el);
@@ -16141,6 +16924,152 @@ var PROC_META={
 
   function goTo(k){ onTab(k); }
 
+  /* ---- The fleet ----------------------------------------------------
+     One registration was one aircraft too few: three airframes fly out of
+     Lae and their checklists already differ, so their cruise figures and
+     tanks will too. A profile is everything that belongs to the AIRFRAME
+     - registration, type, cruise, burn, reserve, planned altitude.
+
+     Fuel on board is deliberately NOT in a profile. It belongs to the
+     flight, not the aircraft, and carrying it across a switch would be
+     the same class of lie as a checklist remembering yesterday's ticks. */
+  var FLEET_KEY = 'nmp.iphone.fleet';
+  var FLEET = null, acId = null;
+  var AC_FIELDS = ['reg', 'type', 'tas', 'burn', 'resMin', 'alt'];
+
+  function fleetLoad(){
+    try {
+      var f = JSON.parse(localStorage.getItem(FLEET_KEY));
+      if (f && Array.isArray(f.list) && f.list.length){
+        FLEET = f.list; acId = f.act || f.list[0].id;
+      }
+    } catch(_){ }
+    if (!FLEET){
+      /* first run after the update: the aircraft already set up becomes
+         profile one, so nothing is lost and nothing needs re-typing */
+      var p = { id:'ac' + Date.now().toString(36) };
+      AC_FIELDS.forEach(function(k){ p[k] = AC[k]; });
+      FLEET = [p]; acId = p.id;
+      fleetSave();
+    }
+    fleetApply(acId);
+  }
+  function fleetSave(){
+    try { localStorage.setItem(FLEET_KEY, JSON.stringify({ list:FLEET, act:acId })); }
+    catch(_){ }
+  }
+  function fleetById(id){
+    for (var i = 0; i < FLEET.length; i++) if (FLEET[i].id === id) return FLEET[i];
+    return null;
+  }
+  function fleetApply(id){
+    var p = fleetById(id) || FLEET[0];
+    if (!p) return;
+    acId = p.id;
+    AC_FIELDS.forEach(function(k){ if (p[k] != null) AC[k] = p[k]; });
+    AC.fob = null;                    /* the flight's fuel, not the aircraft's */
+  }
+  /* every settings write lands on the active profile as well as on AC */
+  function fleetSync(){
+    var p = fleetById(acId);
+    if (!p) return;
+    AC_FIELDS.forEach(function(k){ p[k] = AC[k]; });
+    fleetSave();
+  }
+  function fleetAdd(copy){
+    var src = copy ? fleetById(acId) : null;
+    var p = { id:'ac' + Date.now().toString(36) };
+    AC_FIELDS.forEach(function(k){
+      p[k] = src ? src[k] : ({ reg:'', type:'', tas:120, burn:220, resMin:30, alt:9500 })[k];
+    });
+    if (src) p.reg = '';
+    FLEET.push(p); acId = p.id; fleetApply(p.id); fleetSave();
+  }
+  function fleetDel(){
+    if (FLEET.length < 2) return false;
+    FLEET = FLEET.filter(function(p){ return p.id !== acId; });
+    acId = FLEET[0].id; fleetApply(acId); fleetSave();
+    return true;
+  }
+  function fleetHTML(){
+    var h = '<div class="fleetbar">';
+    FLEET.forEach(function(p){
+      h += '<button class="fchip' + (p.id === acId ? ' on' : '') + '" data-fleet="' + p.id + '">'
+        +  esc(p.reg || 'Unnamed') + '</button>';
+    });
+    h += '<button class="fchip add" data-fleet="+">+</button></div>';
+    return h;
+  }
+
+  /* ---- The More sheet: categories, order and hiding -------------------
+     Fourteen views in the order they were written is a list you read
+     rather than scan. They are grouped by WHEN you reach for them -
+     Flying, Planning, Data - and inside a group the order is yours.
+
+     Edit does what it says now: it moves rows and hides the ones you do
+     not use. It is also where the layout editors live, because arranging
+     the app is one job and it was odd to find half of it under Settings
+     beside the fuel burn. */
+  var MORE_ORDER_KEY = 'nmp.iphone.moreorder', MORE_HIDE_KEY = 'nmp.iphone.morehide';
+  var VIEW_CAT = {
+    map:'Flying', gps:'Flying', airports:'Flying', freq:'Flying',
+    holds:'Flying', chk:'Flying',
+    fuel:'Planning', calc:'Planning', flights:'Planning', mine:'Planning',
+    mbz:'Planning', notes:'Planning',
+    charts:'Data', cloud:'Data'
+  };
+  var MORE_CATS = ['Flying', 'Planning', 'Data', 'Other'];
+  var moreEdit = false;
+  var moreOrder = (function(){
+    try { var a = JSON.parse(localStorage.getItem(MORE_ORDER_KEY)); if (Array.isArray(a)) return a; }
+    catch(_){ }
+    return [];
+  })();
+  var moreHide = (function(){
+    try { var o = JSON.parse(localStorage.getItem(MORE_HIDE_KEY)); if (o && typeof o === 'object') return o; }
+    catch(_){ }
+    return {};
+  })();
+  function moreSaveOrder(){
+    try { localStorage.setItem(MORE_ORDER_KEY, JSON.stringify(moreOrder)); } catch(_){ }
+  }
+  function moreSaveHide(){
+    try { localStorage.setItem(MORE_HIDE_KEY, JSON.stringify(moreHide)); } catch(_){ }
+  }
+  /* Views in a category, in the user's order, with anything new falling
+     in at the end rather than vanishing. */
+  function moreCatViews(cat){
+    var mine = VIEWS.filter(function(v){
+      return MORE_TILES.indexOf(v.k) < 0 && (VIEW_CAT[v.k] || 'Other') === cat;
+    });
+    mine.sort(function(a, b){
+      var ia = moreOrder.indexOf(a.k), ib = moreOrder.indexOf(b.k);
+      if (ia < 0 && ib < 0) return 0;
+      if (ia < 0) return 1;
+      if (ib < 0) return -1;
+      return ia - ib;
+    });
+    return mine;
+  }
+  function moreMove(k, d){
+    var cat = VIEW_CAT[k] || 'Other';
+    var list = moreCatViews(cat).map(function(v){ return v.k; });
+    var i = list.indexOf(k), j = i + d;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    list.splice(j, 0, list.splice(i, 1)[0]);
+    /* rebuild the global order: this category's new order, then everything
+       else in whatever order it already had */
+    var rest = moreOrder.filter(function(x){ return list.indexOf(x) < 0; });
+    moreOrder = rest.concat(list);
+    /* keep categories contiguous in the stored order for readability */
+    moreOrder = [];
+    MORE_CATS.forEach(function(c){
+      (c === cat ? list : moreCatViews(c).map(function(v){ return v.k; }))
+        .forEach(function(x){ moreOrder.push(x); });
+    });
+    moreSaveOrder();
+  }
+
   /* ---------- More sheet list ---------- */
   var MORE_TINT = {
     map:'var(--accent-2)', airports:'var(--good)', fuel:'var(--route)',
@@ -16151,18 +17080,66 @@ var PROC_META={
   /* anything with a tile at the top of the sheet is not repeated below */
   var MORE_TILES = ['downloads'];
   function buildMore(){
+    if (!FLEET) { try { fleetLoad(); } catch(_){ } }
     var mh = '';
-    VIEWS.forEach(function(v){
-      if (MORE_TILES.indexOf(v.k) >= 0) return;
-      mh += '<button class="srow" data-go="' + v.k + '">'
-          + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
-          + svg(v.k) + '</span>' + v.t + '</button>';
+    MORE_CATS.forEach(function(cat){
+      var list = moreCatViews(cat);
+      if (!list.length) return;
+      var shown = list.filter(function(v){ return moreEdit || !moreHide[v.k]; });
+      if (!shown.length) return;
+      mh += '<div class="scat">' + cat + '</div>';
+      shown.forEach(function(v, i){
+        var hidden = !!moreHide[v.k];
+        mh += '<div class="srowwrap' + (hidden ? ' off' : '') + '">'
+            + '<button class="srow" data-go="' + v.k + '"' + (moreEdit ? ' disabled' : '') + '>'
+            + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
+            + svg(v.k) + '</span>' + v.t + '</button>'
+            + (moreEdit
+               ? '<span class="sedit">'
+                 + '<button data-mv="' + v.k + '|-1"' + (i === 0 ? ' disabled' : '') + '>\u2191</button>'
+                 + '<button data-mv="' + v.k + '|1"'
+                 + (i === shown.length - 1 ? ' disabled' : '') + '>\u2193</button>'
+                 + '<button data-hide="' + v.k + '">' + (hidden ? 'Show' : 'Hide') + '</button>'
+                 + '</span>'
+               : '')
+            + '</div>';
+      });
     });
+    if (moreEdit){
+      /* Arranging the app is one job. These used to sit under Settings
+         beside the fuel burn, which is not where anyone looks for them. */
+      mh += '<div class="scat">Layout</div>'
+         +  '<button class="setgo" data-go2="tabs">Bottom bar<span class="ch">\u203a</span></button>'
+         +  '<button class="setgo" data-go2="acty">Activity bar<span class="ch">\u203a</span></button>'
+         +  '<button class="setgo" data-go2="rail">Layer rail<span class="ch">\u203a</span></button>'
+         +  '<button class="setgo" data-go2="acts">Card actions<span class="ch">\u203a</span></button>'
+         +  '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
+         +  '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>';
+    }
     $('#moreList').innerHTML = mh;
+    var eb = $('#moreEditBtn');
+    if (eb) eb.textContent = moreEdit ? 'Done' : 'Edit';
     $('#sver').textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
     wireMore();
   }
   function wireMore(){
+  $$('#moreList [data-mv]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var p = b.getAttribute('data-mv').split('|');
+      moreMove(p[0], parseInt(p[1], 10));
+      buildMore();
+    });
+  });
+  $$('#moreList [data-hide]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var k = b.getAttribute('data-hide');
+      if (moreHide[k]) delete moreHide[k]; else moreHide[k] = 1;
+      moreSaveHide(); buildMore();
+    });
+  });
+  $$('#moreList .setgo[data-go2]').forEach(function(b){
+    b.addEventListener('click', function(){ setGo2(b.getAttribute('data-go2')); });
+  });
   $$('#moreList .srow').forEach(function(r){
     r.addEventListener('click', function(){
       var k = r.getAttribute('data-go');
@@ -16176,7 +17153,10 @@ var PROC_META={
   var ted = $('#tabEd'), tedSlot = 0;
   function openEd(){ closeAll(); tedSlot = 0; drawEd(); ted.classList.add('on'); }
   function closeEd(){ ted.classList.remove('on'); }
-  $('#editTabs').addEventListener('click', openEd);
+  $('#moreEditBtn').addEventListener('click', function(){
+    moreEdit = !moreEdit;
+    buildMore();
+  });
   $('#tabEdClose').addEventListener('click', closeEd);
   ted.addEventListener('click', function(e){ if (e.target === ted) closeEd(); });
 
@@ -16298,9 +17278,10 @@ var PROC_META={
     /* a highlighted airway that outlives its card is just a bright line
        with no explanation */
     if (atsSel){ atsSel = null; renderMap(); }
+    mapRefocus();
   });
   dgrSheet.addEventListener('click', function(e){
-    if (e.target === dgrSheet) dgrSheet.classList.remove('on');
+    if (e.target === dgrSheet){ dgrSheet.classList.remove('on'); mapRefocus(); }
   });
 
   $('#fuelAddClose').addEventListener('click', closeFuelAdd);
@@ -16706,15 +17687,35 @@ var PROC_META={
   function inCtrl(name, val){
     return '<input class="fin" data-set="' + name + '" type="text" inputmode="decimal" value="' + val + '">';
   }
+  /* one dispatcher, because the layout editors are reachable from two
+     places now - Settings kept none of them, More's Edit has them all */
+  function setGo2(k){
+    if (k === 'tabs')    openEd();
+    if (k === 'acty')    openActEd();
+    if (k === 'rail')    openRailEd();
+    if (k === 'acts')    openActsEd();
+    if (k === 'type')    openType();
+    if (k === 'metrics') showMetrics();
+  }
+
   function drawSet(){
+    if (!FLEET) { try { fleetLoad(); } catch(_){ } }
     $('#setBody').innerHTML =
         '<div class="csec" style="margin-top:0">Aircraft</div>'
+      + fleetHTML()
       + setRow('Registration', null, '<input class="fin" data-set="reg" type="text" value="' + AC.reg + '">')
       + setRow('Type', null, '<input class="fin" data-set="type" type="text" value="' + AC.type + '">')
       + setRow('Cruise TAS', 'kt', inCtrl('tas', AC.tas))
       + setRow('Fuel burn', 'kg per hour', inCtrl('burn', AC.burn))
       + setRow('Fuel on board', 'kg \u00b7 set per flight', inCtrl('fob', AC.fob == null ? '' : AC.fob))
       + setRow('Reserve', 'minutes', segCtrl('resMin', [[15,'15'],[30,'30'],[45,'45'],[60,'60']], AC.resMin))
+      + (FLEET.length > 1
+         ? '<button class="setgo dgr" id="acDel">Remove this aircraft<span class="ch">\u00d7</span></button>'
+         : '')
+      + '<div class="cnote">Each registration keeps its own cruise, burn, reserve and planned '
+      + 'altitude. Fuel on board is not one of them \u2014 that belongs to the flight, and '
+      + 'carrying it across a switch would be a lie in the same class as a checklist '
+      + 'remembering yesterday\u2019s ticks.</div>'
 
       + '<div class="csec">Flight plan</div>'
       + setRow('Cruise altitude', 'feet', inCtrl('alt', AC.alt))
@@ -16737,14 +17738,15 @@ var PROC_META={
       + '<div class="csec">Units</div>'
       + setRow('Coordinate format', 'default for the GPS window',
                segCtrl('coordFmt', [['ddm', "D\u00b0M.M'"], ['dms', 'D\u00b0M\u2032S\u2033']], SET.coordFmt))
+      + setRow('Courses', 'WMM2025 \u00b7 variation here ' + crsVarTxt(
+            (ROUTE && ROUTE.length ? ROUTE[0].lat : -6.57),
+            (ROUTE && ROUTE.length ? ROUTE[0].lon : 146.72))
+          + (wmmStale() ? ' \u00b7 model past 2030, extrapolating' : ''),
+          segCtrl('crs', [['mag', 'Magnetic'], ['true', 'True']], SET.crs))
 
-      + '<div class="csec">Layout</div>'
-      + '<button class="setgo" data-go2="tabs">Edit bottom bar<span class="ch">\u203a</span></button>'
-      + '<button class="setgo" data-go2="acty">Edit activity bar<span class="ch">\u203a</span></button>'
-      + '<button class="setgo" data-go2="rail">Edit layer rail<span class="ch">\u203a</span></button>'
-      + '<button class="setgo" data-go2="acts">Edit card actions<span class="ch">\u203a</span></button>'
-      + '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
-      + '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>'
+      + '<div class="cnote">Arranging the app \u2014 bottom bar, activity bar, layer rail, '
+      + 'card actions, type scale \u2014 lives under More, behind Edit. It is the same job as '
+      + 'ordering the views, so it sits with them rather than here beside the fuel burn.</div>'
 
       + '<div class="csec">About</div>'
       + setRow('Version', BUILD, '<span style="font-family:var(--mono);color:var(--accent)">' + VERSION + '</span>')
@@ -16752,6 +17754,20 @@ var PROC_META={
       + 'avionics. Garmin remains primary at all times. Every data layer carries its AIP '
       + 'edition date. Not for navigation.</div>';
 
+    $$('#setBody [data-fleet]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-fleet');
+        if (id === '+'){ fleetAdd(true); }
+        else { fleetSync(); fleetApply(id); fleetSave(); }
+        drawSet(); drawFpl(); renderMap();
+        toast(id === '+' ? 'New aircraft \u2014 set its registration' : 'Now flying ' + (AC.reg || 'unnamed'));
+      });
+    });
+    var acd = $('#acDel');
+    if (acd) acd.addEventListener('click', function(){
+      var gone = AC.reg;
+      if (fleetDel()){ drawSet(); drawFpl(); renderMap(); toast(gone + ' removed'); }
+    });
     $$('#setBody input[data-set]').forEach(function(el){
       el.addEventListener('change', function(){
         var k = el.getAttribute('data-set'), v = el.value;
@@ -16806,17 +17822,8 @@ var PROC_META={
         saveSet(); drawSet(); renderMap();
       });
     });
-    $$('#setBody .setgo').forEach(function(b){
-      b.addEventListener('click', function(){
-        var k = b.getAttribute('data-go2');
-        closeSet();
-        if (k === 'tabs')    openEd();
-        if (k === 'acty')    openActEd();
-        if (k === 'rail')    openRailEd();
-        if (k === 'acts')    openActsEd();
-        if (k === 'type')    openType();
-        if (k === 'metrics') showMetrics();
-      });
+    $$('#setBody .setgo[data-go2]').forEach(function(b){
+      b.addEventListener('click', function(){ closeSet(); setGo2(b.getAttribute('data-go2')); });
     });
   }
 
@@ -17507,6 +18514,8 @@ var PROC_META={
       +  'border:1px dashed var(--border-strong);font-size:var(--t-sm);font-weight:600;'
       +  'color:var(--text-muted)">Append ' + r.pts.length + ' points to route</button>';
     h += '<div class="cnote">' + esc(r.ed) + ' \u00b7 advisory \u00b7 Garmin primary.</div>';
+    var mid = r.pts[Math.floor(r.pts.length / 2)];
+    if (mid && mid.a != null) mapFocus(mid.a, mid.o);
     $('#dgrTitle').textContent = r.rd;
     $('#dgrBody').innerHTML = '<div class="tedhint top">'
       + (r.tier === 'U' ? 'Upper ATS route' : 'ATS route') + '</div>' + h;
@@ -17541,9 +18550,10 @@ var PROC_META={
      CTAF zones use. A limit is only useful next to the unit that owns
      it, so the frequency sits in the list rather than in a footnote. */
   function openCtl(kind, ix){
-    var h, ttl, hint;
+    var h, ttl, hint, ctr = null;
     if (kind === 'tma'){
       var t = PNG_TMA_SECTORS[ix]; if (!t) return;
+      ctr = t.lp || null;
       ttl  = t.name + ' \u00b7 sector ' + t.n;
       hint = 'Terminal area sector \u00b7 ' + t.cls;
       h = '<div class="tedlist">'
@@ -17562,6 +18572,7 @@ var PROC_META={
         + 'actually in.</div>';
     } else {
       var a = PNG_CTA[ix]; if (!a) return;
+      ctr = a.ctr || a.c || null;
       var KIND = { CTR:'Control zone', ATZ:'Aerodrome traffic zone',
                    TMA:'Terminal area', CTA:'Control area' };
       ttl  = a.id;
@@ -17584,6 +18595,7 @@ var PROC_META={
     $('#dgrBody').innerHTML = '<div class="tedhint top">' + hint + '</div>' + h;
     closeAll();
     $('#dgrSheet').classList.add('on');
+    if (ctr) mapFocus(ctr[0], ctr[1]);
   }
 
   /* Tapping a zone is the unambiguous answer to "which area is this
@@ -18370,7 +19382,7 @@ var PROC_META={
         L.marker(mid, { interactive:false, keyboard:false,
           icon: L.divIcon({ className:'nmx-di', iconSize:[0,0], iconAnchor:[0,0],
             html:'<b class="measlb">'
-               + String(Math.round(trkBetween(a, b))).padStart(3, '0') + '\u00b0 '
+               + crsTxt(trkBetween(a, b), a.lat, a.lon) + ' '
                + nmBetween(a, b).toFixed(1) + '</b>' })
         }).addTo(G.box);
       }
@@ -18783,6 +19795,9 @@ var PROC_META={
      all. This is the shared answer: any touch on the map, and any
      Leaflet zoom or drag, marks the map busy for 600 ms afterwards. */
   var mapTouchAt = 0;
+  /* where the map was last centred, so movement can be measured in metres
+     as well as in pixels */
+  var centreLast = null;
   function mapBusy(){
     if (Date.now() - mapTouchAt < 600) return true;
     try {
@@ -18816,16 +19831,37 @@ var PROC_META={
       var bb = LMAP.getBounds();
       var shift = (bb.getEast() - bb.getWest()) * freqCovers() / 2;
       var want = [lat, lon + shift];
-      /* Deadband. Sitting on the pad the fix wanders a few metres every
-         second and every one of those was a pan. Under six pixels of
-         movement is noise, not travel, and panning for it is what makes
-         a stationary map twitch. */
+      /* Deadband, in BOTH units, because either one alone fails at an
+         end of the zoom range.
+
+         Six pixels was the whole rule, and a pixel is a distance that
+         changes with zoom: at wide zoom six pixels is a mile and nothing
+         ever twitches, but zoomed right in it is a few metres, so the
+         GPS wander of a parked aircraft clears it on every fix and the
+         map jitters. That is why it only showed up close in.
+
+         So: under six pixels is never worth a pan, AND under ten metres
+         of actual movement is never worth a pan whatever the zoom. Ten
+         metres is inside civilian GPS noise; it is not travel. */
+      var moved = null;
+      try { moved = nmBetween({ lat:lat, lon:lon }, centreLast || { lat:lat, lon:lon }) * 1852; }
+      catch(_){ }
       try {
         var a = LMAP.latLngToContainerPoint(want);
         var b = LMAP.latLngToContainerPoint(LMAP.getCenter());
-        if (Math.abs(a.x - b.x) < 6 && Math.abs(a.y - b.y) < 6) return;
-      } catch(_){ }
-      LMAP.panTo(want, { animate:false });
+        var dx = Math.abs(a.x - b.x), dy = Math.abs(a.y - b.y);
+        if (dx < 6 && dy < 6) return;
+        if (centreLast && moved != null && moved < 10) return;
+        /* A large correction - after a zoom or a pan, where the aircraft
+           has ended up well off centre - glides rather than teleports.
+           Instant is right for the small steady corrections of flight;
+           it is the big ones that read as the map being snatched. */
+        var far = (dx > 60 || dy > 60);
+        LMAP.panTo(want, far ? { animate:true, duration:0.35 } : { animate:false });
+      } catch(_){
+        LMAP.panTo(want, { animate:false });
+      }
+      centreLast = { lat:lat, lon:lon };
       return;
     }
     var hy = (VIEW.n - VIEW.s) / 2, hx = (VIEW.e - VIEW.w) / 2;
