@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v191 · 2 Aug 2026**.
+Status as of **v196 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -66,6 +66,11 @@ against it
 
 ## Flagged, not chased
 
+- **Two field names in the pack read badly** — "(Duplicate) Utai" and "Awar
+  Airport (unusable)". They are what OurAirports says. Sorting them properly
+  does not make them right; worth deciding whether to override the names
+  locally or leave the source visible.
+
 - **[?] 101 empty `catch` blocks.** Most are legitimate (storage in private
   mode, a DOM node not there yet), but it is a lot of places a fault can die
   quietly. Worth one pass with fresh eyes.
@@ -123,3 +128,9 @@ against it
 | Route chip sheet was a bare word list | v191 | Icons, headed groups, v184 rule |
 | Measure chip under the frequency window | v191 | Centred over what is left of the map |
 | Leg card's remove row escaping the card | v191 | Groups clip their children; tablet sheet clips |
+| Hold-to-reorder route chips broken | v196 | The scrolling body claimed the gesture; chips now opt out |
+| Plan closed behind its own windows | v195 | Panel held while a quick field is open |
+| Fuel on board buried in Settings | v195 | Tap Fuel on arrival to set it; same store as the Fuel view |
+| Frequency list looked unsorted | v194 | A hidden third grouping (rank) cut the alphabet; removed, two headed groups |
+| Long lists ordered by ICAO code | v193 | By name default, By code optional, shared by both lists |
+| Remove rows unclickable and misdrawn | v192 | `dgr` collided with the map's danger-area class; renamed, gate check added |

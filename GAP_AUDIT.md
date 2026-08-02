@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v191 · 2 Aug 2026**
+**Status as of v196 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,11 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v196 | **Bug found:** hold-to-reorder was dead. The panel body became a scrolling container in v169, iOS claims the gesture and fires `touchcancel`, which was wired straight to `dragEnd` — so the 260 ms hold never armed. Chips now set `touch-action:none`, and a cancel before the hold arms only stands the timer down. Third v169-era regression. |
+| v195 | The FPL panel now stays open behind the windows it launches (registration, type, altitude, ETD); Procedure and Routes still take it, being whole views. **Fuel on arrival is now the button that sets fuel on board** — same `AC.fob` the Fuel view uses, blank clears to unknown rather than zero. Header wiring moved to one delegated listener. |
+| v194 | **Bug found:** the frequency list carried a third, invisible ordering (a majors-first "rank") inside its two groups, so the alphabet restarted partway down with nothing on screen explaining it — it read as no sorting at all. Rank removed; two groups only, each with a heading and a count. |
+| v193 | Airports (All) and Frequencies were ordered by ICAO code, hiding Goroka under G-for-AYGA. **By name** is now the default with **By code** as a choice — one setting shared by both lists. Leading punctuation is skipped for sorting; Frequencies still groups fields that have them first. |
+| v192 | **Bug found:** the destructive-row modifier `dgr` collided with the map's danger-area class (`position:absolute`, red border, `pointer-events:none`), so every Remove row since v184 was absolutely positioned against the page and **unclickable**. Renamed `arow-del`. `checkorder` gained a CSS modifier/component collision check that catches it. |
 | v191 | Four iPad layout faults: FPL floor was a flat 250 while the panel's own chrome exceeded 200 (chips sliced) — floor now measured as chrome + one row, drag included; route chip sheet rebuilt with icons and headed groups; measure chip centred over the uncovered map so it stops colliding with the frequency window; `.agrp` and the tablet sheet now clip, so the leg card's remove row cannot escape. |
 | v190 | **Regression fixed (mine, from v169):** the FPL grip could no longer be dragged past the content height, and the panel clipped its last row. Cap removed — the grip runs to full height again; once dragged, the hand-set height wins permanently. Clipping had two causes: a 2 px allowance (a row's bottom margin falls outside `scrollHeight`) and measuring in the same tick as the redraw. |
 | v189 | **Fuel and phone per field** — free text you own, same idea as user frequencies; shown on the card and the airport page, listed in the summary only when set. **Holds** now carry their frame (°M/°T) and the Use-GPS-track suggestion is converted before storing; the entry logic needed no change because it works on differences. |
