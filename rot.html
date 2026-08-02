@@ -22,6 +22,31 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v169 2026-08-02 The FPL panel took the height of the screen
+                       rather than the height of its contents.
+
+                       It was fixed at 72% of whatever space there was.
+                       On a phone that roughly matches what Route holds;
+                       on an iPad it left a third of the screen as an
+                       empty grey field between the last route chip and
+                       the fuel strip.
+
+                       The panel now takes what its content needs, up to
+                       the ceiling the grip sets. Route with four rows is
+                       a short panel; NavLog with twelve cards fills to
+                       the ceiling and scrolls as before. Eased over 140
+                       ms so a tab switch reads as the panel settling.
+
+                       The comment said "must not resize when you switch
+                       tabs" and that rule is now deliberately broken. It
+                       was written when the phone was the only target,
+                       and on a tablet it means the shortest tab gets the
+                       same slab as the longest.
+
+                       The grip still owns the maximum, and can no longer
+                       be dragged past what the content needs: a panel
+                       that stretches into nothing and snaps back when
+                       you let go is worse than one that stops.
        v168 2026-08-02 The shading altitude is a slider now.
 
                        Four buttons meant four taps to move 2,000 ft,
@@ -4207,6 +4232,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   box-shadow:0 12px 26px rgba(0,0,0,.55);
 }
 .drop.on{display:flex}
+/* Height follows the content; the ease is what stops a tab switch
+   reading as a jump. Suppressed while the grip is under a finger. */
+.drop{transition:height .14s ease}
+.drop.sizing{transition:none}
 .dbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:var(--gut) var(--pedge)}
 .drow{display:flex;gap:var(--gut);margin-bottom:var(--gut)}
@@ -6160,7 +6189,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v168-ROT';
+  var VERSION = 'v169-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -7810,6 +7839,8 @@ var PROC_META={
       });
     }
     if (fplTab === 'profile'){ profPaint(); wireScrub(); }
+    /* the content just changed, so the height it needs has too */
+    if (drop && drop.classList.contains('on')) sizeDrop();
     renderMap();
   }
 
@@ -7919,13 +7950,39 @@ var PROC_META={
   })();
   function saveFplH(){ try{ localStorage.setItem(FPL_KEY, String(fplFrac)); }catch(e){} }
 
-  /* Fixed height, scrolling body. The panel must not resize when you
-     switch tabs - only when you drag the grip. */
+  /* The panel takes the height its CONTENT needs, up to the ceiling the
+     grip sets. It used to take the ceiling always - 72% of whatever was
+     available - which on a phone roughly matched the content and on an
+     iPad left a third of the screen as an empty grey field between the
+     last route chip and the fuel strip.
+
+     The old rule was "must not resize when you switch tabs". That was
+     written when the phone was the only target; on a tablet it means
+     Route, which is four rows, gets the same slab as NavLog, which is
+     twelve cards. Height now follows the tab, eased over 140 ms so it
+     reads as the panel settling rather than jumping.
+
+     The grip still owns the maximum. It cannot be dragged past what the
+     content needs, because a panel that stretches into nothing and then
+     snaps back on release is worse than one that stops. */
+  function fplWantH(){
+    var body = $('#fplBody');
+    if (!body) return FPL_MIN;
+    var chrome = 0;
+    ['#fplStrip', '#dropFpl .dtabs', '#fplGrip'].forEach(function(sel){
+      var el = document.querySelector(sel);
+      if (el) chrome += el.getBoundingClientRect().height;
+    });
+    /* scrollHeight is the full content height whatever the panel is
+       currently clipped to, which is exactly the number wanted */
+    return Math.ceil(body.scrollHeight + chrome + 2);
+  }
   function sizeDrop(){
     var top  = $('#chrome').getBoundingClientRect().bottom;
     var tabH = document.querySelector('.tabs').getBoundingClientRect().height;
     fplMax = Math.max(FPL_MIN, window.innerHeight - top - tabH - 10);
-    var h = Math.max(FPL_MIN, Math.min(fplMax, Math.round(fplFrac * fplMax)));
+    var ceil = Math.round(fplFrac * fplMax);
+    var h = Math.max(FPL_MIN, Math.min(fplMax, ceil, fplWantH()));
     drop.style.top = top + 'px';
     drop.style.height = h + 'px';
   }
@@ -7936,15 +7993,20 @@ var PROC_META={
     function begin(clientY){
       var startY = clientY, startH = drop.getBoundingClientRect().height;
       grip.classList.add('on');
+      drop.classList.add('sizing');        /* no easing while a finger is on it */
+      /* the ceiling for THIS drag: never past what the content needs */
+      var dragCap = Math.max(FPL_MIN, Math.min(fplMax, fplWantH()));
       function move(y){
-        var h = Math.max(FPL_MIN, Math.min(fplMax, startH + (y - startY)));
+        var h = Math.max(FPL_MIN, Math.min(dragCap, startH + (y - startY)));
         drop.style.height = h + 'px';
         fplFrac = h / fplMax;
       }
       function tm(ev){ ev.preventDefault(); move(ev.touches[0].clientY); }
       function mm(ev){ move(ev.clientY); }
       function end(){
-        grip.classList.remove('on'); saveFplH();
+        grip.classList.remove('on');
+        drop.classList.remove('sizing');
+        saveFplH();
         document.removeEventListener('touchmove', tm);
         document.removeEventListener('touchend', end);
         document.removeEventListener('mousemove', mm);

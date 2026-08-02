@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v168 · 2 Aug 2026**
+**Status as of v169 · 2 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v169 | **FPL panel takes the height its content needs**, up to the grip's ceiling, eased over 140 ms. It was fixed at 72% of available height — on an iPad that left a third of the screen empty between the last route chip and the fuel strip. The grip can no longer be dragged past the content. |
 | v168 | Terrain shading altitude is a slider (500–20,000 in hundreds, 30 px thumb in a 44 px strip) instead of four ± buttons. Readout and legend follow the thumb live without rebuilding the window; shading repaints throttled during the drag and once on release. |
 | v167 | Home-screen icon: a real PNG mark (amber leg between two square waypoint markers) replacing the SVG letter-N, which iOS never reliably rendered. Page title no longer says "iPhone Layout Demo". |
 | v166 | **Bug found:** Show on map was dead on every recorded flight. Two faults stacked — the sheet's action rows were wired after the recorded-track branch had already returned, so they had no handler at all; and the saved track was drawn by mapping the whole fix list, which threw on the null gap markers *inside* `renderMap` and took the map render down with it. Now drawn per segment, nulls filtered before fitBounds, header reads Recorded flight. |
@@ -144,4 +145,4 @@ picker, cloud-base and airspeed calculators, and Holds.
 7. **Charts** — the big one, still wants its own plan.
 8. **PDF export** — jsPDF is not inlined in this build.
 9. Smaller, unblocked: measure tool, waypoint notes, bulk delete, the
-   empty gap in the iPad FPL panel.
+   empty gap in the iPad FPL panel — **done, v169**.
