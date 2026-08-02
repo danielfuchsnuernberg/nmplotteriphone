@@ -22,6 +22,159 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v179 2026-08-02 CHECKLISTS, two kinds, because you carry two.
+
+                       A LIST is text you own: sections, items, actions.
+                       It is edited AS text rather than through a
+                       row-by-row form - one box, the whole checklist
+                       visible, re-parsed on save. Faster to write, faster
+                       to fix, and it means a checklist can be pasted in
+                       from anywhere. A line starting # is a section;
+                       whatever follows a run of dots, a tab or a spaced
+                       hyphen is the action.
+
+                       A PDF is the manufacturer's, unaltered. Stored
+                       whole in IndexedDB - a new files store, so the
+                       database went to version 2 and gains it on open
+                       rather than being thrown away - and opened in the
+                       system viewer. Deliberately NOT drawn inline:
+                       that needs a PDF engine of about a megabyte, and
+                       iOS will not reliably paint one in a frame.
+                       Opening it hands the job to the viewer that
+                       already pinches, scrolls and works offline.
+
+                       Text size is A- and A+ from 70% to 200%, held
+                       across sessions. The runner scales from one em on
+                       the body, so lines, tick boxes and actions move
+                       together instead of the text drifting out of its
+                       own row. Small enough for the whole list on one
+                       screen, big enough to read in turbulence.
+
+                       Ticks are deliberately NOT saved. A checklist
+                       half-ticked from yesterday's flight is worse than
+                       a blank one: it reads as done.
+       v178 2026-08-02 Tap a leg on the map and get the leg.
+
+                       What it runs between, how far, on what course, the
+                       highest ground under it and what that means for a
+                       safe altitude - plus the three things you actually
+                       do to a leg: fly it, go direct to its end, or take
+                       its end out of the route. Each leg carries an
+                       invisible 18 px line over the top of it, the same
+                       trick the airways use, because a 2 px line is not
+                       a thumb target.
+
+                       Two deliberate departures from the app this is
+                       modelled on.
+
+                       COURSE IS TRUE. There is no magnetic variation
+                       anywhere in this build - no model, no table, no
+                       setting - so a magnetic course would be a number
+                       invented on the spot. It says TRUE and means it.
+                       If you want magnetic, that is a variation source
+                       and a Settings field, and worth doing properly.
+
+                       MOUNTAINOUS is a designated-area call off a chart
+                       nobody here holds. Rather than answer yes or no
+                       from nothing, the card shows LOWEST SAFE: the
+                       highest ground under the track plus your clearance
+                       setting, rounded up to the next 500. That is a
+                       figure with a derivation, and it is what the yes/no
+                       was standing in for.
+
+                       Highest ground uses the same sampler the profile
+                       uses, so the two cannot disagree. Where tiles are
+                       missing it says so and withholds lowest safe
+                       rather than quoting one computed from partial
+                       ground - the rule v147 set.
+       v177 2026-08-02 MY NOTES sat outside the gutter everything else
+                       lines up on.
+
+                       The notes block has two hosts. The card body
+                       carries its own horizontal padding, so the block
+                       sits flush inside it and looks right. The point
+                       window body carries none - its sections inset
+                       themselves with --edge - so the same block ran to
+                       the window edge while ROUTE and WAYPOINT beside it
+                       were indented.
+
+                       The block is wrapped now and the wrapper takes the
+                       inset in the window only. One builder, two hosts,
+                       and the gutter belongs to the host rather than to
+                       the block - which is the rule that was missing
+                       when it was shared in v173.
+       v176 2026-08-02 Measure, and a library you can read before you
+                       pull from it.
+
+                       MEASURE. Tap the ruler on the rail, then tap the
+                       map. Each tap adds a point; every segment carries
+                       its own bearing and length and the chip carries the
+                       running total, with Undo, Clear and Done.
+
+                       The line is the great circle, drawn the way a route
+                       leg is drawn, because a straight line on a Mercator
+                       map is not the distance the numbers describe - the
+                       same reason v143 exists.
+
+                       While measuring, the marker and overlay panes stop
+                       taking taps. A tap that both dropped a measuring
+                       point and opened an airfield card would be two
+                       things at once, and the card would win.
+
+                       THE WAYPOINT LIBRARY. Pull takes everything the
+                       cloud has that you do not. That is the right
+                       default and the wrong only option: after a few
+                       months the desktop holds pads from jobs you will
+                       never fly again and the phone gets all of them.
+                       Browse lists what is up there, marks what you
+                       already hold as held and untickable - your local
+                       copy always wins - and pulls only what you tick.
+                       Nothing is deleted, here or there. Incoming
+                       waypoints are rebuilt field by field through the
+                       same whitelist the bulk pull uses.
+
+                       COPY ROUTE was on the list as missing. It is not:
+                       the flight sheet has had Duplicate since the sheet
+                       was built. It copies the points into a new saved
+                       route named "... copy" and leaves the original
+                       alone. Checked rather than assumed, and struck off
+                       instead of built twice.
+       v175 2026-08-02 A survey of the whole file, and the hole it found.
+
+                       survey.js sweeps for classes of flaw rather than
+                       testing one feature: functions declared and never
+                       called, calls to things that do not exist, data-
+                       hooks emitted with nothing listening, classes
+                       applied with no style, framing phrases worth
+                       re-reading, storage keys, datasets nothing reads,
+                       and how many places swallow an error silently.
+
+                       The find: TWO airway datasets. ATS_ROUTES,
+                       fourteen routes, written before the full set was
+                       lifted; and PNG_ROUTES, ninety-nine, lifted in
+                       v162. The map layer drew all 99. The Routes view
+                       read the other one and offered 14. Eighty-five
+                       airways you could see on the map and could not
+                       choose from the list.
+
+                       The fourteen were a strict subset with identical
+                       points and identical segments, so nothing on
+                       screen was WRONG - it was just missing, which is
+                       the kind of gap that survives because everything
+                       it touches looks right. One dataset now; the copy
+                       is deleted rather than left as a second source of
+                       truth for the same airways. Upper routes are
+                       marked in the list, and the header says how many
+                       of how many you are looking at.
+
+                       Two dead functions removed. swiCtrl built a switch
+                       nothing renders any more; terrTileCount wrapped a
+                       length nobody read. Dead code lies about what
+                       exists.
+
+                       Everything else the survey turned up was clean:
+                       no undefined calls, no orphan data- hooks, no
+                       unnamespaced storage keys, no unread datasets.
        v174 2026-08-02 The map jumped while you were zooming it.
 
                        GPS Follow recentres on every fix, about once a
@@ -3873,6 +4026,100 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .mnbulk .danger.arm{background:var(--bad);color:#0a0e13;border-color:var(--bad)}
 .mnbulk .danger[disabled]{opacity:.4}
 
+/* Checklists. The runner scales with one em on the body, so A+ and A-
+   move every line, box and action together rather than the text drifting
+   out of its own row. */
+.chklist{margin-top:2px}
+.chkrow{width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+  padding:11px 12px;border-radius:var(--radius);background:var(--bg-2);
+  border:1px solid var(--border);margin-bottom:var(--gut)}
+.chkrow .kd{flex:0 0 auto;font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.06em;padding:2px 5px;border-radius:3px;color:#0a0e13}
+.chkrow .kd.lst{background:var(--accent)}
+.chkrow .kd.pdf{background:#7fb3d5}
+.chkrow .tx{flex:1 1 auto;min-width:0}
+.chkrow .tx b{display:block;font-size:var(--t-sm);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chkrow .tx i{display:block;font-style:normal;font-size:var(--t-2xs);color:var(--text-fainter)}
+.chkrow .ch{flex:0 0 auto;font-size:18px;color:var(--text-fainter)}
+.chkadd{display:flex;gap:var(--gut);margin-top:12px}
+.chkadd button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg);border:1px dashed var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted)}
+.chkadd button.danger{border-style:solid;border-color:rgba(240,80,110,.5);color:var(--bad)}
+.chkbar{display:flex;align-items:center;gap:10px;padding-bottom:10px;
+  border-bottom:1px solid var(--border);margin-bottom:10px}
+.chkbar .ttl{flex:1 1 auto;min-width:0;font-size:var(--t-md);font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chkbar .prog{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);color:var(--accent)}
+.chksize{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.chksize button{height:32px;min-width:40px;border-radius:6px;background:var(--bg-2);
+  border:1px solid var(--border-strong);font-size:var(--t-sm);font-weight:700;
+  color:var(--text-muted)}
+.chksize button.lnk{border:0;background:none;min-width:0;color:var(--accent-2);
+  font-weight:600;font-size:var(--t-xs)}
+.chksize span{font-family:var(--mono);font-size:var(--t-2xs);color:var(--text-fainter)}
+.chksec{margin:14px 0 6px;font-size:.72em;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent)}
+.chkit{width:100%;display:flex;align-items:baseline;gap:10px;text-align:left;
+  padding:.55em .6em;border-radius:var(--radius);background:var(--bg-2);
+  border:1px solid var(--border);margin-bottom:.35em}
+.chkit.on{opacity:.5;background:var(--bg)}
+.chkit .bx{flex:0 0 auto;width:1.35em;height:1.35em;border-radius:4px;
+  border:1px solid var(--border-strong);display:flex;align-items:center;
+  justify-content:center;font-size:.8em;color:#0a0e13}
+.chkit.on .bx{background:var(--good);border-color:var(--good)}
+.chkit .t{flex:1 1 auto;min-width:0;font-size:1em;color:var(--text)}
+.chkit .a{flex:0 0 auto;font-family:var(--mono);font-size:.9em;font-weight:700;
+  color:var(--accent)}
+.chkit.on .a{color:var(--text-fainter)}
+.chktx{width:100%;min-height:260px;margin-top:10px;padding:10px 12px;
+  border-radius:var(--radius);background:var(--bg);border:1px solid var(--border-strong);
+  color:var(--text);font-family:var(--mono);font-size:var(--t-sm);line-height:1.5;
+  -webkit-appearance:none;appearance:none;resize:vertical}
+
+/* The waypoint library list. Held rows are dimmed and cannot be ticked:
+   your local copy always wins, so pulling one again would do nothing. */
+.liblist{margin-top:6px}
+.librow{width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+  padding:9px 10px;border-radius:var(--radius);background:var(--bg-2);
+  border:1px solid var(--border);margin-bottom:6px}
+.librow[disabled]{opacity:.45}
+.librow .pk{flex:0 0 auto;width:20px;height:20px;border-radius:5px;
+  border:1px solid var(--border-strong);display:flex;align-items:center;
+  justify-content:center;font-size:12px;color:var(--bg)}
+.librow .pk.on{background:var(--accent);border-color:var(--accent)}
+.librow .tx{flex:1 1 auto;min-width:0}
+.librow .tx b{display:block;font-family:var(--mono);font-size:var(--t-sm);color:var(--text)}
+.librow .tx i{display:block;font-style:normal;font-size:var(--t-2xs);
+  color:var(--text-fainter);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.librow .st{flex:0 0 auto;font-size:var(--t-2xs);font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-fainter)}
+
+/* Measure: the chip, the leg labels, and the pane lockout that stops a
+   tap being two things at once. */
+#map.measuring .leaflet-marker-pane,
+#map.measuring .leaflet-overlay-pane{pointer-events:none}
+.measchip{position:absolute;left:50%;transform:translateX(-50%);top:10px;z-index:530;
+  display:none;min-width:210px;padding:8px 12px;border-radius:10px;
+  background:rgba(10,14,19,.9);border:1px solid rgba(127,227,255,.45);
+  box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.measchip.on{display:block}
+.mtot{font-family:var(--mono);font-size:var(--t-xl);font-weight:700;color:#7fe3ff;
+  line-height:1}
+.mtot u{text-decoration:none;font-size:var(--t-2xs);color:var(--text-fainter);
+  margin-left:4px}
+.mlast{margin-top:2px;font-size:var(--t-2xs);color:var(--text-fainter);
+  font-family:var(--mono)}
+.mbtns{display:flex;gap:6px;margin-top:8px}
+.mbtns button{flex:1 1 0;height:30px;border-radius:6px;background:var(--bg-2);
+  border:1px solid var(--border-strong);font-size:var(--t-2xs);font-weight:700;
+  color:var(--text-muted)}
+.mbtns button[disabled]{opacity:.35}
+.measlb{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:var(--mono);font-size:9px;font-weight:700;color:#0a0e13;
+  background:#7fe3ff;border-radius:3px;padding:1px 4px}
+
 /* MBZ label: the three things the zone is - who, on what, between what.
    Violet, the colour the circle is drawn in. */
 .mbzchip{position:absolute;transform:translate(-50%,-50%);display:flex;
@@ -5662,6 +5909,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .ntacts button.del.arm{border-color:var(--bad);background:rgba(240,80,110,.12)}
 
 /* notes on the airfield card */
+/* The card pads its own body, so the block sits flush there. The point
+   window does not, so it takes the same --edge inset its action groups
+   use and the headings line up. */
+.qkbody .nblk{padding:0 var(--edge)}
+.qkbody .nblk .csec{margin-top:14px}
 .cnotes{margin-top:2px}
 .cnotes .row{width:100%;text-align:left;display:block;padding:9px 0;
   border-bottom:1px solid var(--border)}
@@ -5872,6 +6124,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <div class="mapnote">Map engine starting…</div>
     <div id="mapLayers"></div>
 
+    <div class="measchip" id="measChip"></div>
+
     <!-- ROTATION TEST: north arrow / mode cycle -->
     <button class="rotctl" id="rotCtl" aria-label="Map orientation">
       <svg class="nd" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -5904,6 +6158,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <div class="rgrp collapsed-only">
         <button class="rb tall" id="rbRec">
           <span class="lab">REC</span><span class="tick">00:00</span>
+        </button>
+      </div>
+
+      <div class="rgrp collapsed-only">
+        <button class="rb" id="rbMeas" aria-label="Measure">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linejoin="round"><path d="M3.5 14.5l11-11 6 6-11 11z"/>
+            <path d="M7 11l2 2M10 8l2 2M13 5l2 2"/></svg>
         </button>
       </div>
 
@@ -6383,7 +6645,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v175-ROT';
+  var VERSION = 'v179-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -8608,6 +8870,532 @@ var PROC_META={
      parallel system. Yours are stored on the device and are yours to
      add, edit and delete. */
   /* ============================================================
+     MEASURE
+
+     Tap the ruler, then tap the map. Each tap adds a point; the line
+     between them is the great circle, drawn the same way a route leg is,
+     because a straight line on a Mercator map is not the distance the
+     numbers describe. Every segment carries its own bearing and length
+     and the chip carries the running total.
+
+     While measuring, the marker and overlay panes stop taking taps. A
+     tap that both dropped a measuring point AND opened an airfield card
+     would be two things at once, and the card would win the argument.
+     ============================================================ */
+  /* ============================================================
+     ROUTE LEG
+
+     Tap a leg on the map and get the leg, not the whole plan: what it
+     runs between, how far, on what course, the highest ground under it,
+     and what that means for a safe altitude - plus the three things you
+     actually want to do to a leg.
+
+     Two deliberate departures from the app this is modelled on.
+
+     COURSE IS TRUE. There is no magnetic variation anywhere in this
+     build - no model, no table, no setting - so a magnetic course would
+     be a number invented on the spot. It says TRUE and means it.
+
+     MOUNTAINOUS is a designated-area call off a chart nobody here holds,
+     so instead of a yes or no this shows LOWEST SAFE: the highest ground
+     under the leg plus your clearance setting, rounded up. That is a
+     figure with a derivation, and it is the one you would have wanted
+     the yes/no for anyway.
+     ============================================================ */
+  var legSel = -1, legDelArm = false, legDelTmr = null;
+
+  /* Highest ground under one leg. Same sampler the profile uses, so the
+     two can never disagree; null when the tiles are not loaded, and the
+     card says so rather than showing a floor of nothing. */
+  function legHighest(a, b){
+    var n = 48, hi = null, gaps = 0;
+    for (var i = 0; i <= n; i++){
+      var p = interp(a, b, i / n);
+      var e = terrainAt(p.lat, p.lon);
+      if (e == null){ gaps++; continue; }
+      if (hi == null || e > hi) hi = e;
+    }
+    return { hi:hi, gaps:gaps, n:n + 1 };
+  }
+  function legSafe(hi){
+    if (hi == null) return null;
+    return Math.ceil((hi + (SET.clr || 1000)) / 500) * 500;
+  }
+
+  function openLeg(i){
+    if (i < 0 || i >= ROUTE.length - 1) return;
+    var a = ROUTE[i], b = ROUTE[i+1];
+    legSel = i; legDelArm = false;
+    var nm = nmBetween(a, b), crs = trkBetween(a, b);
+    var t = legHighest(a, b), safe = legSafe(t.hi);
+    var state = (i < toWpt - 1) ? 'Flown' : (i === toWpt - 1) ? 'Flying now' : 'To come';
+
+    function row(k, v, unit){
+      return '<div class="farow"><span class="fanm">' + k + '</span>'
+           + '<span class="faq"><span class="l">' + v + '</span>'
+           + (unit ? '<span class="k">' + unit + '</span>' : '') + '</span></div>';
+    }
+    var h = '<div class="tedlist">'
+          + row('Distance', nm.toFixed(1), 'nm')
+          + row('Course', String(Math.round(crs)).padStart(3, '0') + '\u00b0', 'true')
+          + row('Highest ground', t.hi == null ? '\u2014' : t.hi.toLocaleString(),
+                t.hi == null ? '' : 'ft')
+          + row('Lowest safe', safe == null ? '\u2014' : safe.toLocaleString(),
+                safe == null ? '' : 'ft')
+          + '</div>';
+    if (t.hi == null){
+      h += '<div class="cnote">No terrain tiles loaded for this leg, so there is no ground '
+        +  'figure and no lowest safe. Turn terrain on, or download the region.</div>';
+    } else if (t.gaps){
+      h += '<div class="cnote">' + t.gaps + ' of ' + t.n + ' samples had no tile. The figure is '
+        +  'the highest of what loaded, so treat it as a floor.</div>';
+    } else {
+      h += '<div class="cnote">Highest ground under the track plus your ' + (SET.clr || 1000)
+        +  ' ft clearance, rounded up to the next 500. Terrarium elevation, not survey data: '
+        +  'no towers, no wires, no obstacles.</div>';
+    }
+    h += '<div class="asec">Leg</div><div class="agrp">'
+      +  actRow('data-lga','show','fly','Fly this leg')
+      +  actRow('data-lga','dct','dct','Direct to ' + esc(label(b)))
+      +  '</div>';
+    if (ROUTE.length > 2){
+      h += '<div class="agrp danger">'
+        +  actRow('data-lga','del','del',
+                  legDelArm ? 'Tap again to remove ' + esc(label(b))
+                            : 'Remove ' + esc(label(b)) + ' from the route')
+        +  '</div>';
+    }
+    $('#dgrTitle').textContent = label(a) + ' \u2192 ' + label(b);
+    $('#dgrBody').innerHTML = '<div class="tedhint top">Leg ' + (i + 1) + ' of '
+      + (ROUTE.length - 1) + ' \u00b7 ' + state + '</div>' + h;
+    Array.prototype.forEach.call($('#dgrBody').querySelectorAll('[data-lga]'), function(x){
+      x.addEventListener('click', function(){ legAction(x.getAttribute('data-lga'), i); });
+    });
+    closeAll();
+    $('#dgrSheet').classList.add('on');
+  }
+
+  function legAction(a, i){
+    var b = ROUTE[i+1];
+    if (!b) return;
+    if (a === 'show'){
+      /* make this the leg being flown - the same thing tapping a NavLog
+         card does, and it drives the map, the profile and the frequency
+         corridor together */
+      toWpt = i + 1;
+      $('#dgrSheet').classList.remove('on');
+      saveRoute(); drawFpl(); renderMap();
+      toast('Flying leg ' + (i + 1));
+      return;
+    }
+    if (a === 'dct'){
+      $('#dgrSheet').classList.remove('on');
+      directTo(b);
+      return;
+    }
+    if (a === 'del'){
+      if (!legDelArm){
+        legDelArm = true;
+        if (legDelTmr) clearTimeout(legDelTmr);
+        legDelTmr = setTimeout(function(){ legDelArm = false; }, 4000);
+        openLeg(i);
+        return;
+      }
+      ROUTE.splice(i + 1, 1);
+      if (toWpt > ROUTE.length - 1) toWpt = Math.max(1, ROUTE.length - 1);
+      legDelArm = false;
+      $('#dgrSheet').classList.remove('on');
+      saveRoute(); drawFpl(); renderMap();
+      toast('Removed');
+      return;
+    }
+  }
+
+  var measOn = false, measPts = [];
+  function measTotal(){
+    var t = 0;
+    for (var i = 0; i < measPts.length - 1; i++) t += nmBetween(measPts[i], measPts[i+1]);
+    return t;
+  }
+  function measSet(on){
+    measOn = !!on;
+    var host = document.getElementById('map');
+    if (host) host.classList.toggle('measuring', measOn);
+    var b = document.getElementById('rbMeas');
+    if (b) b.classList.toggle('on', measOn);
+    if (!measOn) measPts = [];
+    drawMeasChip();
+    renderMap();
+  }
+  function measAdd(lat, lon){
+    measPts.push({ lat:lat, lon:lon });
+    drawMeasChip();
+    renderMap();
+  }
+  function measUndo(){
+    measPts.pop(); drawMeasChip(); renderMap();
+  }
+  function drawMeasChip(){
+    var el = document.getElementById('measChip');
+    if (!el) return;
+    if (!measOn){ el.classList.remove('on'); el.innerHTML = ''; return; }
+    el.classList.add('on');
+    var n = measPts.length;
+    var last = '';
+    if (n >= 2){
+      var a = measPts[n-2], b = measPts[n-1];
+      last = String(Math.round(trkBetween(a, b))).padStart(3, '0') + '\u00b0 \u00b7 '
+           + nmBetween(a, b).toFixed(1) + ' nm';
+    }
+    el.innerHTML =
+        '<div class="mtot"><b>' + (n < 2 ? '\u2014' : measTotal().toFixed(1))
+      +   '</b><u>nm</u></div>'
+      + '<div class="mlast">' + (n === 0 ? 'Tap the map to start'
+                               : n === 1 ? 'Tap again for a leg' : 'last leg ' + last) + '</div>'
+      + '<div class="mbtns">'
+      +   '<button data-meas="undo"' + (n ? '' : ' disabled') + '>Undo</button>'
+      +   '<button data-meas="clear"' + (n ? '' : ' disabled') + '>Clear</button>'
+      +   '<button data-meas="done">Done</button>'
+      + '</div>';
+    Array.prototype.forEach.call(el.querySelectorAll('[data-meas]'), function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var a = b.getAttribute('data-meas');
+        if (a === 'undo') measUndo();
+        else if (a === 'clear'){ measPts = []; drawMeasChip(); renderMap(); }
+        else measSet(false);
+      });
+    });
+  }
+
+  /* ============================================================
+     CHECKLISTS
+
+     Two kinds, because you carry two kinds.
+
+     A LIST is text you own: sections, items, actions. It is edited as
+     text rather than through a row-by-row form - one textarea, the whole
+     checklist visible, and it re-parses on save. That is faster to write,
+     faster to fix at 2 a.m., and it means a checklist can be pasted in
+     from anywhere.
+
+     A PDF is the manufacturer's, unaltered. It is stored whole in
+     IndexedDB and opened in the system viewer. It is NOT drawn inline:
+     rendering a PDF inside the page needs a PDF engine (about a megabyte)
+     and iOS will not reliably paint one in a frame. Opening it hands the
+     job to the viewer that already works, offline, with pinch zoom.
+
+     Ticks are deliberately NOT saved. A checklist half-ticked from
+     yesterday's flight is worse than a blank one: it reads as done.
+     ============================================================ */
+  var CHK_KEY = 'nmp.iphone.chk', CHK_SCALE_KEY = 'nmp.iphone.chkscale';
+  var CHK = (function(){
+    try { var a = JSON.parse(localStorage.getItem(CHK_KEY)); if (Array.isArray(a)) return a; }
+    catch(_){ }
+    return [];
+  })();
+  var chkScale = (function(){
+    var v = parseFloat(localStorage.getItem(CHK_SCALE_KEY));
+    return (isFinite(v) && v >= 0.7 && v <= 2) ? v : 1;
+  })();
+  var chkRun = null, chkTick = {}, chkEdit = null, chkQuery = '';
+
+  function saveChk(){
+    try { localStorage.setItem(CHK_KEY, JSON.stringify(CHK)); } catch(_){ }
+  }
+  function saveChkScale(){
+    try { localStorage.setItem(CHK_SCALE_KEY, String(chkScale)); } catch(_){ }
+  }
+  function chkById(id){
+    for (var i = 0; i < CHK.length; i++) if (CHK[i].id === id) return CHK[i];
+    return null;
+  }
+  function chkCount(c){
+    var n = 0;
+    (c.sec || []).forEach(function(s){ n += (s.items || []).length; });
+    return n;
+  }
+
+  /* ---- text <-> structure ------------------------------------------
+     A line beginning # is a section. Otherwise the ACTION is whatever
+     follows a run of dots, a tab, or " - "; a line with none of those is
+     an item with no action, which is legitimate - "CHECK" lists exist. */
+  function chkParse(txt){
+    var sec = [], cur = null;
+    String(txt || '').split(/\r?\n/).forEach(function(raw){
+      var line = raw.replace(/\s+$/, '');
+      if (!line.trim()) return;
+      if (/^#/.test(line)){
+        cur = { t: line.replace(/^#+\s*/, '').trim(), items: [] };
+        sec.push(cur);
+        return;
+      }
+      if (!cur){ cur = { t:'', items: [] }; sec.push(cur); }
+      var m = line.match(/^(.*?)(?:\s*\.{2,}\s*|\t+|\s+-\s+)(.*)$/);
+      if (m && m[2].trim()) cur.items.push({ t:m[1].trim(), a:m[2].trim() });
+      else cur.items.push({ t:line.trim(), a:'' });
+    });
+    return sec;
+  }
+  function chkToText(c){
+    return (c.sec || []).map(function(s){
+      return (s.t ? '# ' + s.t + '\n' : '')
+           + (s.items || []).map(function(it){
+               return it.a ? it.t + ' ... ' + it.a : it.t;
+             }).join('\n');
+    }).join('\n\n');
+  }
+
+  var CHK_TEMPLATE =
+      '# BEFORE START\n'
+    + 'Doors and harnesses ... SECURE\n'
+    + 'Controls ... FREE\n'
+    + 'Fuel ... CHECKED\n\n'
+    + '# BEFORE TAKEOFF\n'
+    + 'Instruments ... T AND P GREEN\n'
+    + 'Area ... CLEAR\n';
+
+  /* ---- the list ---- */
+  function chkListHTML(){
+    var q = chkQuery.trim().toUpperCase();
+    var rows = CHK.filter(function(c){
+      if (!q) return true;
+      return (c.nm || '').toUpperCase().indexOf(q) >= 0
+          || (c.ac || '').toUpperCase().indexOf(q) >= 0;
+    });
+    var h = '<div class="ntfld"><label for="chkQ">Filter</label>'
+          + '<input id="chkQ" type="text" placeholder="Name or aircraft\u2026" value="'
+          + esc(chkQuery) + '"></div>';
+    if (!CHK.length){
+      h += '<div class="cempty">No checklists yet.</div>';
+    } else if (!rows.length){
+      h += '<div class="cempty">No match</div>';
+    } else {
+      h += '<div class="chklist">';
+      rows.forEach(function(c){
+        h += '<button class="chkrow" data-chk="' + esc(c.id) + '">'
+          +  '<span class="kd ' + (c.kind === 'pdf' ? 'pdf' : 'lst') + '">'
+          +  (c.kind === 'pdf' ? 'PDF' : 'LIST') + '</span>'
+          +  '<span class="tx"><b>' + esc(c.nm || 'Untitled') + '</b>'
+          +  '<i>' + esc(c.ac || '') + (c.ac && c.kind !== 'pdf' ? ' \u00b7 ' : '')
+          +  (c.kind === 'pdf' ? '' : chkCount(c) + ' items') + '</i></span>'
+          +  '<span class="ch">\u203a</span></button>';
+      });
+      h += '</div>';
+    }
+    h += '<div class="chkadd">'
+      +    '<button data-chknew="list">New checklist</button>'
+      +    '<button data-chknew="pdf">Import a PDF</button>'
+      +  '</div>'
+      +  '<input type="file" id="chkFile" accept="application/pdf,.pdf" '
+      +  'style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">';
+    h += '<div class="cnote" style="margin-top:14px">Checklists are yours and live on this '
+      +  'device. A PDF opens in the system viewer rather than inside the app \u2014 that is the '
+      +  'one that already pinches, scrolls and works offline. Ticks are never saved: a '
+      +  'checklist half-ticked from yesterday reads as done.</div>';
+    return h;
+  }
+
+  /* ---- the runner ---- */
+  function chkRunHTML(c){
+    var done = 0, total = chkCount(c);
+    Object.keys(chkTick).forEach(function(k){ if (chkTick[k]) done++; });
+    var h = '<div class="chkbar">'
+          + '<button class="lnk" data-chka="back">\u2039 All</button>'
+          + '<span class="ttl">' + esc(c.nm || 'Checklist') + '</span>'
+          + '<span class="prog">' + done + '/' + total + '</span>'
+          + '</div>'
+          + '<div class="chksize">'
+          + '<button data-chka="smaller" aria-label="Smaller text">A\u2212</button>'
+          + '<span>' + Math.round(chkScale * 100) + '%</span>'
+          + '<button data-chka="bigger" aria-label="Bigger text">A+</button>'
+          + '<button class="lnk" data-chka="reset">Reset ticks</button>'
+          + '<button class="lnk" data-chka="edit">Edit</button>'
+          + '</div>';
+    h += '<div class="chkbody" style="font-size:' + chkScale.toFixed(2) + 'em">';
+    (c.sec || []).forEach(function(s, si){
+      if (s.t) h += '<div class="chksec">' + esc(s.t) + '</div>';
+      (s.items || []).forEach(function(it, ii){
+        var k = si + '.' + ii, on = !!chkTick[k];
+        h += '<button class="chkit' + (on ? ' on' : '') + '" data-chkt="' + k + '">'
+          +  '<span class="bx">' + (on ? '\u2713' : '') + '</span>'
+          +  '<span class="t">' + esc(it.t) + '</span>'
+          +  (it.a ? '<span class="a">' + esc(it.a) + '</span>' : '')
+          +  '</button>';
+      });
+    });
+    h += '</div>';
+    h += '<div class="chkadd" style="margin-top:14px">'
+      +    '<button data-chka="del" class="danger">Delete this checklist</button>'
+      +  '</div>';
+    return h;
+  }
+
+  function chkEditHTML(c){
+    return '<div class="chkbar"><button class="lnk" data-chka="cancel">\u2039 Cancel</button>'
+         + '<span class="ttl">' + (c.id ? 'Edit' : 'New checklist') + '</span></div>'
+         + '<div class="setrow"><span class="lb">Name</span>'
+         + '<input class="fin wide" id="chkFnm" type="text" value="' + esc(c.nm || '') + '"></div>'
+         + '<div class="setrow"><span class="lb">Aircraft</span>'
+         + '<input class="fin wide" id="chkFac" type="text" placeholder="BK117 / P2-XXX" value="'
+         + esc(c.ac || '') + '"></div>'
+         + '<textarea id="chkFtx" class="chktx" spellcheck="false">'
+         + esc(c.id ? chkToText(c) : CHK_TEMPLATE) + '</textarea>'
+         + '<div class="chkadd"><button data-chka="save">Save</button></div>'
+         + '<div class="cnote">A line starting with # is a section. Everything after a run of '
+         + 'dots, a tab, or a spaced hyphen is the action: <b>Fuel ... CHECKED</b>. A line with '
+         + 'none of those is an item on its own.</div>';
+  }
+
+  function chkHTML(){
+    if (chkEdit) return chkEditHTML(chkEdit);
+    var c = chkRun ? chkById(chkRun) : null;
+    if (c && c.kind === 'pdf') return chkPdfHTML(c);
+    if (c) return chkRunHTML(c);
+    return chkListHTML();
+  }
+  function chkPdfHTML(c){
+    return '<div class="chkbar"><button class="lnk" data-chka="back">\u2039 All</button>'
+         + '<span class="ttl">' + esc(c.nm || 'PDF') + '</span></div>'
+         + '<div class="tedlist">'
+         + '<div class="farow"><span class="fanm">File</span>'
+         +   '<span class="faq"><span class="l">' + esc(c.file || '') + '</span></span></div>'
+         + '<div class="farow"><span class="fanm">Size</span>'
+         +   '<span class="faq"><span class="l">'
+         +   (c.sz ? Math.round(c.sz / 1024).toLocaleString() : '\u2014') + '</span>'
+         +   '<span class="k">KB</span></span></div>'
+         + '</div>'
+         + '<div class="chkadd"><button data-chka="open">Open the PDF</button></div>'
+         + '<div class="chkadd"><button data-chka="del" class="danger">Delete this checklist</button></div>'
+         + '<div class="cnote">It opens in the system PDF viewer, which pinches, scrolls and '
+         + 'works offline. Drawing it inside the app would need a PDF engine of about a '
+         + 'megabyte, and iOS will not reliably paint one in a frame.</div>';
+  }
+
+  function drawChk(){
+    var v = viewCache['chk'];
+    if (!v) return;
+    var b = v.querySelector('#chkBody');
+    if (!b) return;
+    b.innerHTML = chkHTML();
+    wireChkBody(v);
+  }
+
+  function chkAction(a){
+    var c = chkRun ? chkById(chkRun) : null;
+    if (a === 'back'){ chkRun = null; chkTick = {}; drawChk(); return; }
+    if (a === 'cancel'){ chkEdit = null; drawChk(); return; }
+    if (a === 'bigger'){ chkScale = Math.min(2, chkScale + 0.15); saveChkScale(); drawChk(); return; }
+    if (a === 'smaller'){ chkScale = Math.max(0.7, chkScale - 0.15); saveChkScale(); drawChk(); return; }
+    if (a === 'reset'){ chkTick = {}; drawChk(); return; }
+    if (a === 'edit'){ chkEdit = c; drawChk(); return; }
+    if (a === 'save'){
+      var nm = ($('#chkFnm') || {}).value || '';
+      var ac = ($('#chkFac') || {}).value || '';
+      var tx = ($('#chkFtx') || {}).value || '';
+      if (!nm.trim()){ toast('The checklist needs a name'); return; }
+      var sec = chkParse(tx);
+      if (!sec.length){ toast('Nothing to save \u2014 add at least one item'); return; }
+      var t = chkEdit && chkEdit.id ? chkEdit : { id:'ck' + Date.now().toString(36), kind:'list' };
+      t.nm = nm.trim(); t.ac = ac.trim(); t.sec = sec; t.kind = 'list';
+      if (!chkById(t.id)) CHK.push(t);
+      saveChk();
+      chkEdit = null; chkRun = t.id; chkTick = {};
+      drawChk();
+      toast('Saved \u00b7 ' + chkCount(t) + ' items');
+      return;
+    }
+    if (a === 'open'){
+      if (!c) return;
+      fileGet(c.id).then(function(rec){
+        if (!rec || !rec.blob){ toast('That file is not on this device any more'); return; }
+        var url = URL.createObjectURL(rec.blob);
+        var link = document.createElement('a');
+        link.href = url; link.target = '_blank'; link.rel = 'noopener';
+        document.body.appendChild(link); link.click();
+        setTimeout(function(){
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 30000);
+      }).catch(function(){ toast('Could not read the file'); });
+      return;
+    }
+    if (a === 'del'){
+      if (!c) return;
+      if (!chkDelArm){
+        chkDelArm = true;
+        if (chkDelTmr) clearTimeout(chkDelTmr);
+        chkDelTmr = setTimeout(function(){ chkDelArm = false; drawChk(); }, 4000);
+        drawChk();
+        toast('Tap delete again to confirm');
+        return;
+      }
+      var id = c.id;
+      CHK = CHK.filter(function(x){ return x.id !== id; });
+      saveChk();
+      if (c.kind === 'pdf') fileDel(id);
+      chkDelArm = false; chkRun = null; chkTick = {};
+      drawChk();
+      toast('Deleted');
+      return;
+    }
+  }
+  var chkDelArm = false, chkDelTmr = null;
+
+  function chkImportPdf(file){
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024){ toast('That PDF is over 25 MB'); return; }
+    var rec = { id:'ck' + Date.now().toString(36), kind:'pdf',
+                nm:file.name.replace(/\.pdf$/i, ''), ac:'',
+                file:file.name, sz:file.size };
+    filePut({ id:rec.id, blob:file, name:file.name }).then(function(){
+      CHK.push(rec); saveChk(); chkRun = rec.id; drawChk();
+      toast('Imported ' + file.name);
+    }).catch(function(){ toast('Could not store that file'); });
+  }
+
+  function wireChkBody(root){
+    var q = root.querySelector('#chkQ');
+    if (q) q.addEventListener('input', function(){
+      chkQuery = q.value; drawChk();
+      var n = root.querySelector('#chkQ');
+      if (n){ n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-chk]'), function(b){
+      b.addEventListener('click', function(){
+        chkRun = b.getAttribute('data-chk'); chkTick = {}; chkDelArm = false; drawChk();
+      });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-chkt]'), function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-chkt');
+        if (chkTick[k]) delete chkTick[k]; else chkTick[k] = 1;
+        drawChk();
+      });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-chka]'), function(b){
+      b.addEventListener('click', function(){ chkAction(b.getAttribute('data-chka')); });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-chknew]'), function(b){
+      b.addEventListener('click', function(){
+        if (b.getAttribute('data-chknew') === 'pdf'){
+          var f = root.querySelector('#chkFile');
+          if (f) f.click();
+          return;
+        }
+        chkEdit = { kind:'list' }; drawChk();
+      });
+    });
+    var fi = root.querySelector('#chkFile');
+    if (fi) fi.addEventListener('change', function(){
+      var f = fi.files && fi.files[0];
+      fi.value = '';
+      chkImportPdf(f);
+    });
+  }
+  function wireChk(el){ wireChkBody(el); }
+
+  /* ============================================================
      MAP ROTATION - TEST BUILD ONLY
 
      Three modes. North up is the app as it has always been. Track up
@@ -8733,8 +9521,6 @@ var PROC_META={
     } catch(_){ toast('No compass on this device \u2014 using track up'); rotMode = 'track'; rotApply(); }
   }
 
-  /* Every divIcon is wrapped so the label can be turned back upright
-     while the map turns. The aircraft is the deliberate exception. */
   (function wrapIcons(){
     if (typeof L === 'undefined' || !L.divIcon) return;
     var orig = L.divIcon;
@@ -9153,7 +9939,9 @@ var PROC_META={
           + '<path d="M6.5 7l1 12.2h9L17 7"/><path d="M10.5 10.5v6"/><path d="M13.5 10.5v6"/>',
     save:   '<path d="M5.5 4.5h9L18.5 8.5v11h-13z"/><path d="M8.5 4.5v5h6v-5"/>'
           + '<path d="M8.5 19.5v-6h7v6"/>',
-    elev:   '<path d="M2.5 18.5h19"/><path d="M4.5 15.5l5-7.5 3.2 4.8 2.3-3.2 4.5 5.9z"/>'
+    elev:   '<path d="M2.5 18.5h19"/><path d="M4.5 15.5l5-7.5 3.2 4.8 2.3-3.2 4.5 5.9z"/>',
+    /* a leg with a chevron on it: the leg you are flying */
+    fly:    '<path d="M3.5 17.5l17-11"/><path d="M13.5 6.5h7v7"/>'
   };
   function actSvg(k, fill){
     return '<svg viewBox="0 0 24 24" fill="' + (fill ? 'currentColor' : 'none')
@@ -9675,6 +10463,20 @@ var PROC_META={
       rotApply();
     }, { passive:true });
   })();
+
+  /* Measure wiring: the rail button, and a map tap while it is on. */
+  (function(){
+    var b = document.getElementById('rbMeas');
+    if (b) b.addEventListener('click', function(){ measSet(!measOn); });
+  })();
+  function measHookMap(){
+    if (!LMAP || LMAP._measHook) return;
+    LMAP._measHook = true;
+    LMAP.on('click', function(e){
+      if (!measOn || !e.latlng) return;
+      measAdd(e.latlng.lat, e.latlng.lng);
+    });
+  }
 
   /* ---- Frequency window -------------------------------------------
      Two questions, answered at a glance: which area frequency am I on
@@ -10790,17 +11592,23 @@ var PROC_META={
      everything small stays in localStorage where it belongs. Anything
      already saved is migrated on first run. If IndexedDB is
      unavailable, it falls back to localStorage rather than failing. */
-  var IDB_NAME = 'nmplotter-iphone', IDB_STORE = 'flights', _idb = null;
+  var IDB_NAME = 'nmplotter-iphone', IDB_STORE = 'flights';
+  /* A second store, for whole files - a checklist PDF is a blob, not a
+     record, and it has no business in the flight store. The version goes
+     to 2 so an existing database gains the store on open rather than
+     needing to be thrown away. */
+  var IDB_FILES = 'files', _idb = null;
 
   function idb(){
     if (_idb) return Promise.resolve(_idb);
     return new Promise(function(res, rej){
       if (typeof indexedDB === 'undefined'){ rej(new Error('no idb')); return; }
       var r;
-      try { r = indexedDB.open(IDB_NAME, 1); } catch(e){ rej(e); return; }
+      try { r = indexedDB.open(IDB_NAME, 2); } catch(e){ rej(e); return; }
       r.onupgradeneeded = function(){
         var d = r.result;
         if (!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE, { keyPath:'id' });
+        if (!d.objectStoreNames.contains(IDB_FILES)) d.createObjectStore(IDB_FILES, { keyPath:'id' });
       };
       r.onsuccess = function(){ _idb = r.result; res(_idb); };
       r.onerror   = function(){ rej(r.error || new Error('idb open failed')); };
@@ -10826,6 +11634,36 @@ var PROC_META={
       });
     });
   }
+  /* whole files, keyed by the record that owns them */
+  function filePut(rec){
+    return idb().then(function(d){
+      return new Promise(function(res, rej){
+        var tx = d.transaction(IDB_FILES, 'readwrite');
+        tx.objectStore(IDB_FILES).put(rec);
+        tx.oncomplete = res; tx.onerror = function(){ rej(tx.error); };
+      });
+    });
+  }
+  function fileGet(id){
+    return idb().then(function(d){
+      return new Promise(function(res, rej){
+        var tx = d.transaction(IDB_FILES, 'readonly');
+        var q = tx.objectStore(IDB_FILES).get(id);
+        q.onsuccess = function(){ res(q.result || null); };
+        q.onerror   = function(){ rej(q.error); };
+      });
+    });
+  }
+  function fileDel(id){
+    return idb().then(function(d){
+      return new Promise(function(res, rej){
+        var tx = d.transaction(IDB_FILES, 'readwrite');
+        tx.objectStore(IDB_FILES)['delete'](id);
+        tx.oncomplete = res; tx.onerror = function(){ rej(tx.error); };
+      });
+    });
+  }
+
   function idbAll(){
     return idb().then(function(d){
       return new Promise(function(res, rej){
@@ -12028,14 +12866,20 @@ var PROC_META={
      note that lives somewhere else. */
   function notesBlockHTML(id){
     var mine = notesFor(id);
-    return '<div class="csec">My notes' + (mine.length ? ' (' + mine.length + ')' : '') + '</div>'
+    /* Wrapped, because the block has two hosts with different gutters.
+       The card body carries its own horizontal padding; the point window
+       body does not - its sections inset themselves with --edge. Unwrapped,
+       the notes heading sat hard against the window edge while ROUTE and
+       WAYPOINT beside it were inset, which is what it looked like. */
+    return '<div class="nblk">'
+         + '<div class="csec">My notes' + (mine.length ? ' (' + mine.length + ')' : '') + '</div>'
          + '<div class="cnotes">'
          + mine.map(function(n){
              return '<button class="row" data-cn="' + n.id + '"><b>' + esc(n.ttl || 'Untitled')
                   + '</b><span>' + noteAge(n.ts) + '</span></button>';
            }).join('')
          + '<button class="add" data-cnadd="' + esc(id) + '">Add a note for ' + esc(id) + '</button>'
-         + '</div>';
+         + '</div></div>';
   }
   function wireNotesBlock(root){
     Array.prototype.slice.call(root.querySelectorAll('[data-cn]')).forEach(function(b){
@@ -12567,6 +13411,7 @@ var PROC_META={
     { k:'holds',    t:'Holds'    },
     { k:'mine',     t:'My waypoints' },
     { k:'mbz',      t:'Broadcast zones' },
+    { k:'chk',      t:'Checklists' },
     { k:'notes',    t:'Notes'    },
     { k:'downloads',t:'Downloads' }
   ];
@@ -15150,6 +15995,9 @@ var PROC_META={
                  : (k === 'mine')     ? '<div class="vhead"><b>My waypoints</b>'
                      + '<span class="sub">points you made</span></div>'
                      + '<div class="vbody" id="mineListBody">' + mineHTML() + '</div>'
+                 : (k === 'chk')      ? '<div class="vhead"><b>Checklists</b>'
+                     + '<span class="sub">yours, and your PDFs</span></div>'
+                     + '<div class="vbody" id="chkBody">' + chkHTML() + '</div>'
                  : (k === 'mbz')      ? '<div class="vhead"><b>Broadcast zones</b>'
                      + '<span class="sub">MBZ, yours to edit</span></div>'
                      + '<div class="vbody" id="mbzBody">' + mbzHTML() + '</div>'
@@ -15173,6 +16021,7 @@ var PROC_META={
     if (k === 'holds') wireHold(el);
     if (k === 'mine') wireMine(el);
     if (k === 'mbz') wireMbz(el);
+    if (k === 'chk') wireChk(el);
     if (k === 'calc') wireCalc(el);
     return el;
   }
@@ -17105,13 +17954,103 @@ var PROC_META={
       +  '<div class="csec cldsec">Waypoints <span class="cnt">' + nWp + ' here</span></div>'
       +  '<div class="cldrow"><button data-cld="pushW">Push to cloud</button>'
       +    '<button data-cld="pullW">Pull from cloud</button></div>'
+      +  '<div class="cldrow"><button data-cld="libW">Browse the library\u2026</button></div>'
       +  '<div class="cldmsg" id="cldMsgW"></div>'
+      +  '<div id="cldLib"></div>'
 
       +  '<div class="cnote" style="margin-top:16px">Push uploads only what the cloud does not '
       +  'already have and never deletes anything remotely. Pull adds only what you do not '
       +  'already hold \u2014 your local copy always wins. Recorded flights are not synced; '
       +  'they carry full tracks and belong on the device.</div>';
     return h;
+  }
+
+  /* ---- the waypoint library -----------------------------------------
+     Pull takes everything the cloud has that you do not. That is the
+     right default and the wrong only option: after a few months the
+     desktop holds pads from jobs you will never fly again, and the
+     phone gets all of them.
+
+     This lists what is up there, marks what you already hold, and pulls
+     only what you tick. It never deletes anything, here or there. */
+  var libItems = null, libSel = {}, libBusy = false;
+  function libHTML(){
+    if (libBusy) return '<div class="cldmsg">Reading the library\u2026</div>';
+    if (!libItems) return '';
+    if (!libItems.length){
+      return '<div class="cldmsg">The library is empty.</div>';
+    }
+    var have = {};
+    DB.forEach(function(p){ if (p.cat === 'mine') have[p.id] = 1; });
+    var nNew = libItems.filter(function(x){ return !have[x.id]; }).length;
+    var h = '<div class="csec cldsec">Library <span class="cnt">' + libItems.length
+          + ' there \u00b7 ' + nNew + ' new</span></div><div class="liblist">';
+    libItems.forEach(function(x){
+      var mine = !!have[x.id], on = !!libSel[x.id];
+      h += '<button class="librow' + (mine ? ' have' : '') + '" data-lib="' + esc(x.id) + '"'
+        +  (mine ? ' disabled' : '') + '>'
+        +  '<span class="pk' + (on ? ' on' : '') + '">' + (on ? '\u2713' : '') + '</span>'
+        +  '<span class="tx"><b>' + esc(x.id) + '</b><i>' + esc(x.nm || x.name || '') + '</i></span>'
+        +  '<span class="st">' + (mine ? 'held' : 'new') + '</span></button>';
+    });
+    h += '</div>';
+    var n = Object.keys(libSel).length;
+    h += '<div class="cldrow" style="margin-top:10px">'
+      +  '<button data-cld="libAll">' + (n === nNew && nNew ? 'Select none' : 'Select all new')
+      +  '</button>'
+      +  '<button data-cld="libPull"' + (n ? '' : ' disabled') + '>'
+      +  (n ? 'Pull ' + n : 'Pull') + '</button></div>';
+    return h;
+  }
+  function drawLib(){
+    var el = $('#cldLib');
+    if (!el) return;
+    el.innerHTML = libHTML();
+    Array.prototype.forEach.call(el.querySelectorAll('[data-lib]'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-lib');
+        if (libSel[id]) delete libSel[id]; else libSel[id] = 1;
+        drawLib();
+      });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-cld]'), function(b){
+      b.addEventListener('click', function(){ cloudAction(b.getAttribute('data-cld')); });
+    });
+  }
+  function libLoad(){
+    libBusy = true; libSel = {}; drawLib();
+    cloudList('waypoints', true).then(function(items){
+      libBusy = false;
+      libItems = (items || []).filter(function(x){
+        return x && x.id && typeof x.lat === 'number' && typeof x.lon === 'number';
+      });
+      drawLib();
+    }).catch(function(err){
+      libBusy = false; libItems = [];
+      var m = $('#cldMsgW');
+      if (m) m.textContent = 'Could not read the library: ' + (err && err.message ? err.message : 'no answer');
+      drawLib();
+    });
+  }
+  function libPull(){
+    if (!libItems) return;
+    var ids = Object.keys(libSel), added = 0;
+    /* Rebuilt field by field, same whitelist the bulk pull uses, so a
+       remote object cannot bring anything with it. */
+    libItems.forEach(function(x){
+      if (!libSel[x.id]) return;
+      if (dbById(x.id)) return;
+      var w = { id:String(x.id), nm:x.nm || x.name || String(x.id), cat:'mine',
+                lat:x.lat, lon:x.lon };
+      if (typeof x.lb === 'string' && x.lb) w.lb = x.lb;
+      if (typeof x.el === 'number' && isFinite(x.el)) w.el = Math.round(x.el);
+      DB.unshift(w); added++;
+    });
+    if (added){ saveMarks(); drawMine(); renderMap(); }
+    libSel = {};
+    drawLib(); drawCloud();
+    toast(added ? added + ' waypoint' + (added === 1 ? '' : 's') + ' pulled'
+                : 'Nothing new to pull');
   }
 
   function drawCloud(){
@@ -17162,6 +18101,16 @@ var PROC_META={
     var acts = {
       pushR: function(){ cloudPushRoutes(rep('#cldMsgR')); },
       pullR: function(){ cloudPullRoutes(rep('#cldMsgR')); },
+      libW:    function(){ libLoad(); },
+      libAll:  function(){
+        var have = {};
+        DB.forEach(function(p){ if (p.cat === 'mine') have[p.id] = 1; });
+        var news = (libItems || []).filter(function(x){ return !have[x.id]; });
+        if (Object.keys(libSel).length === news.length) libSel = {};
+        else news.forEach(function(x){ libSel[x.id] = 1; });
+        drawLib();
+      },
+      libPull: function(){ libPull(); },
       pushW: function(){ cloudPushWaypoints(rep('#cldMsgW')); },
       pullW: function(){ cloudPullWaypoints(rep('#cldMsgW')); }
     };
@@ -17365,6 +18314,31 @@ var PROC_META={
       });
     }
 
+    /* ---- the measuring line -------------------------------------------
+       Great circle per segment, like a route leg, with the bearing and
+       length on each and a dot at every point. */
+    if (measOn && measPts.length){
+      measPts.forEach(function(p){
+        L.circleMarker([p.lat, p.lon], { radius:4, color:'#7fe3ff', weight:2,
+          fillColor:'#0a0e13', fillOpacity:1, interactive:false }).addTo(G.box);
+      });
+      for (var mi = 0; mi < measPts.length - 1; mi++){
+        var a = measPts[mi], b = measPts[mi+1], line = [];
+        for (var t = 0; t <= 24; t++) line.push(gcPoint(a, b, t / 24));
+        L.polyline(line, { color:'#0a0e13', weight:6, opacity:.5,
+                           interactive:false, lineJoin:'round' }).addTo(G.box);
+        L.polyline(line, { color:'#7fe3ff', weight:2, opacity:.95, dashArray:'5 4',
+                           interactive:false, lineJoin:'round' }).addTo(G.box);
+        var mid = line[12];
+        L.marker(mid, { interactive:false, keyboard:false,
+          icon: L.divIcon({ className:'nmx-di', iconSize:[0,0], iconAnchor:[0,0],
+            html:'<b class="measlb">'
+               + String(Math.round(trkBetween(a, b))).padStart(3, '0') + '\u00b0 '
+               + nmBetween(a, b).toFixed(1) + '</b>' })
+        }).addTo(G.box);
+      }
+    }
+
     /* ---- Mandatory Broadcast Zones ------------------------------------
        v262's violet dashed circle, and its label: name, frequency and
        the vertical band, because all three are the point of the zone. */
@@ -17541,6 +18515,13 @@ var PROC_META={
           dashArray: past ? '6 5' : null,
           interactive:false, lineJoin:'round', lineCap:'round'
         }).addTo(G.leg);
+        /* an invisible 18 px line over the top, so a 2 px leg can be hit
+           with a thumb - the same trick the airways use */
+        (function(ix){
+          L.polyline(pts, { color:'#000', weight:18, opacity:0, interactive:true,
+                            bubblingMouseEvents:false })
+            .addTo(G.leg).on('click', function(){ openLeg(ix); });
+        })(li);
       }
     }
 
@@ -18097,6 +19078,7 @@ var PROC_META={
 
     document.getElementById('map').classList.add('live');
     mapBusyWatch();
+    measHookMap();
 
     /* Re-parent the overlay layer into a Leaflet pane. Panes are
        children of the map pane, which Leaflet translates on drag, so
