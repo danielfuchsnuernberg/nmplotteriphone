@@ -22,6 +22,16 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v199 2026-08-03 Reversed v197's panel floor.
+
+                       v197 added the header block plus another route row
+                       to the minimum height, so the panel would open
+                       showing two points rather than one. On the device
+                       that came out worse than what it replaced.
+
+                       Back to v191's floor: the panel's own furniture
+                       plus one row. The grip is yours, and a floor that
+                       argues with it is the wrong tool for the job.
        v198 2026-08-03 Full is 540, and it belongs to the aircraft.
 
                        The wheel ran to 1,200 kg, which is a number you
@@ -7337,7 +7347,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v198-ROT';
+  var VERSION = 'v199-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -9216,22 +9226,13 @@ var PROC_META={
     });
     return c;
   }
-  /* The floor has to clear the panel's furniture AND the block that sits
-     at the top of its body - six header buttons in two rows - or the
-     first thing the panel shows is a route point cut in half. Measured,
-     because the buttons wrap differently on a phone and a tablet, plus
-     room for two route rows rather than one: a plan you cannot see two
-     points of is not showing you a plan. */
-  function fplHeadH(){
-    var h = 0;
-    Array.prototype.forEach.call(
-      document.querySelectorAll('#fplBody > .drow'), function(el){
-        h += el.getBoundingClientRect().height + 8;
-      });
-    return h;
-  }
+  /* v199: back to v191's floor - the panel's own furniture plus a row.
+     v197 added the header block and another row on top, on the reasoning
+     that the panel should open showing two route points. On the device
+     that came out worse than what it replaced, so it is reversed. The
+     grip is yours and a floor that argues with it is the wrong tool. */
   function fplFloor(){
-    return Math.max(FPL_MIN, Math.round(fplChromeH() + fplHeadH() + 190));
+    return Math.max(FPL_MIN, Math.round(fplChromeH() + 120));
   }
   function sizeDrop(){
     var top  = $('#chrome').getBoundingClientRect().bottom;

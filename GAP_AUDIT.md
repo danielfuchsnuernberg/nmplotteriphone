@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v198 · 3 Aug 2026**
+**Status as of v199 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v199 | **Reversed v197's panel floor.** Counting the header block plus a second route row stopped the grip going small — worse on the device than what it replaced. Back to v191's floor: the panel's own furniture plus one row. |
 | v198 | **Usable fuel is now a per-aircraft field** (default 540 kg, BK117) rather than a constant — the fleet holds three airframes and a full tank is not the same figure twice. The wheel stops at the tank, Full means it, and the save clamp uses the same reader. |
 | v197 | Fuel on board moved to a wheel (tens, 0–1,200 kg, quick steps, Clear for unknown) and now reads only the wheel — it could previously fall through to whatever was left in the text box. **Open the card** added to the route-point sheet. FPL floor now measures the header block inside the body, so the panel no longer opens with a route point sliced in half. |
 | v196 | **Bug found:** hold-to-reorder was dead. The panel body became a scrolling container in v169, iOS claims the gesture and fires `touchcancel`, which was wired straight to `dragEnd` — so the 260 ms hold never armed. Chips now set `touch-action:none`, and a cancel before the hold arms only stands the timer down. Third v169-era regression. |

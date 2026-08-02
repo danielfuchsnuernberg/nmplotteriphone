@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v198 · 3 Aug 2026**.
+Status as of **v199 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -131,7 +131,7 @@ against it
 | Fuel wheel ran past the tank | v198 | Usable fuel is a per-aircraft field, default 540 kg |
 | Fuel on board typed, not dialled | v197 | Wheel in tens, 0–1,200 kg, with quick steps |
 | No way to a point's card from the plan | v197 | Open the card row in the point sheet |
-| Plan opened with its points cut in half | v197 | Floor now counts the header block inside the body |
+| Plan opened with its points cut in half | v197, ~~reversed v199~~ | The taller floor stopped the grip going small; back to v191's floor |
 | Hold-to-reorder route chips broken | v196 | The scrolling body claimed the gesture; chips now opt out |
 | Plan closed behind its own windows | v195 | Panel held while a quick field is open |
 | Fuel on board buried in Settings | v195 | Tap Fuel on arrival to set it; same store as the Fuel view |
