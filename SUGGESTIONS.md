@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v215 · 3 Aug 2026**.
+Status as of **v222 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -56,6 +56,12 @@ against it
 
 ## Needs a decision from you
 
+- **[D] VFR / IFR layer sets on the rail** — discussed 3 Aug. Recommendation:
+  tabs inside the open rail (VFR | IFR), no new rail button, switching turns the
+  other set off. Alternatives were: fold the IFR layers into the existing
+  groups, or split the one cell into two half-height buttons. Waiting on your
+  choice; a mock comes before any code.
+
 - **[D] Drop the By name / By code control on Frequencies too?** Airports lost
   it in v209. The only argument for keeping it there is that you sometimes
   arrive at a frequency list already holding a code, which is not true of the
@@ -67,9 +73,8 @@ against it
   fetches before wiring anything to it, because a modelled figure sitting
   beside an observed one has to be told apart on sight. Send me the v262 file
   or the worker route and this is a short build.
-- **[D] Airport diagram thumbnail in the card header** — part of the v208 spec,
-  waiting on the Charts subsystem: there is no diagram to show until plates
-  load.
+- **[R] The diagram square is in place (v218) and already looks for an Airport
+  plate.** Nothing more to wire — it fills itself the day charts land.
 - **[D] Density altitude on the weather tab** — computable from temperature,
   QNH and elevation, all of which we already hold. Cheap, and useful out of a
   hot strip.
@@ -144,6 +149,13 @@ against it
 | Route chip sheet was a bare word list | v191 | Icons, headed groups, v184 rule |
 | Measure chip under the frequency window | v191 | Centred over what is left of the map |
 | Leg card's remove row escaping the card | v191 | Groups clip their children; tablet sheet clips |
+| Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
+| Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Aircraft pills did not match the app's UI | v220 | Now a segment in a labelled row; Add is a row, not a symbol |
+| Worker URLs in two different views | v219 | Both under Cloud; Settings points there |
+| Airport page had no diagram square | v218 | Added; becomes the button that opens the plate when one exists |
+| Reorder editor removed entirely | v217 | Nobody asked for it; groups do the job. Bar editors kept |
+| Drag never worked on device | v216 | Replaced with tap-to-lift, tap-to-place; no gestures at all |
 | Drag barely worked; groups were a fence | v215 | Hit test used the window centre, not the finger; views move between groups |
 | Bar views vanished from the list | v214 | My v213 mistake; the list is complete again |
 | Slot editor — bottom bar reconfigurable | v213 | Bar is the first group in the More editor; drag to swap |

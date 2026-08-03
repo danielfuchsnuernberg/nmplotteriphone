@@ -22,6 +22,139 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v222 2026-08-03 Two labels stacked on top of each other.
+
+                       WEATHER, then WEATHER WORKER URL, with nothing
+                       between them - and both set in the same small
+                       uppercase, so they read as one doubled heading
+                       rather than a section and a field inside it. Same
+                       under LIBRARY.
+
+                       The field gets room to be its own thing now, and
+                       it stops repeating the heading: under WEATHER the
+                       box is Worker URL, under LIBRARY it is Worker URL
+                       and Key. The heading already said which is which,
+                       the same argument as GROUND over GND 121.7.
+       v221 2026-08-03 The airport page stops jumping to the top when you
+                       change tab.
+
+                       Switching a tab rebuilds the view, and a rebuilt
+                       scroller starts at the top - so tapping Weather
+                       half way down a field threw you back to the name.
+
+                       The tab row is the fixed point now: its position on
+                       screen is measured before the rebuild and restored
+                       after, so whatever happens below it, it stays where
+                       your thumb left it. Clamped, because Weather is
+                       shorter than Info and the old scroll position can
+                       be past the end of the new content - restoring a
+                       raw number would have left you looking at blank
+                       space instead.
+
+                       And the tabs are pinned to the top of the scroller.
+                       Once the header has scrolled away they stay under
+                       your thumb, which is what makes changing tab feel
+                       like changing a panel rather than opening a new
+                       page. The Procedure sub-tabs do the same.
+       v220 2026-08-03 The aircraft picker looks like the rest of the app.
+
+                       It was a row of pills with a floating round plus -
+                       a shape that appears nowhere else in this build.
+                       Every other choice in Settings is a segment: one
+                       height, one radius, the accent on the one that is
+                       on, mono for anything you would read as a code. A
+                       registration is exactly that, so the picker is a
+                       segment now, sitting in a labelled row like every
+                       other setting.
+
+                       And Add is a row, not a symbol. Every action in
+                       Settings is a full-width row with a label; a lone
+                       plus beside the registrations reads as a sixth
+                       aircraft rather than as a verb. Remove names the
+                       aircraft it will remove, for the same reason.
+
+                       The segment wraps rather than squashing, because
+                       three registrations at the app's own button height
+                       will not sit on one line on a phone.
+       v219 2026-08-03 Both worker URLs in one place.
+
+                       The weather proxy sat under Settings and the
+                       library worker under Cloud. They are the same kind
+                       of thing - a Cloudflare worker you paste a URL for
+                       - and keeping them two views apart was asking for
+                       one to be pasted into the other's box, which is
+                       the commonest way to end up with neither working.
+
+                       Both are under Cloud now, weather first, each
+                       saying what it is for. Settings keeps a line
+                       pointing there rather than a second copy of the
+                       field: two boxes writing one setting is a bug
+                       waiting for the day they disagree.
+       v218 2026-08-03 A square for the diagram, on the airport page.
+
+                       The map card has always carried a thumbnail beside
+                       the field's name; the full page did not, so the
+                       two read as different things. It does now, and the
+                       header is a row rather than a stack.
+
+                       Empty, the square says what kind of field this is
+                       - RWY, STRIP - which is what the map card's
+                       thumbnail shows, so the page has the same shape
+                       whether or not a plate exists yet.
+
+                       And the moment a plate is loaded under Airport,
+                       the square becomes the button that opens it: it
+                       reads DIAGRAM, takes the accent border, and taps
+                       through to the plate viewer. Nothing to wire later
+                       - it is looking for the plate already and will
+                       find it the day charts land.
+       v217 2026-08-03 The reorder editor is gone, and it should never
+                       have been there.
+
+                       You asked the right question: why edit the order
+                       at all? The groups already do the work a custom
+                       order was supposed to do, and a list that is the
+                       same every time is one less thing to remember.
+
+                       It was four versions of a feature nobody asked
+                       for - arrows, then a drag, then a drag that did
+                       not work, then a pick-up - borrowed from another
+                       app because it was in a screenshot. That is the
+                       whole lesson: copying a mechanism is not the same
+                       as copying an idea, and I should have asked what
+                       it was FOR before building it three times.
+
+                       The More sheet is now the list, grouped, fixed.
+                       The editors that earn their place sit at the
+                       bottom of it, always visible rather than behind a
+                       mode: bottom bar, activity bar, layer rail, card
+                       actions, type scale, metrics. Those are the ones
+                       where a wrong choice costs you a reach in the air.
+
+                       Gone with it: the stored order, the stored group
+                       overrides, the hide flags, the pick-and-place and
+                       the drag. Nothing left behind to go stale.
+       v216 2026-08-03 No gesture at all. Pick it up, put it down.
+
+                       The drag is gone. It was the wrong tool: the list
+                       scrolls, the sheet is a panel over a map, and a
+                       drag has to fight both - and I cannot feel any of
+                       it from here, so I kept fixing it blind and kept
+                       being wrong. Three versions of that is enough.
+
+                       Tap the handle on a row and it lifts. Every other
+                       row then says Put here, and tapping one lands it -
+                       including a slot in the bottom bar, which swaps.
+                       Tap the x on the lifted row, or Cancel on the line
+                       at the top, and it goes back.
+
+                       Two taps move a view the length of the list. That
+                       is fewer than the four an arrow needed, and none
+                       of them have to land on something that is moving.
+
+                       Everything here is a click. Nothing tracks a
+                       finger, nothing competes with the scroller, and
+                       every part of it is something a harness can press.
        v215 2026-08-03 The drag actually works, and the groups are not a
                        fence.
 
@@ -4949,7 +5082,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   font-weight:600;color:var(--accent-2)}
 .apstar{margin-left:auto;background:none;border:0;font-size:18px;color:var(--text-fainter)}
 .apstar.on{color:var(--accent)}
-.aphead{padding:14px 0 10px;border-bottom:1px solid var(--border)}
+.aphead{display:flex;align-items:flex-start;gap:14px;
+  padding:14px 0 10px;border-bottom:1px solid var(--border)}
+.apidwrap{flex:1 1 auto;min-width:0}
+/* The diagram's square. Empty it says what kind of field this is, the
+   same as the map card's thumbnail; with a plate under Airport it is the
+   button that opens it. */
+.apdgm{flex:0 0 76px;width:76px;height:76px;display:flex;align-items:center;
+  justify-content:center;border-radius:8px;background:var(--bg-2);
+  border:1px solid var(--border-strong);padding:0}
+.apdgm span{font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.1em;color:var(--text-fainter)}
+.apdgm.has{border-color:var(--accent);border-style:solid}
+.apdgm.has span{color:var(--accent)}
+.apdgm.has:active{background:var(--inset)}
 .apid{font-family:var(--mono);font-size:var(--t-2xl);font-weight:700;color:var(--accent);
   letter-spacing:.02em;line-height:1.05}
 .apnm{font-size:var(--t-lg);font-weight:700;color:var(--text);margin-top:2px}
@@ -4967,7 +5113,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .aprow .v{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text)}
 .aprow .v.mono{font-family:var(--mono);font-weight:700;color:var(--accent-2)}
 .aprow .v.dim{color:var(--text-fainter)}
-.aptabs{display:flex;gap:2px;padding:10px 0 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* Pinned. Once the header has scrolled away the tabs stay under your
+   thumb, which is also what makes switching them feel like switching a
+   panel rather than opening a new page. */
+.aptabs{position:sticky;top:0;z-index:3;background:var(--bg);
+  display:flex;gap:2px;padding:10px 0 8px;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  box-shadow:0 1px 0 var(--border)}
+.aptabs::-webkit-scrollbar{display:none}
 .aptabs button{flex:0 0 auto;height:var(--mod-a);padding:0 14px;border-radius:var(--radius);
   background:none;border:0;font-size:var(--t-sm);font-weight:600;color:var(--text-fainter)}
 .aptabs button.on{background:var(--bg-2);color:var(--text)}
@@ -4995,8 +5148,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .srowwrap.inbar{background:var(--bg-2);border-radius:var(--radius);margin-bottom:2px}
 .srowwrap.inbar .srow{opacity:1}
 .scat .cnt2{float:right;font-family:var(--mono);letter-spacing:0;color:var(--text-fainter)}
-.srowwrap.dragging{background:var(--inset);border-radius:var(--radius)}
-.srowwrap.dragging .grip{color:var(--accent)}
+.srowwrap.lifted{background:var(--inset);border-radius:var(--radius);
+  box-shadow:inset 0 0 0 1px var(--accent)}
+.srow .lift{flex:0 0 auto;font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent)}
+.srow .put{flex:0 0 auto;font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent-2)}
+.grip.on{color:var(--accent);font-size:var(--t-lg);font-weight:700}
+.picked{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px;
+  padding:10px 12px;border-radius:var(--radius);background:var(--bg-2);
+  border:1px solid var(--accent);font-size:var(--t-xs);color:var(--text-2)}
+.picked b{color:var(--text)}
+.picked button{margin-left:auto;background:none;border:0;font-size:var(--t-xs);
+  font-weight:700;color:var(--accent-2)}
 /* Your own details for a field: same row shape as a frequency, because
    they are the same idea - what the pack does not carry, you do. */
 /* A group heading, so a list that restarts its alphabet says why. */
@@ -5124,12 +5288,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fldrow .v{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fldrow .v.dim{color:var(--text-fainter)}
-.fleetbar{display:flex;flex-wrap:wrap;gap:6px;padding:2px var(--edge) 10px}
-.fchip{height:32px;padding:0 12px;border-radius:16px;background:var(--bg-2);
-  border:1px solid var(--border-strong);font-family:var(--mono);
-  font-size:var(--t-xs);font-weight:700;color:var(--text-muted)}
-.fchip.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
-.fchip.add{font-family:var(--sans);font-size:var(--t-md);color:var(--accent-2)}
+/* the fleet picker wraps when there are more registrations than fit,
+   which a segment does not do by itself */
+.flrow .fseg{flex-wrap:wrap;justify-content:flex-end}
+.flrow .fseg button{flex:0 1 auto;min-width:84px;padding:0 12px}
 .setgo.setgo-del{color:var(--bad)}
 
 /* Checklists. The runner scales with one em on the body, so A+ and A-
@@ -7050,6 +7212,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .ntv{position:fixed;inset:0;z-index:1150;background:var(--bg);display:none;
   flex-direction:column;padding-top:calc(var(--sat) + var(--top-pad));padding-bottom:var(--sabp)}
 .ntv.on{display:flex}
+/* A section heading is a rule with a label on it; a field label is a
+   label. Stacked with no gap they read as one doubled heading, which is
+   what WEATHER over WEATHER WORKER URL looked like. The field gets room
+   to be its own thing. */
+.csec + .ntfld{margin-top:14px}
+.ntfld + .ntfld{margin-top:14px}
 .ntfld{margin-bottom:12px}
 .ntfld label{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--text-muted);margin-bottom:5px}
@@ -7452,7 +7620,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <button class="stile" id="stDl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
     <button class="stile" id="stSet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg><span class="lab">Settings</span></button>
   </div>
-  <div class="shead"><span class="k">Views</span><button class="a" id="moreEditBtn">Edit</button></div>
+  <div class="shead"><span class="k">Views</span></div>
   <div class="slist" id="moreList"></div>
   <div class="sver" id="sver"></div>
 </div>
@@ -7796,7 +7964,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v215';
+  var VERSION = 'v222';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -14367,7 +14535,12 @@ var PROC_META={
         e.stopPropagation();
         procSub = b.getAttribute('data-psub');
         try { drawCard(); } catch(_){ }
-        try { if (apPage) rerenderAirports(viewCache['airports']); } catch(_){ }
+        try {
+          if (apPage){
+            var v = viewCache['airports'];
+            apKeepTabs(v, function(){ rerenderAirports(v); });
+          }
+        } catch(_){ }
       });
     });
     $$(sel + ' [data-cn]').forEach(function(b){
@@ -18010,6 +18183,20 @@ var PROC_META={
     if (!isFld) apTab = 'info';
     var tw = sunTimes(f.lat, f.lon, new Date(), 96);
 
+    /* The square the diagram will live in. Empty it carries the field's
+       kind - RWY, STRIP - the same as the map card's thumbnail, so the
+       header has the same shape whether or not a plate exists yet. The
+       moment one is loaded under Airport, the square becomes the button
+       that opens it. */
+    var aptPlate = (function(){
+      try {
+        var ps = chartsFor(f.id) || [];
+        for (var i2 = 0; i2 < ps.length; i2++){
+          if (catOf(ps[i2]) === 'apt') return ps[i2];
+        }
+      } catch(_){ }
+      return null;
+    })();
     var h = '<div class="apbar">'
           + '<button class="lnk" data-apa="back">\u2039 Airports</button>'
           + '<button class="apstar' + (isFav(f.id) ? ' on' : '') + '" data-apa="star" '
@@ -18018,6 +18205,11 @@ var PROC_META={
           + '</div>';
 
     h += '<div class="aphead">'
+      +  (aptPlate
+          ? '<button class="apdgm has" data-cplate="' + esc(aptPlate) + '">'
+            + '<span>DIAGRAM</span></button>'
+          : '<div class="apdgm"><span>' + (CAT_SHORT[f.cat] || 'WPT') + '</span></div>')
+      +  '<div class="apidwrap">'
       +  '<div class="apid">' + esc(f.id) + '</div>'
       +  '<div class="apnm">' + esc(f.nm || '') + '</div>'
       +  '<div class="apel">'
@@ -18032,6 +18224,7 @@ var PROC_META={
       +    '</button>'
       +    (tw ? '<span class="apsun">First light ' + hhmmLocal(tw[0], 600)
                 + ' \u00b7 Last light ' + hhmmLocal(tw[1], 600) + '</span>' : '')
+      +  '</div>'
       +  '</div>'
       +  '</div>';
 
@@ -18050,6 +18243,31 @@ var PROC_META={
         :                    cardNtm(f))
       +  '</div>';
     return h;
+  }
+
+  /* Switching a tab rebuilds the whole view, and a rebuilt scroller
+     starts at the top - so tapping Weather half way down a field threw
+     you back to the name. The tab row is the fixed point: whatever
+     happens below it, it should stay where your thumb left it.
+
+     Measured before, restored after, clamped to whatever the new tab is
+     tall enough to allow. Restoring a raw scrollTop would be wrong -
+     Weather is shorter than Info, and the old number can be past the end
+     of the new content. */
+  function apKeepTabs(root, fn){
+    var body = root.querySelector('.vbody');
+    var tabs = root.querySelector('.aptabs');
+    var was = null;
+    if (body && tabs) was = tabs.getBoundingClientRect().top
+                           - body.getBoundingClientRect().top;
+    fn();
+    if (was == null) return;
+    var b2 = root.querySelector('.vbody'), t2 = root.querySelector('.aptabs');
+    if (!b2 || !t2) return;
+    /* offsetTop is measured against the scroller, so this is the scroll
+       position that puts the tab row back where it was on screen */
+    var want = t2.offsetTop - was;
+    b2.scrollTop = Math.max(0, Math.min(want, b2.scrollHeight - b2.clientHeight));
   }
 
   function apPageWire(root){
@@ -18079,7 +18297,8 @@ var PROC_META={
     });
     Array.prototype.forEach.call(root.querySelectorAll('[data-apt]'), function(b){
       b.addEventListener('click', function(){
-        apTab = b.getAttribute('data-apt'); rerenderAirports(root);
+        apTab = b.getAttribute('data-apt');
+        apKeepTabs(root, function(){ rerenderAirports(root); });
       });
     });
     wireCardBody('#apBody', f);
@@ -18317,13 +18536,26 @@ var PROC_META={
     var v = Number(AC.fuelMax);
     return (isFinite(v) && v >= 50 && v <= 5000) ? Math.round(v / 10) * 10 : 540;
   }
+  /* The picker is a SEGMENT, like every other choice in Settings - same
+     height, same radius, same accent for the one that is on, same mono
+     face for a registration. It was a row of pills with a floating round
+     plus, which is a shape that appears nowhere else in this app.
+
+     And Add is a row, not a symbol. Every other action in Settings is a
+     full-width row with a label; a lone + beside the registrations reads
+     as a sixth aircraft rather than as a verb. */
   function fleetHTML(){
-    var h = '<div class="fleetbar">';
-    FLEET.forEach(function(p){
-      h += '<button class="fchip' + (p.id === acId ? ' on' : '') + '" data-fleet="' + p.id + '">'
-        +  esc(p.reg || 'Unnamed') + '</button>';
-    });
-    h += '<button class="fchip add" data-fleet="+">+</button></div>';
+    var h = '<div class="setrow flrow"><span class="lb">Flying<small>'
+          + FLEET.length + (FLEET.length === 1 ? ' aircraft' : ' aircraft') + '</small></span>'
+          + '<span class="fseg" data-seg="fleet">'
+          + FLEET.map(function(p){
+              return '<button data-fleet="' + p.id + '"'
+                   + (p.id === acId ? ' class="on"' : '') + '>'
+                   + esc(p.reg || 'Unnamed') + '</button>';
+            }).join('')
+          + '</span></div>'
+          + '<button class="setgo" data-fleet="+">Add an aircraft'
+          + '<span class="ch">+</span></button>';
     return h;
   }
 
@@ -18336,7 +18568,31 @@ var PROC_META={
      not use. It is also where the layout editors live, because arranging
      the app is one job and it was odd to find half of it under Settings
      beside the fuel burn. */
-  var MORE_ORDER_KEY = 'nmp.iphone.moreorder';
+  /* ---- The More list -------------------------------------------------
+     Fixed. Grouped by when you reach for a thing - Flying, Planning,
+     Data - and in the order the app was built with, which is the order
+     it stays in.
+
+     There was a reorder editor here: arrows, then a drag, then a
+     pick-up. Four versions of a feature nobody asked for, borrowed from
+     another app because it was there. The groups already do the work a
+     custom order was supposed to do, and a list that is the same every
+     time is one less thing to remember.
+
+     The bars that DO earn an editor still have one, at the bottom of
+     this sheet: the bottom bar, the activity bar, the layer rail and the
+     card actions. Those are the ones where a wrong choice costs you a
+     reach in the air. */
+  /* These two went out with the block that held them: the tiles that are
+     NOT views (Downloads sits in its own row of two at the top), and the
+     colour each view's icon carries. */
+  var MORE_TILES = ['downloads'];
+  var MORE_TINT = {
+    map:'#7fb3d5', gps:'#f0a500', airports:'#3ddc97', freq:'#e84393',
+    holds:'#b39ddb', chk:'#f0a500', fuel:'#f0a500', calc:'#f0a500',
+    flights:'#3ddc97', mine:'#f0a500', mbz:'#f0a500', notes:'#f0a500',
+    charts:'#7fb3d5', cloud:'#7fb3d5'
+  };
   var VIEW_CAT = {
     map:'Flying', gps:'Flying', airports:'Flying', freq:'Flying',
     holds:'Flying', chk:'Flying',
@@ -18345,294 +18601,51 @@ var PROC_META={
     charts:'Data', cloud:'Data'
   };
   var MORE_CATS = ['Flying', 'Planning', 'Data', 'Other'];
-  var moreEdit = false;
-  var moreOrder = (function(){
-    try { var a = JSON.parse(localStorage.getItem(MORE_ORDER_KEY)); if (Array.isArray(a)) return a; }
-    catch(_){ }
-    return [];
-  })();
-  function moreSaveOrder(){
-    try { localStorage.setItem(MORE_ORDER_KEY, JSON.stringify(moreOrder)); } catch(_){ }
-  }
-
-  /* Views in a category, in the user's order, with anything new falling
-     in at the end rather than vanishing. */
-  /* Which group a view sits in: yours if you have moved it, otherwise
-     the one it was built with. */
-  var MORE_CAT_KEY = 'nmp.iphone.morecat';
-  var moreCat = (function(){
-    try { var o = JSON.parse(localStorage.getItem(MORE_CAT_KEY)); if (o && typeof o === 'object') return o; }
-    catch(_){ }
-    return {};
-  })();
-  function moreSaveCat(){
-    try { localStorage.setItem(MORE_CAT_KEY, JSON.stringify(moreCat)); } catch(_){ }
-  }
-  function catOfView(k){
-    var c = moreCat[k];
-    if (c && MORE_CATS.indexOf(c) >= 0) return c;
-    return VIEW_CAT[k] || 'Other';
-  }
 
   function moreCatViews(cat){
-    var mine = VIEWS.filter(function(v){
-      /* v214: back in. v213 took bar views out of the list on the
-         reasoning that they were in two places at once - and the first
-         thing that happened is that Charts went missing from where you
-         look for it. A view being reachable somewhere else is not the
-         same as it being where you expect it. The list is complete. */
-      return MORE_TILES.indexOf(v.k) < 0 && catOfView(v.k) === cat;
-    });
-    mine.sort(function(a, b){
-      var ia = moreOrder.indexOf(a.k), ib = moreOrder.indexOf(b.k);
-      if (ia < 0 && ib < 0) return 0;
-      if (ia < 0) return 1;
-      if (ib < 0) return -1;
-      return ia - ib;
-    });
-    return mine;
-  }
-  /* ---- Drag a view into place ---------------------------------------
-     The grip owns the gesture, so there is no long press to wait out and
-     no chance of a scroll stealing it: touch-action is off on the handle
-     alone, and the list still scrolls everywhere else.
-
-     The row is moved as you cross another row rather than on release, so
-     what you see under your finger is the order you are choosing. Moves
-     are within the group - Flying, Planning, Data - because the groups
-     are what make the list readable and dragging Notes into Flying would
-     be dragging it into the wrong question. */
-  /* ---- The bottom bar, as the first group in the list ----------------
-     The bar's slots are the thing you reach for most, so they sit at the
-     top of the editor and take the same grip as everything else. Drag a
-     view up into the bar and the one it lands on comes back down to the
-     list - the bar holds a fixed number of places and a swap is the only
-     honest way to fill one that is already taken.
-
-     tabCfg is the same store the old Edit bottom bar screen wrote, so
-     nothing has to be set up again. */
-  function barKeys(){ return tabCfg.slice(0, tabSlots()); }
-  function barSwap(inKey, slotKey){
-    var cfg = tabCfg.slice(), i = cfg.indexOf(slotKey), j = cfg.indexOf(inKey);
-    if (i < 0) return false;
-    if (j >= 0){                       /* both in the bar: reorder */
-      cfg[i] = inKey; cfg[j] = slotKey;
-    } else {                           /* from the list: take the slot */
-      cfg[i] = inKey;
-      cfg.push(slotKey);               /* the displaced view keeps a home */
-    }
-    tabCfg = cfg;
-    saveCfg();
-    try { renderTabs(); } catch(_){ }
-    return true;
-  }
-
-  var mDrag = null;
-  function moreDragStart(k, y, root, x){
-    mDrag = { k:k, y:y, x:(x == null ? 0 : x),
-              cat:catOfView(k), bar:(barKeys().indexOf(k) >= 0) };
-    var row = root.querySelector('[data-rowk="' + k + '"]');
-    if (row) row.classList.add('dragging');
-  }
-  function moreDragMove(y, root, x){
-    if (!mDrag) return;
-    /* THE FINGER'S OWN X. This looked for the row under the middle of the
-       WINDOW - and the More sheet is a right-hand panel, so on a phone
-       and on a tablet alike the middle of the window is the map behind
-       it. It found nothing, most of the time, which is why the drag
-       barely worked. */
-    var over = document.elementFromPoint(
-      (x == null ? mDrag.x : x), y);
-    var row = over && over.closest ? over.closest('[data-rowk]') : null;
-    if (!row) return;
-    var k2 = row.getAttribute('data-rowk');
-    if (!k2 || k2 === mDrag.k) return;
-    /* crossing a bar slot: take it, and send its occupant back down */
-    if (row.getAttribute('data-bar')){
-      if (barSwap(mDrag.k, k2)){
-        buildMore();
-        var b2 = root.querySelector('[data-rowk="' + mDrag.k + '"]');
-        if (b2) b2.classList.add('dragging');
-      }
-      return;
-    }
-    /* a bar view dragged onto the list leaves the bar the same way */
-    if (barKeys().indexOf(mDrag.k) >= 0) return;
-    /* FREE MOVEMENT. Crossing into another group moves the view into it -
-       the groups are a way of reading the list, not a fence. Flying,
-       Planning and Data are yours to fill. */
-    var c2 = catOfView(k2);
-    if (c2 !== mDrag.cat){
-      moreCat[mDrag.k] = c2;
-      moreSaveCat();
-      mDrag.cat = c2;
-    }
-    var list = moreCatViews(mDrag.cat).map(function(v){ return v.k; });
-    var from = list.indexOf(mDrag.k), to = list.indexOf(k2);
-    if (from < 0 || to < 0) return;
-    moreMove(mDrag.k, to - from);
-    buildMore();
-    var again = root.querySelector('[data-rowk="' + mDrag.k + '"]');
-    if (again) again.classList.add('dragging');
-  }
-  function moreDragEnd(root){
-    if (!mDrag) return;
-    mDrag = null;
-    Array.prototype.forEach.call(root.querySelectorAll('.dragging'), function(el){
-      el.classList.remove('dragging');
+    return VIEWS.filter(function(v){
+      return MORE_TILES.indexOf(v.k) < 0 && (VIEW_CAT[v.k] || 'Other') === cat;
     });
   }
 
-  function moreMove(k, d){
-    var cat = catOfView(k);
-    var list = moreCatViews(cat).map(function(v){ return v.k; });
-    var i = list.indexOf(k), j = i + d;
-    if (i < 0 || j < 0 || j >= list.length) return;
-    list.splice(j, 0, list.splice(i, 1)[0]);
-    /* rebuild the global order: this category's new order, then everything
-       else in whatever order it already had */
-    var rest = moreOrder.filter(function(x){ return list.indexOf(x) < 0; });
-    moreOrder = rest.concat(list);
-    /* keep categories contiguous in the stored order for readability */
-    moreOrder = [];
-    MORE_CATS.forEach(function(c){
-      (c === cat ? list : moreCatViews(c).map(function(v){ return v.k; }))
-        .forEach(function(x){ moreOrder.push(x); });
-    });
-    moreSaveOrder();
-  }
-
-  /* ---------- More sheet list ---------- */
-  var MORE_TINT = {
-    map:'var(--accent-2)', airports:'var(--good)', fuel:'var(--route)',
-    charts:'var(--accent-2)', wb:'var(--navaid)', freq:'var(--magenta)',
-    flights:'var(--good)', notes:'var(--route)', gps:'var(--accent)',
-    cloud:'var(--accent-2)', holds:'var(--navaid)', mine:'var(--accent)'
-  };
-  /* anything with a tile at the top of the sheet is not repeated below */
-  var MORE_TILES = ['downloads'];
   function buildMore(){
     if (!FLEET) { try { fleetLoad(); } catch(_){ } }
     var mh = '';
-    if (moreEdit){
-      var bk = barKeys();
-      mh += '<div class="scat">Bottom bar<span class="cnt2">' + bk.length
-         +  ' of ' + tabSlots() + '</span></div>';
-      bk.forEach(function(k){
-        mh += '<div class="srowwrap inbar" data-rowk="' + k + '" data-bar="1">'
-           +  '<button class="srow" disabled>'
-           +  '<span class="sq" style="background:' + (MORE_TINT[k] || 'var(--accent)') + '">'
-           +  svg(k) + '</span><span class="lb">' + vTitle(k) + '</span></button>'
-           +  '<button class="grip" data-grip="' + k + '" aria-label="Drag to reorder">'
-           +  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-           +  'stroke-width="1.8" stroke-linecap="round">'
-           +  '<path d="M5 9h14"/><path d="M5 15h14"/></svg></button>'
-           +  '</div>';
-      });
-      mh += '<div class="cnote">Drag a view up here to put it in the bar. '
-         +  'The one it lands on swaps out. Views in the bar are still listed '
-         +  'below as well - the bar is where they are quickest to reach, not the '
-         +  'only place they exist. More is always the last slot.</div>';
-    }
     MORE_CATS.forEach(function(cat){
       var list = moreCatViews(cat);
       if (!list.length) return;
-      var shown = list;
       mh += '<div class="scat">' + cat + '</div>';
-      shown.forEach(function(v, i){
-        /* One grip, and you drag. Two arrows moved a row one place per
-           tap, which is four taps to move Notes above Fuel; a grip moves
-           it in one gesture and takes a third of the width doing it.
-           Hiding is gone - a view you never open costs you one scroll,
-           and a list with things missing from it is a list you have to
-           remember the state of. */
-        mh += '<div class="srowwrap" data-rowk="' + v.k + '">'
-            + '<button class="srow" data-go="' + v.k + '"' + (moreEdit ? ' disabled' : '') + '>'
+      list.forEach(function(v){
+        mh += '<div class="srowwrap">'
+            + '<button class="srow" data-go="' + v.k + '">'
             + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
             + svg(v.k) + '</span><span class="lb">' + v.t + '</span></button>'
-            + (moreEdit
-               ? '<button class="grip" data-grip="' + v.k + '" aria-label="Drag to reorder">'
-                 + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-                 + 'stroke-width="1.8" stroke-linecap="round">'
-                 + '<path d="M5 9h14"/><path d="M5 15h14"/></svg></button>'
-               : '')
             + '</div>';
       });
     });
-    if (moreEdit){
-      /* Arranging the app is one job. These used to sit under Settings
-         beside the fuel burn, which is not where anyone looks for them. */
-      mh += '<div class="scat">Order</div>'
-         +  '<button class="setgo" id="moreReset">Reset to the default order'
-         +    '<span class="ch">\u21ba</span></button>'
-         +  '<div class="scat">Layout</div>'
-         +  '<button class="setgo" data-go2="tabs">Bottom bar<span class="ch">\u203a</span></button>'
-         +  '<button class="setgo" data-go2="acty">Activity bar<span class="ch">\u203a</span></button>'
-         +  '<button class="setgo" data-go2="rail">Layer rail<span class="ch">\u203a</span></button>'
-         +  '<button class="setgo" data-go2="acts">Card actions<span class="ch">\u203a</span></button>'
-         +  '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
-         +  '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>';
-    }
+    /* The editors that are worth having, always here rather than behind
+       a mode - they are what you came to this sheet to change. */
+    mh += '<div class="scat">Layout</div>'
+       +  '<button class="setgo" data-go2="tabs">Bottom bar<span class="ch">\u203a</span></button>'
+       +  '<button class="setgo" data-go2="acty">Activity bar<span class="ch">\u203a</span></button>'
+       +  '<button class="setgo" data-go2="rail">Layer rail<span class="ch">\u203a</span></button>'
+       +  '<button class="setgo" data-go2="acts">Card actions<span class="ch">\u203a</span></button>'
+       +  '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
+       +  '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>';
     $('#moreList').innerHTML = mh;
-    var eb = $('#moreEditBtn');
-    if (eb) eb.textContent = moreEdit ? 'Done' : 'Edit';
-    $('#sver').textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
+    /* The list is rebuilt, so it is re-wired here rather than by whoever
+       happens to call it. The old code wired it from one call site; when
+       that call site went, so did every handler in the sheet. */
     wireMore();
   }
-  function wireMore(){
-  var rst = $('#moreReset');
-  if (rst) rst.addEventListener('click', function(){
-    /* Arm-then-fire, like every other undoable-once action in the app.
-       Nothing is lost that cannot be redone in a few drags, but a list
-       you have arranged is still work, and one stray tap should not
-       undo it. */
-    if (rst._armed){
-      moreOrder = [];
-      moreCat = {};
-      moreSaveOrder(); moreSaveCat();
-      buildMore();
-      toast('Back to the default order');
-      return;
-    }
-    rst._armed = true;
-    rst.classList.add('arm');
-    rst.firstChild.nodeValue = 'Tap again to reset';
-    setTimeout(function(){
-      if (!rst || !rst._armed) return;
-      rst._armed = false;
-      rst.classList.remove('arm');
-      try { rst.firstChild.nodeValue = 'Reset to the default order'; } catch(_){ }
-    }, 3000);
-  });
 
-  var moreRoot = $('#sheetMore');
-  $$('#moreList [data-grip]').forEach(function(g){
-    g.addEventListener('touchstart', function(e){
-      var t = e.touches && e.touches[0]; if (!t) return;
-      moreDragStart(g.getAttribute('data-grip'), t.clientY, moreRoot, t.clientX);
-    }, { passive:true });
-  });
-  if (moreRoot && !moreRoot._dragWired){
-    moreRoot._dragWired = true;
-    moreRoot.addEventListener('touchmove', function(e){
-      if (!mDrag) return;
-      e.preventDefault();
-      var t = e.touches && e.touches[0]; if (!t) return;
-      moreDragMove(t.clientY, moreRoot, t.clientX);
-    }, { passive:false });
-    ['touchend', 'touchcancel'].forEach(function(ev){
-      moreRoot.addEventListener(ev, function(){ moreDragEnd(moreRoot); });
+  function wireMore(){
+    $$('#moreList .setgo[data-go2]').forEach(function(b){
+      b.addEventListener('click', function(){ setGo2(b.getAttribute('data-go2')); });
     });
-  }
-  $$('#moreList .setgo[data-go2]').forEach(function(b){
-    b.addEventListener('click', function(){ setGo2(b.getAttribute('data-go2')); });
-  });
-  $$('#moreList .srow').forEach(function(r){
-    r.addEventListener('click', function(){
-      var k = r.getAttribute('data-go');
-      goTo(k);
+    $$('#moreList .srow[data-go]').forEach(function(r){
+      r.addEventListener('click', function(){ goTo(r.getAttribute('data-go')); });
     });
-  });
   }
   buildMore();
 
@@ -18640,10 +18653,7 @@ var PROC_META={
   var ted = $('#tabEd'), tedSlot = 0;
   function openEd(){ closeAll(); tedSlot = 0; drawEd(); ted.classList.add('on'); }
   function closeEd(){ ted.classList.remove('on'); }
-  $('#moreEditBtn').addEventListener('click', function(){
-    moreEdit = !moreEdit;
-    buildMore();
-  });
+
   $('#tabEdClose').addEventListener('click', closeEd);
   ted.addEventListener('click', function(e){ if (e.target === ted) closeEd(); });
 
@@ -19199,7 +19209,8 @@ var PROC_META={
                inCtrl('fuelMax', AC.fuelMax == null ? '' : AC.fuelMax))
       + setRow('Reserve', 'minutes', segCtrl('resMin', [[15,'15'],[30,'30'],[45,'45'],[60,'60']], AC.resMin))
       + (FLEET.length > 1
-         ? '<button class="setgo setgo-del" id="acDel">Remove this aircraft<span class="ch">\u00d7</span></button>'
+         ? '<button class="setgo setgo-del" id="acDel">Remove '
+           + esc(AC.reg || 'this aircraft') + '<span class="ch">\u00d7</span></button>'
          : '')
       + '<div class="cnote">Each registration keeps its own cruise, burn, reserve and planned '
       + 'altitude. Fuel on board is not one of them \u2014 that belongs to the flight, and '
@@ -19213,13 +19224,10 @@ var PROC_META={
                segCtrl('clr', [[500,'500'],[1000,'1000'],[1500,'1500']], SET.clr))
 
       + '<div class="csec">Weather</div>'
-      + setRow('Weather source', 'your worker URL \u2014 same one the desktop build uses',
-               '<input class="fin" data-set="wxproxy" type="url" inputmode="url" '
-             + 'autocapitalize="off" autocorrect="off" spellcheck="false" '
-             + 'placeholder="https://your-worker.workers.dev" value="'
-             + (wxProxy() || '') + '">')
-      + '<div class="cnote">METAR is fetched live. With no URL set, weather is '
-      + 'simply absent \u2014 nothing is shown from stored data.</div>'
+      + '<div class="cnote">The weather worker URL lives under Cloud now, beside the '
+      + 'library one \u2014 both are Cloudflare workers and keeping them in two places was '
+      + 'asking to paste one into the other. METAR is fetched live; with no URL set, '
+      + 'weather is simply absent, and nothing is shown from stored data.</div>'
 
       + '<div class="csec">Map</div>'
       + setRow('Airfield labels', 'declutter', segCtrl('labels', [['off','Off'],['auto','Auto'],['always','Always']], SET.labels))
@@ -20472,11 +20480,20 @@ var PROC_META={
           + 'own, and a pull never touches the route you are flying \u2014 it adds to the library, '
           + 'and loading one stays a separate step.</div>';
 
+    h += '<div class="csec">Weather</div>'
+      +  '<div class="ntfld"><label for="cldWx">Worker URL</label>'
+      +  '<input id="cldWx" type="url" inputmode="url" autocapitalize="off" autocorrect="off" '
+      +  'spellcheck="false" placeholder="https://your-wx-worker.workers.dev" value="'
+      +  esc(wxProxy() || '') + '"></div>'
+      +  '<div class="cnote">The METAR proxy. A different worker from the library one below '
+      +  '\u2014 two jobs, two URLs, and pasting either into the other\u2019s box is the '
+      +  'commonest way to have neither work.</div>';
+
     h += '<div class="csec">Library</div>'
       +  '<div class="ntfld"><label for="cldBase">Worker URL</label>'
       +  '<input id="cldBase" type="url" inputmode="url" autocapitalize="off" autocorrect="off" '
       +  'spellcheck="false" placeholder="https://your-worker.workers.dev" value="' + esc(base) + '"></div>'
-      +  '<div class="ntfld"><label for="cldKey">Library key</label>'
+      +  '<div class="ntfld"><label for="cldKey">Key</label>'
       +  '<input id="cldKey" type="password" autocapitalize="off" autocorrect="off" '
       +  'spellcheck="false" placeholder="the key the desktop build uses" value="' + esc(key) + '"></div>'
       +  '<div class="cnote">Same URL and key as the desktop build, so both apps read one '
@@ -20636,6 +20653,20 @@ var PROC_META={
   function wireHold(el){ wireHoldBody(el); }
 
   function wireCloudBody(el){
+    var wxi = el.querySelector('#cldWx');
+    if (wxi) wxi.addEventListener('change', function(){
+      var u = String(wxi.value || '').trim().replace(/\/+$/, '');
+      try { localStorage.setItem(WX_KEY, u); } catch(_){ }
+      WXC = {}; wxState = u ? 'idle' : 'noproxy'; wxErr = '';
+      if (!u){ toast('Weather source cleared'); renderMap(); return; }
+      toast('Checking weather source\u2026');
+      wxRefresh(true, function(){
+        renderMap();
+        toast(wxState === 'error' ? ('Weather source failed \u2014 ' + wxErr)
+            : (Object.keys(WXC).some(function(i){ return WXC[i].raw; })
+               ? 'Weather source working' : 'Connected, but no reports returned'));
+      });
+    });
     var bs = el.querySelector('#cldBase'), ks = el.querySelector('#cldKey');
     if (bs) bs.addEventListener('change', function(){
       try { localStorage.setItem(CLOUD_BASE_KEY, bs.value.trim().replace(/\/+$/, '')); } catch(_){ }

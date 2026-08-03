@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v215 · 3 Aug 2026**
+**Status as of v222 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,13 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v222 | Cloud's section headings sat directly on their field labels — both small uppercase, so they read as one doubled heading. Spacing added between a `.csec` and the field under it, and the labels stop repeating the heading (WEATHER › Worker URL; LIBRARY › Worker URL, Key). |
+| v221 | Changing tab on the airport page no longer jumps to the top: the tab row's screen position is measured before the rebuild and restored after, clamped to what the new tab can scroll. Tabs and Procedure sub-tabs are also **pinned** to the top of the scroller. |
+| v220 | The aircraft picker was a row of pills with a floating round plus — shapes used nowhere else in the build. It is now a **segment in a labelled row**, the same control every other Settings choice uses, and **Add an aircraft** is a full-width row with a label rather than a lone symbol. Remove names the registration it will remove. |
+| v219 | **Both Cloudflare worker URLs are under Cloud** — the weather proxy moved out of Settings to sit beside the library worker, each labelled for its job. Settings keeps a pointer rather than a second input; two boxes writing one setting is a bug waiting for the day they disagree. |
+| v218 | The full-screen airport page gains the **diagram square** beside the ident, matching the map card's thumbnail; the header is a row rather than a stack. Empty it shows the field's kind (RWY / STRIP); when a plate exists under Airport it becomes a button reading DIAGRAM that opens the plate viewer. |
+| v217 | **The reorder editor is removed entirely** — four versions of a feature nobody asked for. The More list is grouped Flying / Planning / Data in the app's own order, fixed. The layout editors (bottom bar, activity bar, layer rail, card actions, type scale, metrics) are now always visible at the bottom of the sheet rather than behind an Edit mode. All stored order, group-override and hide state deleted. |
+| v216 | **The drag is gone.** Reordering is now tap-to-lift, tap-to-place: tap a row's handle, every other row offers *Put here*, tap one to land it — including a bottom-bar slot, which swaps. Cancel on the banner or the handle again puts it back. All clicks, delegated on the list (a rebuild was killing handlers bound to the old buttons — which is why the first attempt did nothing at all). |
 | v215 | **Bug found:** the drag's hit test used `elementFromPoint` at the middle of the *window*, but the More sheet is a right-hand panel — so it was testing the map behind it and found nothing most of the time. Now uses the finger's own x. Views can also be dragged **between** groups now and stay there; Reset restores both order and groups. |
 | v214 | **Reverted v213's list filter** — taking bar views out of the list made Charts vanish from where you look for it. Reachable elsewhere is not the same as being where expected. |
 | v213 | **Slot editor**, in the reference shape: the bottom bar is the first group in the More editor, with the same grip. Dragging a view onto a slot swaps — the displaced view returns to the list. A view in the bar no longer also appears in the list. Writes `tabCfg`, the same store the old Edit-bottom-bar screen used. More keeps the last slot and cannot be moved. |
