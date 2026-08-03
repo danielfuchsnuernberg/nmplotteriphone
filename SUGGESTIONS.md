@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v225 · 3 Aug 2026**.
+Status as of **v226 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -150,6 +150,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Four aircraft pushed Settings off-screen | v226 | Picker is its own wrapping row; unnamed profiles numbered |
 | Aircraft pills did not match the app's UI | v220 | Now a segment in a labelled row; Add is a row, not a symbol |
 | Worker URLs in two different views | v219 | Both under Cloud; Settings points there |
 | Airport page had no diagram square | v218 | Added; becomes the button that opens the plate when one exists |

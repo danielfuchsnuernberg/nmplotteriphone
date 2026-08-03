@@ -22,6 +22,25 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v226 2026-08-03 Four aircraft pushed the whole Settings page off
+                       the side of the screen.
+
+                       The picker was a segment squeezed into the right
+                       of a label row, sized for two. Four would not fit,
+                       the row would not wrap, and the page scrolled
+                       SIDEWAYS - taking every field with it, which is
+                       why the screenshot shows half a Settings view with
+                       the labels gone.
+
+                       It is its own full-width row now, under the
+                       heading, wrapping. Nothing to squeeze, nothing to
+                       overflow, and Settings cannot scroll horizontally
+                       at all any more.
+
+                       And an aircraft with no registration is numbered
+                       rather than called Unnamed. Two Unnameds side by
+                       side are two buttons you cannot tell apart, which
+                       is worse than a placeholder that says nothing.
        v225 2026-08-03 Both of yesterday's fixes were wrong in the same
                        way: I measured the wrong thing.
 
@@ -5373,10 +5392,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fldrow .v{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fldrow .v.dim{color:var(--text-fainter)}
-/* the fleet picker wraps when there are more registrations than fit,
-   which a segment does not do by itself */
-.flrow .fseg{flex-wrap:wrap;justify-content:flex-end}
-.flrow .fseg button{flex:0 1 auto;min-width:84px;padding:0 12px}
+/* The picker: its own row, wrapping, nothing to overflow. Buttons keep
+   the app's height and radius, mono for a registration. */
+.flpick{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 12px}
+.flpick button{flex:0 1 auto;min-width:96px;height:var(--mod-a);padding:0 14px;
+  border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);
+  font-family:var(--mono);font-size:var(--t-sm);font-weight:600;color:var(--text-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flpick button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+/* and nothing in Settings may push the page sideways */
+#setBody{overflow-x:hidden}
+.setrow{min-width:0}
 .setgo.setgo-del{color:var(--bad)}
 
 /* Checklists. The runner scales with one em on the body, so A+ and A-
@@ -8059,7 +8085,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v225-ROT';
+  var VERSION = 'v226-ROT';
   var BUILD   = '2026-08-03';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -18790,19 +18816,27 @@ var PROC_META={
      And Add is a row, not a symbol. Every other action in Settings is a
      full-width row with a label; a lone + beside the registrations reads
      as a sixth aircraft rather than as a verb. */
+  /* A registration with no registration yet is numbered, not called
+     Unnamed - two Unnameds side by side are two buttons you cannot tell
+     apart, which is worse than a placeholder that says nothing. */
+  function fleetLabel(p, i){
+    return p.reg ? p.reg : ('Aircraft ' + (i + 1));
+  }
   function fleetHTML(){
-    var h = '<div class="setrow flrow"><span class="lb">Flying<small>'
-          + FLEET.length + (FLEET.length === 1 ? ' aircraft' : ' aircraft') + '</small></span>'
-          + '<span class="fseg" data-seg="fleet">'
-          + FLEET.map(function(p){
-              return '<button data-fleet="' + p.id + '"'
-                   + (p.id === acId ? ' class="on"' : '') + '>'
-                   + esc(p.reg || 'Unnamed') + '</button>';
-            }).join('')
-          + '</span></div>'
-          + '<button class="setgo" data-fleet="+">Add an aircraft'
-          + '<span class="ch">+</span></button>';
-    return h;
+    /* The picker is its own full-width row under the section heading, not
+       a control squeezed into the right of a label row. Four aircraft in
+       a 96 px control pushed the whole Settings page sideways - the page
+       scrolled horizontally and every field went off screen with it. It
+       wraps here, and there is nothing to squeeze. */
+    return '<div class="flpick">'
+         + FLEET.map(function(p, i){
+             return '<button data-fleet="' + p.id + '"'
+                  + (p.id === acId ? ' class="on"' : '') + '>'
+                  + esc(fleetLabel(p, i)) + '</button>';
+           }).join('')
+         + '</div>'
+         + '<button class="setgo" data-fleet="+">Add an aircraft'
+         + '<span class="ch">+</span></button>';
   }
 
   /* ---- The More sheet: categories, order and hiding -------------------
@@ -19463,7 +19497,8 @@ var PROC_META={
       + setRow('Reserve', 'minutes', segCtrl('resMin', [[15,'15'],[30,'30'],[45,'45'],[60,'60']], AC.resMin))
       + (FLEET.length > 1
          ? '<button class="setgo setgo-del" id="acDel">Remove '
-           + esc(AC.reg || 'this aircraft') + '<span class="ch">\u00d7</span></button>'
+           + esc(AC.reg || fleetLabel({}, FLEET.map(function(p){ return p.id; }).indexOf(acId)))
+           + '<span class="ch">\u00d7</span></button>'
          : '')
       + '<div class="cnote">Each registration keeps its own cruise, burn, reserve and planned '
       + 'altitude. Fuel on board is not one of them \u2014 that belongs to the flight, and '

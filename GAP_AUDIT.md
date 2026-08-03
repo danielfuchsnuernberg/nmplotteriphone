@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v225 · 3 Aug 2026**
+**Status as of v226 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v226 | **Bug found:** the aircraft picker was a segment squeezed into the right of a label row and sized for two — four aircraft would not fit, the row would not wrap, and the whole Settings page scrolled sideways with every field going off screen. It is now its own full-width wrapping row, and `#setBody` cannot scroll horizontally. Unnamed profiles are numbered (Aircraft 2) rather than all reading Unnamed. |
 | v225 | Two corrections. The build line belongs in `#sver`, a sibling pinned under the list — the element was there all along; only the code filling it went out in v217. v224's copy inside the list scrolled away with the content. And the airport page still jumped on tab switch: v221 measured the tab row's screen position, but the row is **sticky**, so that measurement is always zero once pinned. It now keeps the scroll position itself. |
 | v224 | The build line is back at the foot of the More sheet (`NM Plotter iPhone · v224 · 2026-08-03`). It had been inside the reorder-editor block removed in v217 — the third thing that block was quietly holding, after `MORE_TILES` and `MORE_TINT`. Harness now asserts the string matches the file's own VERSION. |
 | v223 | Frequencies loses its By name / By code switch — both lists are alphabetical by name and all the sort state is deleted. The sticky letter band carried the scroller's background but not its side padding, so the row underneath showed through at the gutters; it now spans them. The frequency ident column was 52 px, so five-character PG numbers wrapped onto two lines — 76 px and truncating. |
