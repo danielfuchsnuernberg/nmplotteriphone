@@ -22,6 +22,98 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v231 2026-08-03 A heading with no air under the title bar. Again.
+
+                       Bars and sizing, then BARS, flush. Same fault as
+                       the Cloud fields in v222 and the doubled labels
+                       before that: a section heading pressed against
+                       whatever is above it reads as part of it.
+
+                       Fixed as a RULE this time rather than a margin
+                       typed into one builder - the first heading in any
+                       of these sheet bodies gets its gap, so the next
+                       sheet does not have to remember. Three times is
+                       enough to stop fixing instances.
+       v230 2026-08-03 The layout row joins the list it lives in.
+
+                       It was a settings-style row with a chevron, sitting
+                       under a heading of tinted icon rows - the last
+                       thing in the list and the one thing that did not
+                       belong to it.
+
+                       It is the same row as every view above it now:
+                       tinted tile, symbol, label. The tint is steel
+                       rather than one of the flying colours, which is
+                       the honest signal - this is set-up, not something
+                       you reach for in the air - and the symbol is the
+                       rail and the bar it arranges.
+       v229 2026-08-03 Six rows of layout become one.
+
+                       Bottom bar, activity bar, layer rail, card
+                       actions, type scale, layout metrics - six rows at
+                       the foot of a list you open every flight, for
+                       things you set up once and do not touch for a
+                       month. That is furniture between you and the
+                       views.
+
+                       One row now: Bars and sizing. It opens a page with
+                       the six on it, grouped, because four of them are
+                       bars you arrange and two are sizes you set, and
+                       those are different jobs that happened to be filed
+                       together.
+
+                       Nothing is harder to reach than before in any way
+                       that matters: one tap deeper, for the things you
+                       touch least.
+       v228 2026-08-03 Both rails are yours.
+
+                       v227 shipped one rail you configure and one you are
+                       given: IFR was a fixed list of six in the source.
+                       That is the wrong shape - if the VFR rail is worth
+                       arranging then so is the one you use in cloud, and
+                       more so, because there are fewer slots than there
+                       are IFR layers to want.
+
+                       IFR is five slots now, stored and edited exactly
+                       as VFR is, and the rail editor asks which rail you
+                       are editing at the top of it rather than making
+                       you go and switch the map first. Picking a set
+                       there switches the live rail too, so what you are
+                       editing is what you can see.
+
+                       Dropped from the IFR default to make five: CTAF
+                       zones, which are a VFR structure sitting in an IFR
+                       list. Put them back in a slot if you disagree -
+                       that is the point.
+       v227 2026-08-03 The rail carries two sets, and VFR finally means
+                       something.
+
+                       That button said VFR and meant nothing - it was a
+                       label on the door. It means the set of layers the
+                       rail is showing now, and the set that is on the
+                       map.
+
+                       VFR is the rail you have always configured. IFR is
+                       the structure you fly in cloud: navaids, the
+                       airway system, the fixes and the controlled
+                       airspace around them.
+
+                       SWITCHING TURNS THE OTHER SET OFF rather than
+                       stacking both. A map carrying everything is a map
+                       carrying nothing, and the one tap that strips it
+                       back to IFR structure is the point of having two.
+
+                       No second button on the rail. The sets are two
+                       cells at the top of the open rail, both visible,
+                       so switching is one tap on something you can see -
+                       never a cycle through off, which was the trap in
+                       the first idea. Tapping the LIVE set closes the
+                       rail, so the cell you already pressed still does
+                       what it always did.
+
+                       Closed, the head shows which set is live, and the
+                       colour carries it too: amber for VFR, blue for
+                       IFR, running through the layer symbols below.
        v226 2026-08-03 Four aircraft pushed the whole Settings page off
                        the side of the screen.
 
@@ -5750,8 +5842,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       is allowed and then scrolls; it never grows past the screen and it
       never pushes its own actions off the bottom.
    -------------------------------------------------------------------- */
+/* A heading needs air under the title bar it sits below. Third time this
+   has bitten - the Cloud fields in v222, the field labels before that -
+   so it is a rule on the sheet rather than a margin typed into one
+   builder: the first heading in any of these bodies gets its gap. */
 .dgrbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;padding-bottom:16px}
+.dgrbody > .csec:first-child,
+.dgrbody > .cnote:first-child{margin-top:12px}
 /* NOT .dgr. That name was already taken by the danger-area rectangle on
    the map - position:absolute, a red border, and pointer-events:none.
    An action row wearing it was absolutely positioned against the page,
@@ -5962,6 +6060,23 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .rb svg{width:20px;height:20px;display:block}
 .rb .lab{font-size:var(--t-xs);font-weight:700;letter-spacing:.05em}
 .rb.tall{height:58px}
+/* the two sets, stacked at the top of the open rail - both visible, so
+   switching is a tap on a thing rather than a cycle through states */
+/* the editor's own set switch, same two words, same colours */
+.redset{display:flex;gap:6px;margin-bottom:12px}
+.redset button{flex:1 1 0;height:var(--mod-a);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  font-family:var(--mono);font-size:var(--t-xs);font-weight:700;letter-spacing:.06em;
+  color:var(--text-muted)}
+.redset button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.redset button.on.ifr{background:var(--accent-2);border-color:var(--accent-2)}
+.rb.rset{height:34px;flex-direction:row;gap:0}
+.rb.rset .lab{font-size:var(--t-2xs);letter-spacing:.12em}
+.rb.rset.on{background:var(--accent);color:#0a0e13}
+.rb.rset.ifr.on{background:var(--accent-2);color:#0a0e13}
+/* the live set colours the layers under it */
+#railLyr .rb.lyr.on{color:var(--accent)}
+#railLyr.ifr .rb.lyr.on{color:var(--accent-2)}
 .rb .tick{font-family:var(--mono);font-size:var(--t-xs);color:var(--text-dim)}
 .rb.on .tick{color:#0a0e13}
 
@@ -8085,7 +8200,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v226-ROT';
+  var VERSION = 'v231-ROT';
   var BUILD   = '2026-08-03';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -13132,32 +13247,48 @@ var PROC_META={
   railEd.addEventListener('click', function(e){ if (e.target === railEd) closeRailEd(); });
 
   function drawRailEd(){
-    var s = '<div class="pl">Rail slots, top to bottom</div><div class="row">';
+    /* Which rail you are editing is a choice at the top, not something
+       you have to go and set on the map first. Both rails are yours. */
+    var s = '<div class="redset">'
+          + '<button data-red="vfr"' + (railSet === 'vfr' ? ' class="on"' : '') + '>VFR rail</button>'
+          + '<button data-red="ifr"' + (railSet === 'ifr' ? ' class="on ifr"' : '') + '>IFR rail</button>'
+          + '</div>'
+          + '<div class="pl">Rail slots, top to bottom</div><div class="row">';
+    var cfg = railCfg();
     for (var i = 0; i < 5; i++){
       s += '<button class="tslot sm' + (i === railSel ? ' sel' : '') + '" data-rs="' + i + '">'
          + '<span class="n">' + (i + 1) + '</span>'
-         + '<span class="v">' + LAYER_META[RAIL_CFG[i]].t.replace(/&amp;.*/, '').trim() + '</span></button>';
+         + '<span class="v">' + LAYER_META[cfg[i]].t.replace(/&amp;.*/, '').trim() + '</span></button>';
     }
     s += '</div>';
     $('#railSlots').innerHTML = s;
     $$('#railSlots .tslot').forEach(function(b){
       b.addEventListener('click', function(){ railSel = parseInt(b.getAttribute('data-rs'), 10); drawRailEd(); });
     });
-    $('#railHint').textContent = 'Choose what goes in rail slot ' + (railSel + 1) + '.';
+    $$('#railSlots [data-red]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var w = b.getAttribute('data-red');
+        if (w !== railSet) railSetTo(w);
+        railSel = 0;
+        drawRailEd();
+      });
+    });
+    $('#railHint').textContent = 'Choose what goes in slot ' + (railSel + 1)
+                               + ' of the ' + railSet.toUpperCase() + ' rail.';
 
     $('#railList').innerHTML = RAIL_POOL.map(function(k){
-      var at = RAIL_CFG.indexOf(k);
+      var at = railCfg().indexOf(k);
       return '<button class="tedrow" data-rk="' + k + '">'
            + '<span class="ic">' + laySvg(k) + '</span>' + LAYER_META[k].t
            + (at >= 0 ? '<span class="badge">' + (at + 1) + '</span>' : '') + '</button>';
     }).join('');
     $$('#railList .tedrow').forEach(function(b){
       b.addEventListener('click', function(){
-        var k = b.getAttribute('data-rk'), at = RAIL_CFG.indexOf(k);
+        var k = b.getAttribute('data-rk'), cfg2 = railCfg(), at = cfg2.indexOf(k);
         if (at === railSel) return;
-        if (at >= 0) RAIL_CFG[at] = RAIL_CFG[railSel];   /* swap, never duplicate */
-        RAIL_CFG[railSel] = k;
-        saveRail(); drawRailEd(); buildRail();
+        if (at >= 0) cfg2[at] = cfg2[railSel];   /* swap, never duplicate */
+        cfg2[railSel] = k;
+        saveRailCfg(); drawRailEd(); buildRail(); syncRail();
       });
     });
   }
@@ -13267,12 +13398,23 @@ var PROC_META={
      from inside the rail, and the column closes under your finger. */
   function buildRail(){
     var host = $('#railLyr'); if (!host) return;
-    host.innerHTML = '<button class="rb on" id="rbVfrOpen"><span class="lab">VFR</span></button>'
-      + RAIL_CFG.map(function(k){
+    host.innerHTML =
+        '<button class="rb rset' + (railSet === 'vfr' ? ' on' : '') + '" data-rset="vfr">'
+      +   '<span class="lab">VFR</span></button>'
+      + '<button class="rb rset ifr' + (railSet === 'ifr' ? ' on' : '') + '" data-rset="ifr">'
+      +   '<span class="lab">IFR</span></button>'
+      + railKeys().map(function(k){
           return '<button class="rb lyr' + (layOn(k) ? ' on' : '') + '" data-lyr="' + k + '" '
                + 'aria-label="' + LAYER_META[k].t.replace(/&amp;/g,'and') + '">' + laySvg(k) + '</button>';
         }).join('');
-    $('#rbVfrOpen').addEventListener('click', function(e){ e.stopPropagation(); toggleRail(); });
+    $$('#railLyr .rb.rset').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var w = b.getAttribute('data-rset');
+        if (w === railSet) toggleRail();      /* the live set closes the rail */
+        else railSetTo(w);
+      });
+    });
     $$('#railLyr .rb.lyr').forEach(function(b){
       b.addEventListener('click', function(e){
         e.stopPropagation();
@@ -18867,6 +19009,15 @@ var PROC_META={
      NOT views (Downloads sits in its own row of two at the top), and the
      colour each view's icon carries. */
   var MORE_TILES = ['downloads'];
+  /* Its own tint, because Layout is its own category - steel rather than
+     one of the flying colours, which is the honest signal: this is set-up,
+     not something you reach for in the air. The symbol is the rail and
+     the bar it arranges. */
+  var BARS_TINT = '#8aa0b5';
+  var BARS_SVG =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+    + 'stroke-linecap="round"><rect x="3.2" y="4.2" width="5.2" height="15.6" rx="1.6"/>'
+    + '<path d="M12.5 7.5h8"/><path d="M12.5 12h8"/><path d="M12.5 16.5h5"/></svg>';
   var MORE_TINT = {
     map:'#7fb3d5', gps:'#f0a500', airports:'#3ddc97', freq:'#e84393',
     holds:'#b39ddb', chk:'#f0a500', fuel:'#f0a500', calc:'#f0a500',
@@ -18905,13 +19056,20 @@ var PROC_META={
     });
     /* The editors that are worth having, always here rather than behind
        a mode - they are what you came to this sheet to change. */
+    /* One row, not six. These are things you set up once and then do not
+       touch for a month, and six of them at the foot of a list you open
+       every flight is six rows of furniture between you and the views.
+       They live one tap in, behind a row that says what they are. */
+    /* Same row as every view above it: tinted tile, symbol, label. It was
+       a settings-style row with a chevron sitting under a heading of
+       icon rows, which made the last thing in the list the one thing
+       that did not belong to it. */
     mh += '<div class="scat">Layout</div>'
-       +  '<button class="setgo" data-go2="tabs">Bottom bar<span class="ch">\u203a</span></button>'
-       +  '<button class="setgo" data-go2="acty">Activity bar<span class="ch">\u203a</span></button>'
-       +  '<button class="setgo" data-go2="rail">Layer rail<span class="ch">\u203a</span></button>'
-       +  '<button class="setgo" data-go2="acts">Card actions<span class="ch">\u203a</span></button>'
-       +  '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
-       +  '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>';
+       +  '<div class="srowwrap">'
+       +  '<button class="srow" id="barsGo">'
+       +  '<span class="sq" style="background:' + BARS_TINT + '">'
+       +  BARS_SVG + '</span><span class="lb">Bars and sizing</span></button>'
+       +  '</div>';
     $('#moreList').innerHTML = mh;
     /* #sver was there the whole time - a sibling of the list, pinned
        under it, which is where this line has always lived. v224 put a
@@ -18927,9 +19085,8 @@ var PROC_META={
   }
 
   function wireMore(){
-    $$('#moreList .setgo[data-go2]').forEach(function(b){
-      b.addEventListener('click', function(){ setGo2(b.getAttribute('data-go2')); });
-    });
+    var bg = $('#moreList #barsGo');
+    if (bg) bg.addEventListener('click', function(){ openBarsSheet(); });
     $$('#moreList .srow[data-go]').forEach(function(r){
       r.addEventListener('click', function(){ goTo(r.getAttribute('data-go')); });
     });
@@ -19471,6 +19628,38 @@ var PROC_META={
   function inCtrl(name, val){
     return '<input class="fin" data-set="' + name + '" type="text" inputmode="decimal" value="' + val + '">';
   }
+  /* The bars, on their own page. Grouped, because four of them are bars
+     you arrange and two are sizes you set, and those are different jobs
+     that happened to be filed together. */
+  function openBarsSheet(){
+    var h = '<div class="csec">Bars</div>'
+      + '<button class="setgo" data-go2="tabs">Bottom bar'
+      +   '<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="acty">Activity bar'
+      +   '<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="rail">Layer rail \u00b7 VFR and IFR'
+      +   '<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="acts">Card actions'
+      +   '<span class="ch">\u203a</span></button>'
+      + '<div class="csec">Sizing</div>'
+      + '<button class="setgo" data-go2="type">Type scale'
+      +   '<span class="ch">\u203a</span></button>'
+      + '<button class="setgo" data-go2="metrics">Layout metrics'
+      +   '<span class="ch">\u203a</span></button>'
+      + '<div class="cnote">Each one opens its own editor. Nothing here changes '
+      + 'what the app can do \u2014 only where your thumb finds it.</div>';
+    $('#dgrTitle').textContent = 'Bars and sizing';
+    $('#dgrBody').innerHTML = h;
+    $$('#dgrBody .setgo[data-go2]').forEach(function(b){
+      b.addEventListener('click', function(){
+        dgrSheet.classList.remove('on');
+        setGo2(b.getAttribute('data-go2'));
+      });
+    });
+    closeAll();
+    dgrSheet.classList.add('on');
+  }
+
   /* one dispatcher, because the layout editors are reachable from two
      places now - Settings kept none of them, More's Edit has them all */
   function setGo2(k){
@@ -19780,6 +19969,11 @@ var PROC_META={
   }
 
   var RAIL_KEY = 'nmp.iphone.rail';
+  /* the head's label follows the live set */
+  function railHeadLabel(){
+    var lab = $('#rbVfr') && $('#rbVfr').querySelector('.lab');
+    if (lab) lab.textContent = (typeof railSet === 'string' ? railSet : 'vfr').toUpperCase();
+  }
   var RAIL_POOL = ['fields','strips','fixes','mine','route','airspace','danger','wxcat','terrain','labels'];
   var RAIL_CFG = (function(){
     try{
@@ -19789,6 +19983,65 @@ var PROC_META={
     return ['fields','airspace','mine','route','terrain'];
   })();
   function saveRail(){ try{ localStorage.setItem(RAIL_KEY, JSON.stringify(RAIL_CFG)); }catch(e){} }
+
+  /* ---- Two sets on one rail ------------------------------------------
+     The rail button said VFR and meant nothing - it was a label on the
+     door. It means something now: which set of layers the rail is
+     showing, and which set is on the map.
+
+     VFR is the rail you have always configured, RAIL_CFG. IFR is the
+     structure you fly in cloud - navaids, the airway system, the fixes
+     and the controlled airspace around them.
+
+     Switching turns the other set OFF rather than stacking both. A map
+     carrying everything is a map carrying nothing, and the one tap that
+     strips it back to IFR structure is the point of having the two.
+
+     No second button on the rail: the two sets are two cells at the top
+     of the open rail, both visible, so switching is one tap on something
+     you can see and never a cycle through off. */
+  var RSET_KEY = 'nmp.iphone.railset';
+  /* Five slots, the same as VFR, stored the same way and edited by the
+     same screen. It was a fixed six - which made one of the two rails a
+     thing you own and the other a thing you are given. */
+  var RIFR_KEY = 'nmp.iphone.railifr';
+  var RAIL_IFR = (function(){
+    var def = ['navaid', 'ats', 'atsu', 'fixes', 'ctla'];
+    try {
+      var a = JSON.parse(localStorage.getItem(RIFR_KEY));
+      if (a && a.length === 5 && a.every(function(k){ return RAIL_POOL.indexOf(k) >= 0; })) return a;
+    } catch(_){ }
+    return def.filter(function(k){ return RAIL_POOL.indexOf(k) >= 0; }).length === 5
+         ? def : def.slice(0, 5);
+  })();
+  var railSet = (function(){
+    try { var v = localStorage.getItem(RSET_KEY); if (v === 'ifr' || v === 'vfr') return v; }
+    catch(_){ }
+    return 'vfr';
+  })();
+  function railKeys(which){
+    return (which || railSet) === 'ifr' ? RAIL_IFR.slice() : RAIL_CFG.slice();
+  }
+  /* the live rail, as a thing the editor can write into */
+  function railCfg(){ return (railSet === 'ifr') ? RAIL_IFR : RAIL_CFG; }
+  function saveRailCfg(){
+    if (railSet === 'ifr'){
+      try { localStorage.setItem(RIFR_KEY, JSON.stringify(RAIL_IFR)); } catch(_){ }
+    } else saveRail();
+  }
+  function railSetTo(which){
+    if (which === railSet) return;
+    /* the set you are leaving goes off the map with it */
+    railKeys(railSet).forEach(function(k){ if (layOn(k)) layToggle(k); });
+    railSet = which;
+    try { localStorage.setItem(RSET_KEY, railSet); } catch(_){ }
+    saveLayers();
+    buildRail(); syncRail(); renderMap();
+    if (typeof drawLayersPop === 'function') drawLayersPop();
+    var lab = $('#rbVfr') && $('#rbVfr').querySelector('.lab');
+    if (lab) lab.textContent = railSet.toUpperCase();
+    toast(railSet.toUpperCase() + ' layers');
+  }
 
   var BASES = [
     ['png',   'PNG vector (offline)'],

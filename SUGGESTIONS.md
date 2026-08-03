@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v226 · 3 Aug 2026**.
+Status as of **v231 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -56,11 +56,6 @@ against it
 
 ## Needs a decision from you
 
-- **[D] VFR / IFR layer sets on the rail** — discussed 3 Aug. Recommendation:
-  tabs inside the open rail (VFR | IFR), no new rail button, switching turns the
-  other set off. Alternatives were: fold the IFR layers into the existing
-  groups, or split the one cell into two half-height buttons. Waiting on your
-  choice; a mock comes before any code.
 
 
 - **[D] Weather sub-tabs on the card — the remaining piece of the v208 spec.**
@@ -150,6 +145,11 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Heading flush under a sheet title, third time | v231 | Fixed as a rule on the sheet body, not per builder |
+| Layout row did not match the view rows | v230 | Tinted tile, symbol, label — same as every view |
+| Six layout rows cluttering the More sheet | v229 | One row, Bars and sizing, opening a page |
+| IFR rail was fixed, not configurable | v228 | Five slots, stored and edited exactly as VFR |
+| VFR / IFR layer sets on the rail | v227 | Two cells in the open rail; switching swaps the map |
 | Four aircraft pushed Settings off-screen | v226 | Picker is its own wrapping row; unnamed profiles numbered |
 | Aircraft pills did not match the app's UI | v220 | Now a segment in a labelled row; Add is a row, not a symbol |
 | Worker URLs in two different views | v219 | Both under Cloud; Settings points there |

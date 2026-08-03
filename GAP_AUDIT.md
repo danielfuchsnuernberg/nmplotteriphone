@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v226 · 3 Aug 2026**
+**Status as of v231 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,11 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v231 | The first heading in a sheet body sat flush against the title bar (third instance of this fault after v222 and v205). Fixed as a **rule on `.dgrbody`** rather than a margin typed into one builder, so the next sheet inherits it. |
+| v230 | The **Bars and sizing** row now matches every view row above it — tinted tile, symbol, label — instead of being a settings-style row with a chevron. Steel tint rather than one of the flying colours, signalling set-up rather than something reached for in the air. |
+| v229 | The six layout editors collapse to a single **Bars and sizing** row in the More sheet, opening a page that groups them: four bars you arrange, two sizes you set. One tap deeper for the things touched least. |
+| v228 | **Both rails are configurable.** The IFR set is five slots, stored under its own key and edited by the same screen; the rail editor now asks which rail at the top of itself, and picking there switches the live rail so you edit what you can see. CTAF zones dropped from the IFR default (a VFR structure in an IFR list) — put back in a slot if wanted. |
+| v227 | **VFR / IFR sets on the layer rail.** The head button now means something: which set is live. VFR is the rail you configured; IFR is navaids, ATS routes, upper routes, procedure fixes, controlled airspace and TMA sectors. Two cells at the top of the open rail — no new button, both visible, no cycling; tapping the live set closes the rail as before. Switching turns the other set off. Colour carries it: amber VFR, blue IFR. |
 | v226 | **Bug found:** the aircraft picker was a segment squeezed into the right of a label row and sized for two — four aircraft would not fit, the row would not wrap, and the whole Settings page scrolled sideways with every field going off screen. It is now its own full-width wrapping row, and `#setBody` cannot scroll horizontally. Unnamed profiles are numbered (Aircraft 2) rather than all reading Unnamed. |
 | v225 | Two corrections. The build line belongs in `#sver`, a sibling pinned under the list — the element was there all along; only the code filling it went out in v217. v224's copy inside the list scrolled away with the content. And the airport page still jumped on tab switch: v221 measured the tab row's screen position, but the row is **sticky**, so that measurement is always zero once pinned. It now keeps the scroll position itself. |
 | v224 | The build line is back at the foot of the More sheet (`NM Plotter iPhone · v224 · 2026-08-03`). It had been inside the reorder-editor block removed in v217 — the third thing that block was quietly holding, after `MORE_TILES` and `MORE_TINT`. Harness now asserts the string matches the file's own VERSION. |
