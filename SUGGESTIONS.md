@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v222 · 3 Aug 2026**.
+Status as of **v225 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -62,10 +62,6 @@ against it
   groups, or split the one cell into two half-height buttons. Waiting on your
   choice; a mock comes before any code.
 
-- **[D] Drop the By name / By code control on Frequencies too?** Airports lost
-  it in v209. The only argument for keeping it there is that you sometimes
-  arrive at a frequency list already holding a code, which is not true of the
-  airfield list. Say the word and it goes.
 
 - **[D] Weather sub-tabs on the card — the remaining piece of the v208 spec.**
   METAR is in. TAF needs a second feed through the `nmplotter-wx` worker. You
@@ -149,6 +145,9 @@ against it
 | Route chip sheet was a bare word list | v191 | Icons, headed groups, v184 rule |
 | Measure chip under the frequency window | v191 | Centred over what is left of the map |
 | Leg card's remove row escaping the card | v191 | Groups clip their children; tablet sheet clips |
+| Build number missing from the More sheet | v224, fixed v225 | Restored to #sver, pinned under the list |
+| Airport page still jumped on tab switch | v225 | v221 measured a pinned row; now keeps the scroll position |
+| Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
 | Aircraft pills did not match the app's UI | v220 | Now a segment in a labelled row; Add is a row, not a symbol |

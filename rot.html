@@ -22,6 +22,66 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v225 2026-08-03 Both of yesterday's fixes were wrong in the same
+                       way: I measured the wrong thing.
+
+                       THE BUILD LINE. #sver was in the markup the whole
+                       time - a sibling of the list, pinned under it,
+                       which is where this line has always sat. What went
+                       out with the v217 block was the code that FILLED
+                       it. v224 put a copy inside the list instead, so it
+                       scrolled away with the content. The element is
+                       filled again and the copy is gone.
+
+                       THE TAB SCROLL. v221 measured where the tab row
+                       sat on screen and put it back there. But the tabs
+                       are sticky, so once they are pinned that
+                       measurement is always zero - and restoring zero
+                       scrolls the page to the tab row's layout position,
+                       which is a jump, and a different one depending on
+                       how far down you had scrolled.
+
+                       Measuring something that has been pinned to a
+                       constant is measuring the pin, not the page. It
+                       keeps the SCROLL POSITION now: the header and tabs
+                       stay exactly where they are, the panel under them
+                       changes, and nothing moves that you did not move.
+       v224 2026-08-03 The build number is back at the foot of More.
+
+                       It went out with the reorder editor in v217 - it
+                       had been sitting inside that block, and removing
+                       the block took it with it. That is the second
+                       thing that block was quietly holding, after
+                       MORE_TILES and MORE_TINT.
+
+                       It is the one line that tells you whether what is
+                       on the device is what was last pushed, which
+                       matters more here than in most apps: a service
+                       worker can serve yesterday's build and look
+                       perfectly normal doing it.
+       v223 2026-08-03 By name everywhere, and the letter band actually
+                       covers the row.
+
+                       FREQUENCIES LOSES ITS BY NAME / BY CODE SWITCH, as
+                       Airports did in v209. The argument for keeping it -
+                       that you sometimes arrive at a frequency list
+                       already holding a code - did not survive contact
+                       with the list: a code you are holding goes in the
+                       search box, not into a sort order.
+
+                       THE STICKY LETTER WAS A STRIPE. It carried the
+                       scroller's background but not its side padding, so
+                       it stopped short of the gutters and the row sliding
+                       under it showed through either side - which is what
+                       you can see behind the A. It is a full-width band
+                       now, pulled out to the edges and padded back, and
+                       it sits above the rows rather than beside them.
+
+                       AND PG-0096 WAS WRAPPING ONTO TWO LINES. The ident
+                       column was 52 px, which fits AYNZ and not a
+                       five-character PG number - so half the strips in
+                       the country were breaking their own row in half.
+                       76 px, and it truncates rather than wraps.
        v222 2026-08-03 Two labels stacked on top of each other.
 
                        WEATHER, then WEATHER WORKER URL, with nothing
@@ -5199,7 +5259,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 /* The letter, and the strip that jumps to it. The heading sticks to the
    top of the scroller so the letter you are in is always on screen -
    which is the whole point of having one. */
-.alz{position:sticky;top:0;z-index:2;margin:10px 0 0;padding:5px 0 4px;
+/* The letter has to COVER the row it slides over, so it is a full-width
+   band with the scroller's own background - pulled out to the gutter
+   edges with a negative margin and padded back, because the scroller has
+   side padding and a band that stops short of it leaves a stripe of the
+   row showing either side. That stripe is what looked sloppy. */
+.alz{position:sticky;top:0;z-index:4;
+  margin:14px calc(var(--edge) * -1) 0;padding:6px var(--edge) 5px;
   background:var(--bg);border-bottom:1px solid var(--border-strong);
   font-family:var(--mono);font-size:var(--t-xs);font-weight:700;letter-spacing:.14em;
   color:var(--accent)}
@@ -7113,7 +7179,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .fqfield{width:100%;text-align:left;display:flex;align-items:center;gap:12px;
   padding:12px 0;border-bottom:1px solid var(--border)}
 .fqfield .id{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-md);font-weight:700;
-  color:var(--accent-2);width:52px}
+  color:var(--accent-2);width:76px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
 .fqfield .nm2{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fqfield .n{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);color:var(--text-fainter)}
@@ -7992,8 +8059,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v222-ROT';
-  var BUILD   = '2026-08-01';
+  var VERSION = 'v225-ROT';
+  var BUILD   = '2026-08-03';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
      activity strip and sizeCard - and the earliest of them runs long
@@ -16366,15 +16433,6 @@ var PROC_META={
 
      One setting, shared by Airports and Frequencies, so the two lists
      cannot disagree about what order means. */
-  var SORT_KEY = 'nmp.iphone.sortby';
-  var sortBy = (function(){
-    try { var v = localStorage.getItem(SORT_KEY); if (v === 'code' || v === 'name') return v; }
-    catch(_){ }
-    return 'name';
-  })();
-  function saveSortBy(){
-    try { localStorage.setItem(SORT_KEY, sortBy); } catch(_){ }
-  }
   /* Sort key for a field. A name that starts with a bracket or a quirk of
      the source - "(Duplicate) Utai" - sorts under its first LETTER, not
      under the punctuation, because that is where you would look for it. */
@@ -16397,15 +16455,11 @@ var PROC_META={
     var c = sortName(p).charAt(0).toUpperCase();
     return (c >= 'A' && c <= 'Z') ? c : '#';
   }
-  function sortCmp(a, b){
-    if (sortBy === 'code'){
-      var ai = String(a.id || ''), bi = String(b.id || '');
-      return ai < bi ? -1 : ai > bi ? 1 : 0;
-    }
-    var an = sortName(a), bn = sortName(b);
-    if (an !== bn) return an < bn ? -1 : 1;
-    return String(a.id || '') < String(b.id || '') ? -1 : 1;
-  }
+  /* v223: by name, in both lists, with no switch anywhere. Airports lost
+     the choice in v209 and the argument for keeping it on Frequencies -
+     that you sometimes arrive holding a code - did not survive contact
+     with the list: a code you are holding goes in the search box. */
+  function sortCmp(a, b){ return nameCmp(a, b); }
   /* ---- Alphabetical sections -----------------------------------------
      575 fields in one unbroken column is a column, not a list. It gets
      the letter it is under, the way a phone's own app list does: a
@@ -16415,11 +16469,7 @@ var PROC_META={
      The letter comes from the SAME key the list is sorted by - name or
      code - so the headings can never disagree with the order under them.
      Anything that does not start with a letter files under #. */
-  function alphaOf(p){
-    var k = (sortBy === 'code') ? String(p.id || '') : sortName(p);
-    var c = k.charAt(0).toUpperCase();
-    return (c >= 'A' && c <= 'Z') ? c : '#';
-  }
+  function alphaOf(p){ return alphaName(p); }
   /* one row builder, one letter run - used by both lists */
   function alphaRows(list, rowFn, pre){
     var h = '', last = null;
@@ -16458,21 +16508,7 @@ var PROC_META={
     });
   }
 
-  function sortSegHTML(){
-    return '<div class="hseg sortseg"><span class="grp">'
-         + '<button data-sortby="name"' + (sortBy === 'name' ? ' class="on"' : '') + '>By name</button>'
-         + '<button data-sortby="code"' + (sortBy === 'code' ? ' class="on"' : '') + '>By code</button>'
-         + '</span></div>';
-  }
-  function wireSortSeg(root, redraw){
-    Array.prototype.forEach.call(root.querySelectorAll('[data-sortby]'), function(b){
-      b.addEventListener('click', function(){
-        sortBy = b.getAttribute('data-sortby');
-        saveSortBy();
-        redraw();
-      });
-    });
-  }
+
 
   var FLD_KEY = 'nmp.iphone.fielddetails';
   var MYFLD = (function(){
@@ -16718,8 +16754,7 @@ var PROC_META={
             + '<div class="cnote" style="margin-bottom:10px">' + total + ' field'
             + (total === 1 ? '' : 's')
             + (q ? ' matching' : '')
-            + '. Pull down to search. Tap one to see and edit its frequencies.</div>'
-            + sortSegHTML();
+            + '. Pull down to search. Tap one to see and edit its frequencies.</div>';
 
       if (!items.length) return h + '<div class="cempty">No match</div>';
       var withFq = items.filter(function(p){ return allFreqFor(p.id).length; });
@@ -16739,7 +16774,7 @@ var PROC_META={
         return r;
       }
       /* the short group reads fine as a run; the 560 do not */
-      if (!q) h += alphaBarHTML(without, 'fqz');
+      if (!q) h += alphaBarHTML(without, 'fqz');   /* by name, always */
       h += rowsFor(withFq, 'With frequencies', 'fqw', false)
         +  rowsFor(without, 'No frequency on file', 'fqz', !q);
       return h;
@@ -16774,7 +16809,6 @@ var PROC_META={
     var body = el.querySelector('.vbody');
     function again(){ body.innerHTML = freqsHTML(); wireFreqs(el); }
     el._fqAgain = again;
-    wireSortSeg(el, again);
     wireAlphaBar(el);
 
     Array.prototype.forEach.call(el.querySelectorAll('[data-fqf]'), function(b){
@@ -18243,7 +18277,6 @@ var PROC_META={
 
   function wireAirports(el){
     if (apPage){ apPageWire(el); return; }
-    wireSortSeg(el, function(){ rerenderAirports(el); });
     wireAlphaBar(el);
     Array.prototype.forEach.call(el.querySelectorAll('.npseg button'), function(b){
       b.addEventListener('click', function(){
@@ -18461,19 +18494,26 @@ var PROC_META={
      Weather is shorter than Info, and the old number can be past the end
      of the new content. */
   function apKeepTabs(root, fn){
+    /* Keep the SCROLL POSITION, not the tab row's screen position.
+
+       v221 measured where the tab row sat and put it back there - but
+       the tabs are sticky, so once they are pinned that measurement is
+       always zero, and restoring it scrolled the page to wherever the
+       tab row's layout position is. Which is a jump, and a different one
+       depending on how far down you were. Measuring a thing that has
+       been pinned to a constant is measuring the pin, not the page.
+
+       The scroll position is the simple, right answer: the header and
+       tabs stay exactly where they are, the panel under them changes,
+       and nothing moves that you did not move. Clamped, because the new
+       tab may be shorter than the old one. */
     var body = root.querySelector('.vbody');
-    var tabs = root.querySelector('.aptabs');
-    var was = null;
-    if (body && tabs) was = tabs.getBoundingClientRect().top
-                           - body.getBoundingClientRect().top;
+    var was = body ? body.scrollTop : null;
     fn();
     if (was == null) return;
-    var b2 = root.querySelector('.vbody'), t2 = root.querySelector('.aptabs');
-    if (!b2 || !t2) return;
-    /* offsetTop is measured against the scroller, so this is the scroll
-       position that puts the tab row back where it was on screen */
-    var want = t2.offsetTop - was;
-    b2.scrollTop = Math.max(0, Math.min(want, b2.scrollHeight - b2.clientHeight));
+    var b2 = root.querySelector('.vbody');
+    if (!b2) return;
+    b2.scrollTop = Math.max(0, Math.min(was, b2.scrollHeight - b2.clientHeight));
   }
 
   function apPageWire(root){
@@ -18839,6 +18879,13 @@ var PROC_META={
        +  '<button class="setgo" data-go2="type">Type scale<span class="ch">\u203a</span></button>'
        +  '<button class="setgo" data-go2="metrics">Layout metrics<span class="ch">\u203a</span></button>';
     $('#moreList').innerHTML = mh;
+    /* #sver was there the whole time - a sibling of the list, pinned
+       under it, which is where this line has always lived. v224 put a
+       copy INSIDE the list instead, so it scrolled away with the
+       content. The element was never gone; only the code that filled
+       it, which went out with the v217 block. */
+    var sv = $('#sver');
+    if (sv) sv.textContent = 'NM Plotter iPhone \u00b7 ' + VERSION + ' \u00b7 ' + BUILD;
     /* The list is rebuilt, so it is re-wired here rather than by whoever
        happens to call it. The old code wired it from one call site; when
        that call site went, so did every handler in the sheet. */

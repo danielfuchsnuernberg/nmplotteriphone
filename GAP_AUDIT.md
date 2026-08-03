@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v222 · 3 Aug 2026**
+**Status as of v225 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,9 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v225 | Two corrections. The build line belongs in `#sver`, a sibling pinned under the list — the element was there all along; only the code filling it went out in v217. v224's copy inside the list scrolled away with the content. And the airport page still jumped on tab switch: v221 measured the tab row's screen position, but the row is **sticky**, so that measurement is always zero once pinned. It now keeps the scroll position itself. |
+| v224 | The build line is back at the foot of the More sheet (`NM Plotter iPhone · v224 · 2026-08-03`). It had been inside the reorder-editor block removed in v217 — the third thing that block was quietly holding, after `MORE_TILES` and `MORE_TINT`. Harness now asserts the string matches the file's own VERSION. |
+| v223 | Frequencies loses its By name / By code switch — both lists are alphabetical by name and all the sort state is deleted. The sticky letter band carried the scroller's background but not its side padding, so the row underneath showed through at the gutters; it now spans them. The frequency ident column was 52 px, so five-character PG numbers wrapped onto two lines — 76 px and truncating. |
 | v222 | Cloud's section headings sat directly on their field labels — both small uppercase, so they read as one doubled heading. Spacing added between a `.csec` and the field under it, and the labels stop repeating the heading (WEATHER › Worker URL; LIBRARY › Worker URL, Key). |
 | v221 | Changing tab on the airport page no longer jumps to the top: the tab row's screen position is measured before the rebuild and restored after, clamped to what the new tab can scroll. Tabs and Procedure sub-tabs are also **pinned** to the top of the scroller. |
 | v220 | The aircraft picker was a row of pills with a floating round plus — shapes used nowhere else in the build. It is now a **segment in a labelled row**, the same control every other Settings choice uses, and **Add an aircraft** is a full-width row with a label rather than a lone symbol. Remove names the registration it will remove. |
