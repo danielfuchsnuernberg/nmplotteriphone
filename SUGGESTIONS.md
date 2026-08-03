@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v205 · 3 Aug 2026**.
+Status as of **v213 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -50,18 +50,26 @@ against it
   zones, Checklists, Notes. Grouping in v186 made it more obvious.
 - **[R] More sheet row dividers step further right down the list.** Each
   hairline ends at a different x. Looks unintentional.
-- **[R] Slot editor** — reconfigurable bottom-bar slots. Deferred at the start
-  of the iPhone port and never revisited.
 - **[R] Toolbar declutter and the landscape HUD over real tiles.** Polish.
 - **[R] Measure tool refinements** — nothing specific requested, but total
   bearing end-to-end and a running area would both be cheap.
 
 ## Needs a decision from you
 
-- **[D] Weather sub-tabs on the card** — ForeFlight splits METAR / TAF / MOS /
-  Daily / Winds. We hold METAR only. TAF would need a second feed through the
-  worker; winds aloft and MOS are model data, which is the Open-Meteo argument
-  again. Worth deciding what is wanted before any of it is built.
+- **[D] Drop the By name / By code control on Frequencies too?** Airports lost
+  it in v209. The only argument for keeping it there is that you sometimes
+  arrive at a frequency list already holding a code, which is not true of the
+  airfield list. Say the word and it goes.
+
+- **[D] Weather sub-tabs on the card — the remaining piece of the v208 spec.**
+  METAR is in. TAF needs a second feed through the `nmplotter-wx` worker. You
+  mentioned a weather model in v262: I want to look at what that actually
+  fetches before wiring anything to it, because a modelled figure sitting
+  beside an observed one has to be told apart on sight. Send me the v262 file
+  or the worker route and this is a short build.
+- **[D] Airport diagram thumbnail in the card header** — part of the v208 spec,
+  waiting on the Charts subsystem: there is no diagram to show until plates
+  load.
 - **[D] Density altitude on the weather tab** — computable from temperature,
   QNH and elevation, all of which we already hold. Cheap, and useful out of a
   hot strip.
@@ -136,6 +144,15 @@ against it
 | Route chip sheet was a bare word list | v191 | Icons, headed groups, v184 rule |
 | Measure chip under the frequency window | v191 | Centred over what is left of the map |
 | Leg card's remove row escaping the card | v191 | Groups clip their children; tablet sheet clips |
+| Slot editor — bottom bar reconfigurable | v213 | Bar is the first group in the More editor; drag to swap |
+| No way back from a shuffled view order | v212 | Reset to the default order, arm-then-fire |
+| More list labels jumped to centre | v211 | My v206 regression; text-align:left |
+| Reordering by arrows, and a hide feature nobody wanted | v211 | One grip, drag to reorder; hiding removed |
+| Minima and fix tables cluttering the Procedure tab | v210 | Removed from the card; data kept for the picker |
+| By name / By code control on Airports | v209 | Removed; the list is always by name |
+| Card structure spec: nearest, light, sub-tabs, NOTAM link | v208 | Weather sub-tabs still open |
+| Long lists were one unbroken column | v207 | Sticky letter headings and an A–Z jump strip |
+| More edit mode looked like a spreadsheet | v206 | Label truncates; one joined control group; hide is an eye |
 | Procedures led with fixes, not documents | v205 | Plates first by category; ENR 4.3 fixes below |
 | GROUND over GND 121.7 said it twice | v205 | A lone generic label collapses into its heading |
 | Fuel and contact took two taps for one idea | v204 | One editor: company, phone, fuel, notes; phone dials |

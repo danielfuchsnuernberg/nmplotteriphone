@@ -22,6 +22,191 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v213 2026-08-03 The bottom bar is the first group in the list.
+
+                       The slot editor, in the shape you sent: the bar's
+                       places sit at the top of the More editor and take
+                       the same grip as everything else. Drag a view up
+                       into the bar and the one it lands on comes back
+                       down to the list. The bar holds a fixed number of
+                       places - four on a phone, six on a tablet - and a
+                       swap is the only honest way to fill one that is
+                       already taken.
+
+                       And a view that is IN the bar is no longer also in
+                       the list below it. It was in both, which is why the
+                       list ran to fourteen rows for eleven places to go.
+
+                       It writes tabCfg, the same store the old Edit
+                       bottom bar screen used, so nothing needs setting up
+                       again and that screen still works. More keeps the
+                       last slot and cannot be moved: it is the way back
+                       to everything else, and a bar you can lock yourself
+                       out of is not a bar.
+       v212 2026-08-03 A way back from a shuffled list.
+
+                       Reset to the default order, in the editor, armed
+                       before it fires. Nothing is lost that cannot be
+                       redone in a few drags, but a list you have arranged
+                       is still work and one stray tap should not undo it.
+
+                       From the same screenshot, two things NOT taken.
+
+                       Cancel and Save: editing here commits as you go,
+                       and there is nothing destructive to abandon. A Save
+                       button on fourteen rows is a step that exists only
+                       to be pressed.
+
+                       And the bottom bar as the first group in the list,
+                       which is the slot editor, deferred since the start
+                       of this port. It is a real piece of work rather
+                       than a tidy-up and it belongs in its own round.
+       v211 2026-08-03 The More list gets its alignment back, and the
+                       editor gets a grip.
+
+                       EVERY NAME HAD JUMPED TO THE MIDDLE. Wrapping the
+                       label so it could truncate also made it a flex
+                       child inheriting the row's centring - so a list
+                       that had read icon-then-name for its whole life
+                       suddenly read as a column of centred words. One
+                       declaration: text-align:left. It truncates and it
+                       sits beside its icon, which is where it was.
+
+                       AND YOU DRAG NOW. Two arrows moved a row one place
+                       per tap - four taps to put Notes above Fuel - and
+                       took a third of the row's width to do it. One grip
+                       does it in a gesture. The row moves as you cross
+                       another rather than on release, so what is under
+                       your finger is the order you are choosing.
+
+                       The grip owns the gesture: touch-action is off on
+                       the handle alone, so there is no long press to
+                       wait out, nothing for a scroll to steal, and the
+                       list still scrolls from everywhere else. That is
+                       the v196 lesson applied on purpose rather than
+                       after the fact.
+
+                       Moves stay inside the group. Flying, Planning and
+                       Data are what make fourteen rows readable, and
+                       dragging Notes into Flying would be dragging it
+                       into the wrong question.
+
+                       HIDING IS GONE. A view you never open costs you
+                       one scroll; a list with things missing from it is
+                       a list whose state you have to remember. Anything
+                       hidden before is back.
+       v210 2026-08-03 The Procedure tab is the list, and nothing else.
+
+                       The ENR 4.3 minima and fix table were still under
+                       the documents - DA, MDA, glidepath, TCH, threshold
+                       elevation, then the fix list - which is a plate's
+                       worth of detail on a tab you opened in order to
+                       find the plate. Gone from the card.
+
+                       The dataset is not gone. The IFR procedure picker
+                       still reads it, which is where a crossing altitude
+                       is worth having, because there you are choosing a
+                       procedure rather than looking for a document.
+       v209 2026-08-03 Airports is by name, and there is no longer a
+                       switch about it.
+
+                       By name or by code was a setting and a control in
+                       a list that already carries four segments above
+                       it, answering a question with only one useful
+                       answer: you look for a town. Gone.
+
+                       The comparator is explicit rather than reading the
+                       shared setting, so nothing switched anywhere else
+                       can quietly reorder this list - and the letter
+                       headings come from the same explicit key, so they
+                       cannot drift out of step with it either.
+
+                       Frequencies keeps its By name / By code control
+                       for now. Say the word and it goes the same way;
+                       the reason to keep it there is that a frequency
+                       list is a thing you sometimes arrive at holding a
+                       code, which is not true of the airfield list.
+       v208 2026-08-03 The airport card, to the structure you set out.
+
+                       NEAREST FIELDS on the Info tab: the five closest,
+                       with distance and bearing from the field you are
+                       looking at, in the frame you fly. It is the
+                       question you ask when the one in front of you will
+                       not have you, and every row opens that field.
+
+                       LIGHT, today and the next three days. First and
+                       last light rather than sunrise and sunset, because
+                       that is what decides the job.
+
+                       PROCEDURE HAS SUB-TABS - Airport, Departure,
+                       Arrival, Approach, Other - each carrying a count.
+                       All five show whether or not they hold anything: a
+                       tab that appears and disappears with the data is a
+                       tab you cannot learn.
+
+                       NOTAM CARRIES THE LINK to NiuSky Pacific, tappable,
+                       opening outside the app. The honest note stays with
+                       it: PNG NOTAMs are a downloadable bulletin, not a
+                       feed, so the app cannot hold them per field. The
+                       link goes to the source and it needs a signal.
+
+                       Elevation joins the page header.
+
+                       STILL TO COME, and deliberately not faked: TAF,
+                       Daily and Winds on the Weather tab. TAF needs a
+                       second feed through the worker; you mentioned a
+                       weather model in v262 and I want to look at what
+                       that actually fetches before wiring anything to
+                       it, because a modelled figure sitting beside an
+                       observed one has to be told apart.
+       v207 2026-08-03 The long lists are broken up by letter.
+
+                       575 fields in one unbroken column is a column, not
+                       a list. Airports (All) and the frequency list now
+                       carry the letter they are under, the way the
+                       phone's own app list does - a heading that STICKS
+                       to the top of the scroller, so the letter you are
+                       in is always on screen, which is the whole point
+                       of having one. Above the list is a strip of the
+                       letters that exist, and tapping one jumps there.
+
+                       The letter comes from the SAME key the list is
+                       sorted by, name or code, so the headings can never
+                       disagree with the order underneath them. Anything
+                       not starting with a letter files under #.
+
+                       Only where the order IS alphabetical. Nearest is
+                       ordered by distance and Recent by when you looked;
+                       a letter over either would be describing an order
+                       that is not there. Searching drops the headings
+                       too - a filtered list is short and its own answer.
+
+                       The 15 fields that have frequencies stay an
+                       unbroken run; it is the 560 that needed breaking
+                       up, and only the strip that jumps into them.
+       v206 2026-08-03 The More sheet's edit mode looked like a
+                       spreadsheet.
+
+                       THE LABEL DID NOT TRUNCATE. It was a bare text
+                       node inside a flex row, which is not something
+                       text-overflow can act on - so Checklists, My
+                       waypoints and Broadcast zones ran straight under
+                       the buttons instead of ending in an ellipsis. It
+                       is its own element now.
+
+                       AND THE CONTROLS ARE ONE JOINED GROUP: two arrows
+                       and an eye, sharing a border, the way the format
+                       and direction segments elsewhere in the app do.
+                       Three separate outlined boxes per row, fourteen
+                       rows deep, was more furniture than the list it is
+                       meant to arrange.
+
+                       Hide is the eye rather than the word, so the
+                       cluster reads as controls rather than as three
+                       more labels competing with the one that matters.
+                       A hidden view dims and carries a small HIDDEN tag
+                       instead of its button changing to Show - the state
+                       belongs on the row, not on the control.
        v205 2026-08-03 Procedures is the list of documents, and a
                        frequency heading stops repeating itself.
 
@@ -4758,15 +4943,27 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 /* More sheet: categories, the edit strip, and the fleet chips. */
 .scat{padding:14px var(--edge) 6px;font-size:var(--t-2xs);font-weight:700;
   letter-spacing:.12em;text-transform:uppercase;color:var(--text-fainter)}
-.srowwrap{display:flex;align-items:center;gap:6px;padding-right:var(--edge)}
-.srowwrap .srow{flex:1 1 auto;min-width:0}
-.srowwrap.off .srow{opacity:.4}
+.srowwrap{display:flex;align-items:center;gap:10px;padding-right:var(--edge)}
+.srowwrap .srow{flex:1 1 auto;min-width:0;gap:10px}
+/* text-align:left is the whole fix. Wrapping the label in a flex child
+   to make it truncate also made it a block that inherits the row's
+   centring - so every name in the list jumped to the middle. It
+   truncates AND sits beside its icon, which is where it was. */
+.srow .lb{flex:1 1 auto;min-width:0;text-align:left;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
 .srowwrap .srow[disabled]{pointer-events:none}
-.sedit{flex:0 0 auto;display:flex;align-items:center;gap:4px}
-.sedit button{height:30px;min-width:30px;padding:0 7px;border-radius:6px;
-  background:var(--bg-2);border:1px solid var(--border-strong);
-  font-size:var(--t-2xs);font-weight:700;color:var(--text-muted)}
-.sedit button[disabled]{opacity:.3}
+/* One handle. touch-action is off here and nowhere else, so the grip owns
+   the gesture and the list still scrolls from anywhere it is not. */
+.grip{flex:0 0 auto;width:40px;height:38px;display:flex;align-items:center;
+  justify-content:center;background:none;border:0;color:var(--text-fainter);
+  touch-action:none}
+.grip svg{width:20px;height:20px;display:block}
+#moreReset.arm{color:var(--bad);border-color:var(--bad)}
+.srowwrap.inbar{background:var(--bg-2);border-radius:var(--radius);margin-bottom:2px}
+.srowwrap.inbar .srow{opacity:1}
+.scat .cnt2{float:right;font-family:var(--mono);letter-spacing:0;color:var(--text-fainter)}
+.srowwrap.dragging{background:var(--inset);border-radius:var(--radius)}
+.srowwrap.dragging .grip{color:var(--accent)}
 /* Your own details for a field: same row shape as a frequency, because
    they are the same idea - what the pack does not carry, you do. */
 /* A group heading, so a list that restarts its alphabet says why. */
@@ -4783,8 +4980,58 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .sortseg button{flex:1 1 0;height:32px;border-radius:6px;background:none;border:0;
   font-size:var(--t-xs);font-weight:600;color:var(--text-fainter)}
 .sortseg button.on{background:var(--accent);color:#0a0e13}
+/* The letter, and the strip that jumps to it. The heading sticks to the
+   top of the scroller so the letter you are in is always on screen -
+   which is the whole point of having one. */
+.alz{position:sticky;top:0;z-index:2;margin:10px 0 0;padding:5px 0 4px;
+  background:var(--bg);border-bottom:1px solid var(--border-strong);
+  font-family:var(--mono);font-size:var(--t-xs);font-weight:700;letter-spacing:.14em;
+  color:var(--accent)}
+.alz:first-child{margin-top:0}
+.alzbar{display:flex;gap:3px;margin:0 0 10px;padding-bottom:8px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  border-bottom:1px solid var(--border)}
+.alzbar::-webkit-scrollbar{display:none}
+.alzbar button{flex:0 0 auto;width:26px;height:28px;border-radius:5px;
+  background:var(--bg-2);border:1px solid var(--border);
+  font-family:var(--mono);font-size:var(--t-xs);font-weight:700;color:var(--text-muted)}
+.alzbar button:active{background:var(--accent);border-color:var(--accent);color:#0a0e13}
 /* A frequency group heading: smaller than a section, enough to break the
    list into the order you work down it. */
+/* the nearest-field rows, the light table, and an outbound link */
+.nfrow{width:100%;display:flex;align-items:baseline;gap:10px;text-align:left;
+  padding:9px 0;border-bottom:1px solid var(--border)}
+.nfrow .id{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  color:var(--accent-2)}
+.nfrow .nm{flex:1 1 auto;min-width:0;font-size:var(--t-sm);color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nfrow .d{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  color:var(--text)}
+.nfrow .d u{text-decoration:none;font-size:var(--t-2xs);color:var(--text-fainter);
+  margin-left:2px}
+.nfrow .b{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-xs);color:var(--text-muted)}
+.solar{margin-top:2px}
+.srow2{display:flex;align-items:baseline;gap:10px;padding:7px 0;
+  border-bottom:1px solid var(--border)}
+.srow2 .dy{flex:1 1 auto;font-size:var(--t-sm);color:var(--text-2)}
+.srow2 .t{flex:0 0 62px;text-align:right;font-family:var(--mono);font-size:var(--t-sm);
+  color:var(--text)}
+.srow2.today .dy{color:var(--text);font-weight:600}
+.srow2.today .t{color:var(--accent)}
+.extlink{display:block;margin-top:10px;padding:12px 14px;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--accent-2);text-decoration:none}
+.extlink:active{background:var(--inset)}
+.psub{display:flex;gap:2px;margin-bottom:8px;overflow-x:auto;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch}
+.psub::-webkit-scrollbar{display:none}
+.psub button{flex:0 0 auto;height:32px;padding:0 12px;border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border);
+  font-size:var(--t-xs);font-weight:600;color:var(--text-fainter)}
+.psub button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+.psub button i{font-style:normal;margin-left:5px;font-family:var(--mono);font-size:var(--t-2xs);
+  opacity:.75}
+.apel{font-family:var(--mono);font-size:var(--t-sm);color:var(--text-2);margin-top:3px}
 .fqgh{margin:12px 0 2px;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:var(--text-fainter)}
 .fqgh:first-child{margin-top:4px}
@@ -7516,7 +7763,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v205';
+  var VERSION = 'v213';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -13020,6 +13267,8 @@ var PROC_META={
      Favourites segment read that same volatile object. Favourites are now
      the persisted FAVS set that My waypoints already used. One store. */
   var cardId = null, cardTab = 'info', cardSub = 'metar';
+  /* which kind of document the Procedure tab is showing */
+  var procSub = 'apt';
   var CARD_TABS = [['info','Info'],['wx','Weather'],['rwy','Runway'],['proc','Procedure'],['ntm','NOTAM']];
   var WX_SUBS   = [['metar','METAR'],['taf','TAF'],['wind','Winds']];
 
@@ -13315,6 +13564,7 @@ var PROC_META={
     }
 
     if (f.id) h += fldBlockHTML(f.id);
+    if (f.id) h += nearFieldsHTML(f) + solarHTML(f);
     if (f.id) h += notesBlockHTML(f.id);
 
     /* This said weather, procedures and NOTAMs were demo placeholders,
@@ -13998,55 +14248,40 @@ var PROC_META={
   }
 
   function cardProc(f){
-    var procs = procsFor(f.id);
     var plates = chartsFor(f.id);
-    if (!procs.length && !plates.length){
+    if (!plates.length && !procsFor(f.id).length){
       return '<div class="cempty">No instrument procedure for ' + esc(f.id) + '</div>'
         + '<div class="cnote">Procedures come from AIP ENR 4.3, which covers the five fields '
         + 'with published instrument approaches. A field with none shows nothing here.</div>';
     }
-    /* PROCEDURES IS A LIST OF DOCUMENTS. Airport, Departure, Arrival,
-       Approach, Other - the plates you would open, in that order. The
-       ENR 4.3 fix lists and minima are a different thing and now sit
-       BELOW them, under their own heading, rather than in front of the
-       list the tab is named for. */
-    var ph = '';
-    procs.forEach(function(pr){
-      var m = procMetaFor(pr.nm);
-      ph += '<div class="csec">' + esc(pr.nm.replace(f.id + ' ', '')) + '</div>';
-      /* heading only - the detail follows */
-      if (m){
-        ph += procMinimaHTML(m);
-      } else {
-        ph += '<div class="cnote">No minima carried for this procedure \u2014 the pack has '
-          +  'them for the Port Moresby approaches only. Fixes below are ENR 4.3.</div>';
-      }
-      ph += '<div class="tedlist">';
-      pr.fixes.forEach(function(x){
-        ph += '<div class="farow"><span class="fanm">' + esc(x.id) + '</span>'
-          +  '<span class="faq"><span class="l">' + esc(x.role || '') + '</span></span></div>';
-      });
-      ph += '</div>';
-    });
-    var h = '';
-    if (plates.length){
-      var byCat = {};
-      plates.forEach(function(p){ (byCat[catOf(p)] = byCat[catOf(p)] || []).push(p); });
-      CHART_CATS.forEach(function(c){
-        var rows = byCat[c[0]]; if (!rows || !rows.length) return;
-        h += '<div class="csec">' + c[1] + '</div>';
-        rows.forEach(function(p){
-          h += '<button class="prow2" data-cplate="' + p + '">'
-            +  '<span class="bdg">AIP</span><span>' + prettyPlate(p) + '</span></button>';
-        });
+    /* PROCEDURES IS A LIST OF DOCUMENTS, and only that. The ENR 4.3 fix
+       lists and minima used to render here - DA, MDA, glidepath, TCH,
+       threshold elevation, the fix table - which is a plate's worth of
+       detail on a tab you opened to find the plate. The dataset stays
+       and the IFR procedure picker still uses it; the card does not
+       repeat it. */
+    /* Sub-tabs, one per kind of document, so the tab opens on what you
+       came for rather than on a column of every plate the field has.
+       Every tab is shown whether or not it holds anything - a tab that
+       appears and disappears with the data is a tab you cannot learn. */
+    var byCat = {};
+    plates.forEach(function(p){ (byCat[catOf(p)] = byCat[catOf(p)] || []).push(p); });
+    var h = '<div class="psub">' + CHART_CATS.map(function(c){
+      var n = (byCat[c[0]] || []).length;
+      return '<button data-psub="' + c[0] + '"'
+           + (procSub === c[0] ? ' class="on"' : '') + '>' + c[1]
+           + (n ? '<i>' + n + '</i>' : '') + '</button>';
+    }).join('') + '</div>';
+    var rows = byCat[procSub] || [];
+    if (rows.length){
+      rows.forEach(function(p){
+        h += '<button class="prow2" data-cplate="' + p + '">'
+          +  '<span class="bdg">AIP</span><span>' + prettyPlate(p) + '</span></button>';
       });
     } else {
-      h += '<div class="cnote">No plate images loaded on this device. The chart '
-        +  'subsystem is not built here yet.</div>';
-    }
-    /* the fixes and minima, after the documents */
-    if (ph){
-      h += '<div class="csec">Procedure fixes \u00b7 ENR 4.3</div>' + ph;
+      h += '<div class="cempty">Nothing under '
+        +  esc((CHART_CATS.filter(function(c){ return c[0] === procSub; })[0] || ['', procSub])[1])
+        +  '</div>';
     }
     return h + '<button class="add" data-chgo="' + f.id + '" style="width:100%;'
       + 'height:var(--mod-a);margin-top:12px;border-radius:var(--radius);background:var(--bg);'
@@ -14063,9 +14298,11 @@ var PROC_META={
        The text is not repeated here either: a grep for it should find
        nothing but the changelog. */
     return '<div class="cempty">No NOTAMs for ' + esc(f.id) + '</div>'
+      + '<a class="extlink" href="https://www.niuskypacific.com.pg" target="_blank" '
+      +   'rel="noopener">NiuSky Pacific \u00b7 briefing and NOTAMs \u2197</a>'
       + '<div class="cnote">This app carries none, for any field. PNG NOTAMs are published '
       + 'as a downloadable bulletin rather than a live feed, so they cannot be fetched per '
-      + 'field the way a METAR can. Get them from the official briefing.</div>';
+      + 'field the way a METAR can. The link goes to the source; it needs a signal.</div>';
   }
 
   /* ---- render ---- */
@@ -14084,6 +14321,22 @@ var PROC_META={
   function wireCardBody(sel, f){
     wireCopy(sel);
     wireFldBlock(sel);
+    $$(sel + ' [data-ap2]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id2 = b.getAttribute('data-ap2');
+        if (apPage){ apPage = id2; apTab = 'info'; rerenderAirports(viewCache['airports']); }
+        else openCard(id2);
+      });
+    });
+    $$(sel + ' [data-psub]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        procSub = b.getAttribute('data-psub');
+        try { drawCard(); } catch(_){ }
+        try { if (apPage) rerenderAirports(viewCache['airports']); } catch(_){ }
+      });
+    });
     $$(sel + ' [data-cn]').forEach(function(b){
       b.addEventListener('click', function(e){ e.stopPropagation(); openNote(b.getAttribute('data-cn')); });
     });
@@ -15718,6 +15971,20 @@ var PROC_META={
     n = n.replace(/^[^A-Z0-9]+/, '');
     return n || String((p && p.id) || '');
   }
+  /* Airports is by NAME, always. The choice was a setting and a control
+     in a list that already has four segments above it, to answer a
+     question that only has one useful answer: you look for a town. The
+     comparator is explicit rather than reading the shared setting, so
+     nothing switched elsewhere can reorder this list behind your back. */
+  function nameCmp(a, b){
+    var an = sortName(a), bn = sortName(b);
+    if (an !== bn) return an < bn ? -1 : 1;
+    return String(a.id || '') < String(b.id || '') ? -1 : 1;
+  }
+  function alphaName(p){
+    var c = sortName(p).charAt(0).toUpperCase();
+    return (c >= 'A' && c <= 'Z') ? c : '#';
+  }
   function sortCmp(a, b){
     if (sortBy === 'code'){
       var ai = String(a.id || ''), bi = String(b.id || '');
@@ -15727,6 +15994,58 @@ var PROC_META={
     if (an !== bn) return an < bn ? -1 : 1;
     return String(a.id || '') < String(b.id || '') ? -1 : 1;
   }
+  /* ---- Alphabetical sections -----------------------------------------
+     575 fields in one unbroken column is a column, not a list. It gets
+     the letter it is under, the way a phone's own app list does: a
+     sticky heading so you always know where you are, and a strip of
+     letters to jump with.
+
+     The letter comes from the SAME key the list is sorted by - name or
+     code - so the headings can never disagree with the order under them.
+     Anything that does not start with a letter files under #. */
+  function alphaOf(p){
+    var k = (sortBy === 'code') ? String(p.id || '') : sortName(p);
+    var c = k.charAt(0).toUpperCase();
+    return (c >= 'A' && c <= 'Z') ? c : '#';
+  }
+  /* one row builder, one letter run - used by both lists */
+  function alphaRows(list, rowFn, pre){
+    var h = '', last = null;
+    list.forEach(function(p){
+      var a = alphaOf(p);
+      if (a !== last){
+        last = a;
+        h += '<div class="alz" id="' + (pre || 'az') + '-' + a + '">' + a + '</div>';
+      }
+      h += rowFn(p);
+    });
+    return h;
+  }
+  function alphaBarHTML(list, pre){
+    if (!list.length) return '';
+    var seen = {}, order = [];
+    list.forEach(function(p){
+      var a = alphaOf(p);
+      if (!seen[a]){ seen[a] = 1; order.push(a); }
+    });
+    if (order.length < 3) return '';
+    return '<div class="alzbar">' + order.map(function(a){
+      return '<button data-az="' + (pre || 'az') + '-' + a + '">' + a + '</button>';
+    }).join('') + '</div>';
+  }
+  function wireAlphaBar(root){
+    var body = root.querySelector('.vbody');
+    Array.prototype.forEach.call(root.querySelectorAll('[data-az]'), function(b){
+      b.addEventListener('click', function(){
+        var t = root.querySelector('#' + b.getAttribute('data-az'));
+        if (!t || !body) return;
+        /* offsetTop is relative to the nearest positioned ancestor, which
+           is the scroller here - so it is the scroll position wanted. */
+        body.scrollTop = Math.max(0, t.offsetTop - 4);
+      });
+    });
+  }
+
   function sortSegHTML(){
     return '<div class="hseg sortseg"><span class="grp">'
          + '<button data-sortby="name"' + (sortBy === 'name' ? ' class="on"' : '') + '>By name</button>'
@@ -15780,6 +16099,47 @@ var PROC_META={
     return t ? ('tel:' + t) : '';
   }
   /* one builder, both hosts - the card's Info tab and the airport page */
+  /* The five nearest fields, which is the question you ask when the one
+     you are looking at will not have you. Distance and bearing from it,
+     in the frame you fly. */
+  function nearFieldsHTML(f){
+    var near = DB.filter(function(p){
+      return (p.cat === 'field' || p.cat === 'strip') && p.id !== f.id;
+    }).map(function(p){
+      return { p:p, d:nmBetween(f, p) };
+    }).sort(function(a, b){ return a.d - b.d; }).slice(0, 5);
+    if (!near.length) return '';
+    var h = '<div class="csec">Nearest fields</div>';
+    near.forEach(function(n){
+      h += '<button class="nfrow" data-ap2="' + n.p.id + '">'
+        +  '<span class="id">' + esc(n.p.id) + '</span>'
+        +  '<span class="nm">' + esc(n.p.nm || '') + '</span>'
+        +  '<span class="d">' + n.d.toFixed(0) + '<u>nm</u></span>'
+        +  '<span class="b">' + crsTxt(trkBetween(f, n.p), f.lat, f.lon) + '</span>'
+        +  '</button>';
+    });
+    return h;
+  }
+
+  /* Light today and for the next three days. First and last light rather
+     than sunrise and sunset, because that is what decides the job. */
+  function solarHTML(f){
+    var h = '<div class="csec">Light</div><div class="solar">';
+    for (var i = 0; i < 4; i++){
+      var d = new Date(Date.now() + i * 86400000);
+      var tw = sunTimes(f.lat, f.lon, d, 96);
+      if (!tw) continue;
+      h += '<div class="srow2' + (i === 0 ? ' today' : '') + '">'
+        +  '<span class="dy">' + (i === 0 ? 'Today'
+             : d.toUTCString().slice(0, 3) + ' ' + d.getUTCDate()) + '</span>'
+        +  '<span class="t">' + hhmmLocal(tw[0], 600) + '</span>'
+        +  '<span class="t">' + hhmmLocal(tw[1], 600) + '</span>'
+        +  '</div>';
+    }
+    return h + '</div><div class="cnote">First light and last light, local. '
+      + 'Civil twilight, computed from the position - not a published table.</div>';
+  }
+
   function fldBlockHTML(id){
     if (!id) return '';
     var h = '<div class="csec">Contact</div>';
@@ -15952,21 +16312,24 @@ var PROC_META={
       if (!items.length) return h + '<div class="cempty">No match</div>';
       var withFq = items.filter(function(p){ return allFreqFor(p.id).length; });
       var without = items.filter(function(p){ return !allFreqFor(p.id).length; });
-      function rowsFor(list, label){
+      function fqRow(p){
+        var n = allFreqFor(p.id).length, mine = myFreqFor(p.id).length;
+        return '<button class="fqfield" data-fqf="' + p.id + '">'
+          +  '<span class="id">' + p.id + '</span>'
+          +  '<span class="nm2">' + p.nm + '</span>'
+          +  '<span class="n' + (mine ? ' mine' : '') + '">' + (n || '\u2014') + '</span></button>';
+      }
+      function rowsFor(list, label, pre, lettered){
         if (!list.length) return '';
         var r = '<div class="fqgrp">' + label
               + '<span class="cnt">' + list.length + '</span></div>';
-        list.forEach(function(p){
-          var n = allFreqFor(p.id).length, mine = myFreqFor(p.id).length;
-          r += '<button class="fqfield" data-fqf="' + p.id + '">'
-            +  '<span class="id">' + p.id + '</span>'
-            +  '<span class="nm2">' + p.nm + '</span>'
-            +  '<span class="n' + (mine ? ' mine' : '') + '">' + (n || '\u2014') + '</span></button>';
-        });
+        r += lettered ? alphaRows(list, fqRow, pre) : list.map(fqRow).join('');
         return r;
       }
-      h += rowsFor(withFq, 'With frequencies')
-        +  rowsFor(without, 'No frequency on file');
+      /* the short group reads fine as a run; the 560 do not */
+      if (!q) h += alphaBarHTML(without, 'fqz');
+      h += rowsFor(withFq, 'With frequencies', 'fqw', false)
+        +  rowsFor(without, 'No frequency on file', 'fqz', !q);
       return h;
     }
 
@@ -16000,6 +16363,7 @@ var PROC_META={
     function again(){ body.innerHTML = freqsHTML(); wireFreqs(el); }
     el._fqAgain = again;
     wireSortSeg(el, again);
+    wireAlphaBar(el);
 
     Array.prototype.forEach.call(el.querySelectorAll('[data-fqf]'), function(b){
       b.addEventListener('click', function(){ fqField = b.getAttribute('data-fqf'); again(); });
@@ -17394,7 +17758,7 @@ var PROC_META={
       return { p:p, d:nmBetween(here, p), b:trkBetween(here, p) };
     });
     if (npMode === 'near') items.sort(function(a, b){ return a.d - b.d; });
-    if (npMode === 'all')  items.sort(function(a, b){ return sortCmp(a.p, b.p); });
+    if (npMode === 'all')  items.sort(function(a, b){ return nameCmp(a.p, b.p); });
     if (npMode === 'near') items = items.slice(0, 20);
 
     var h = '<div class="apsearch' + (apShow ? ' show' : '') + '" id="apSearch">'
@@ -17405,7 +17769,6 @@ var PROC_META={
           +   'autocapitalize="characters" autocorrect="off" spellcheck="false">'
           + '<button class="x' + (apQuery ? ' on' : '') + '" id="apQX" aria-label="Clear">&times;</button>'
           + '</div></div>'
-          + (npMode === 'all' ? sortSegHTML() : '')
           + '<div class="npseg">' + modes.map(function(m){
       return '<button data-np="' + m[0] + '"' + (npMode === m[0] ? ' class="on"' : '') + '>'
            + m[1] + '</button>';
@@ -17417,6 +17780,23 @@ var PROC_META={
       return h;
     }
 
+    /* only the All list is alphabetical; Nearest is ordered by distance
+       and Recent by when you looked, and a letter over either would be
+       describing an order that is not there */
+    var alpha = (npMode === 'all' && !aq);
+    if (alpha){
+      var seenAz = {}, azOrder = [];
+      items.forEach(function(x){
+        var a2 = alphaName(x.p);
+        if (!seenAz[a2]){ seenAz[a2] = 1; azOrder.push(a2); }
+      });
+      if (azOrder.length > 2){
+        h += '<div class="alzbar">' + azOrder.map(function(a2){
+          return '<button data-az="apz-' + a2 + '">' + a2 + '</button>';
+        }).join('') + '</div>';
+      }
+    }
+    var lastAz = null;
     items.forEach(function(it){
       var p = it.p, fi = FIELD_INFO[p.id];
       var dot = 'var(--text-fainter)';
@@ -17429,6 +17809,13 @@ var PROC_META={
       if (rws && rws[0].e && rws[0].e.length === 4) rwy = rwyLenM(rws[0]).toLocaleString() + ' m';
       else if (rws) rwy = rws[0].l + '/' + rws[0].h;
       else rwy = (p.cat === 'strip' ? 'Strip' : '\u2014');
+      if (alpha){
+        var az = alphaName(p);
+        if (az !== lastAz){
+          lastAz = az;
+          h += '<div class="alz" id="apz-' + az + '">' + az + '</div>';
+        }
+      }
       h += '<button class="nprow" data-ap="' + p.id + '">'
         +  '<span class="npdot" style="background:' + dot + '"></span>'
         +  '<span class="npid">' + p.id + '</span>'
@@ -17445,6 +17832,7 @@ var PROC_META={
   function wireAirports(el){
     if (apPage){ apPageWire(el); return; }
     wireSortSeg(el, function(){ rerenderAirports(el); });
+    wireAlphaBar(el);
     Array.prototype.forEach.call(el.querySelectorAll('.npseg button'), function(b){
       b.addEventListener('click', function(){
         npMode = b.getAttribute('data-np');
@@ -17599,6 +17987,9 @@ var PROC_META={
     h += '<div class="aphead">'
       +  '<div class="apid">' + esc(f.id) + '</div>'
       +  '<div class="apnm">' + esc(f.nm || '') + '</div>'
+      +  '<div class="apel">'
+      +    (fi && fi.elev != null ? fi.elev.toLocaleString() + '\' MSL'
+          : (typeof f.el === 'number' ? f.el.toLocaleString() + '\'' : '')) + '</div>'
       +  '<div class="apsub">'
       +    (f.mu && f.mu.toUpperCase() !== (f.nm || '').toUpperCase()
             ? esc(f.mu) + ' \u00b7 ' : '')
@@ -17912,7 +18303,7 @@ var PROC_META={
      not use. It is also where the layout editors live, because arranging
      the app is one job and it was odd to find half of it under Settings
      beside the fuel burn. */
-  var MORE_ORDER_KEY = 'nmp.iphone.moreorder', MORE_HIDE_KEY = 'nmp.iphone.morehide';
+  var MORE_ORDER_KEY = 'nmp.iphone.moreorder';
   var VIEW_CAT = {
     map:'Flying', gps:'Flying', airports:'Flying', freq:'Flying',
     holds:'Flying', chk:'Flying',
@@ -17927,22 +18318,20 @@ var PROC_META={
     catch(_){ }
     return [];
   })();
-  var moreHide = (function(){
-    try { var o = JSON.parse(localStorage.getItem(MORE_HIDE_KEY)); if (o && typeof o === 'object') return o; }
-    catch(_){ }
-    return {};
-  })();
   function moreSaveOrder(){
     try { localStorage.setItem(MORE_ORDER_KEY, JSON.stringify(moreOrder)); } catch(_){ }
   }
-  function moreSaveHide(){
-    try { localStorage.setItem(MORE_HIDE_KEY, JSON.stringify(moreHide)); } catch(_){ }
-  }
+
   /* Views in a category, in the user's order, with anything new falling
      in at the end rather than vanishing. */
   function moreCatViews(cat){
     var mine = VIEWS.filter(function(v){
-      return MORE_TILES.indexOf(v.k) < 0 && (VIEW_CAT[v.k] || 'Other') === cat;
+      /* A view that is in the bottom bar is not also in the list. It was
+         in both, which is why the list ran to fourteen rows for eleven
+         places to go. */
+      return MORE_TILES.indexOf(v.k) < 0
+          && barKeys().indexOf(v.k) < 0
+          && (VIEW_CAT[v.k] || 'Other') === cat;
     });
     mine.sort(function(a, b){
       var ia = moreOrder.indexOf(a.k), ib = moreOrder.indexOf(b.k);
@@ -17953,6 +18342,82 @@ var PROC_META={
     });
     return mine;
   }
+  /* ---- Drag a view into place ---------------------------------------
+     The grip owns the gesture, so there is no long press to wait out and
+     no chance of a scroll stealing it: touch-action is off on the handle
+     alone, and the list still scrolls everywhere else.
+
+     The row is moved as you cross another row rather than on release, so
+     what you see under your finger is the order you are choosing. Moves
+     are within the group - Flying, Planning, Data - because the groups
+     are what make the list readable and dragging Notes into Flying would
+     be dragging it into the wrong question. */
+  /* ---- The bottom bar, as the first group in the list ----------------
+     The bar's slots are the thing you reach for most, so they sit at the
+     top of the editor and take the same grip as everything else. Drag a
+     view up into the bar and the one it lands on comes back down to the
+     list - the bar holds a fixed number of places and a swap is the only
+     honest way to fill one that is already taken.
+
+     tabCfg is the same store the old Edit bottom bar screen wrote, so
+     nothing has to be set up again. */
+  function barKeys(){ return tabCfg.slice(0, tabSlots()); }
+  function barSwap(inKey, slotKey){
+    var cfg = tabCfg.slice(), i = cfg.indexOf(slotKey), j = cfg.indexOf(inKey);
+    if (i < 0) return false;
+    if (j >= 0){                       /* both in the bar: reorder */
+      cfg[i] = inKey; cfg[j] = slotKey;
+    } else {                           /* from the list: take the slot */
+      cfg[i] = inKey;
+      cfg.push(slotKey);               /* the displaced view keeps a home */
+    }
+    tabCfg = cfg;
+    saveCfg();
+    try { renderTabs(); } catch(_){ }
+    return true;
+  }
+
+  var mDrag = null;
+  function moreDragStart(k, y, root){
+    mDrag = { k:k, y:y, cat:(VIEW_CAT[k] || 'Other'), bar:(barKeys().indexOf(k) >= 0) };
+    var row = root.querySelector('[data-rowk="' + k + '"]');
+    if (row) row.classList.add('dragging');
+  }
+  function moreDragMove(y, root){
+    if (!mDrag) return;
+    var over = document.elementFromPoint(window.innerWidth / 2, y);
+    var row = over && over.closest ? over.closest('[data-rowk]') : null;
+    if (!row) return;
+    var k2 = row.getAttribute('data-rowk');
+    if (!k2 || k2 === mDrag.k) return;
+    /* crossing a bar slot: take it, and send its occupant back down */
+    if (row.getAttribute('data-bar')){
+      if (barSwap(mDrag.k, k2)){
+        buildMore();
+        var b2 = root.querySelector('[data-rowk="' + mDrag.k + '"]');
+        if (b2) b2.classList.add('dragging');
+      }
+      return;
+    }
+    /* a bar view dragged onto the list leaves the bar the same way */
+    if (barKeys().indexOf(mDrag.k) >= 0) return;
+    if ((VIEW_CAT[k2] || 'Other') !== mDrag.cat) return;
+    var list = moreCatViews(mDrag.cat).map(function(v){ return v.k; });
+    var from = list.indexOf(mDrag.k), to = list.indexOf(k2);
+    if (from < 0 || to < 0) return;
+    moreMove(mDrag.k, to - from);
+    buildMore();
+    var again = root.querySelector('[data-rowk="' + mDrag.k + '"]');
+    if (again) again.classList.add('dragging');
+  }
+  function moreDragEnd(root){
+    if (!mDrag) return;
+    mDrag = null;
+    Array.prototype.forEach.call(root.querySelectorAll('.dragging'), function(el){
+      el.classList.remove('dragging');
+    });
+  }
+
   function moreMove(k, d){
     var cat = VIEW_CAT[k] || 'Other';
     var list = moreCatViews(cat).map(function(v){ return v.k; });
@@ -17984,25 +18449,46 @@ var PROC_META={
   function buildMore(){
     if (!FLEET) { try { fleetLoad(); } catch(_){ } }
     var mh = '';
+    if (moreEdit){
+      var bk = barKeys();
+      mh += '<div class="scat">Bottom bar<span class="cnt2">' + bk.length
+         +  ' of ' + tabSlots() + '</span></div>';
+      bk.forEach(function(k){
+        mh += '<div class="srowwrap inbar" data-rowk="' + k + '" data-bar="1">'
+           +  '<button class="srow" disabled>'
+           +  '<span class="sq" style="background:' + (MORE_TINT[k] || 'var(--accent)') + '">'
+           +  svg(k) + '</span><span class="lb">' + vTitle(k) + '</span></button>'
+           +  '<button class="grip" data-grip="' + k + '" aria-label="Drag to reorder">'
+           +  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+           +  'stroke-width="1.8" stroke-linecap="round">'
+           +  '<path d="M5 9h14"/><path d="M5 15h14"/></svg></button>'
+           +  '</div>';
+      });
+      mh += '<div class="cnote">Drag a view up here to put it in the bar. '
+         +  'The one it lands on comes back to the list. More is always the last '
+         +  'slot and cannot be moved.</div>';
+    }
     MORE_CATS.forEach(function(cat){
       var list = moreCatViews(cat);
       if (!list.length) return;
-      var shown = list.filter(function(v){ return moreEdit || !moreHide[v.k]; });
-      if (!shown.length) return;
+      var shown = list;
       mh += '<div class="scat">' + cat + '</div>';
       shown.forEach(function(v, i){
-        var hidden = !!moreHide[v.k];
-        mh += '<div class="srowwrap' + (hidden ? ' off' : '') + '">'
+        /* One grip, and you drag. Two arrows moved a row one place per
+           tap, which is four taps to move Notes above Fuel; a grip moves
+           it in one gesture and takes a third of the width doing it.
+           Hiding is gone - a view you never open costs you one scroll,
+           and a list with things missing from it is a list you have to
+           remember the state of. */
+        mh += '<div class="srowwrap" data-rowk="' + v.k + '">'
             + '<button class="srow" data-go="' + v.k + '"' + (moreEdit ? ' disabled' : '') + '>'
             + '<span class="sq" style="background:' + (MORE_TINT[v.k] || 'var(--accent)') + '">'
-            + svg(v.k) + '</span>' + v.t + '</button>'
+            + svg(v.k) + '</span><span class="lb">' + v.t + '</span></button>'
             + (moreEdit
-               ? '<span class="sedit">'
-                 + '<button data-mv="' + v.k + '|-1"' + (i === 0 ? ' disabled' : '') + '>\u2191</button>'
-                 + '<button data-mv="' + v.k + '|1"'
-                 + (i === shown.length - 1 ? ' disabled' : '') + '>\u2193</button>'
-                 + '<button data-hide="' + v.k + '">' + (hidden ? 'Show' : 'Hide') + '</button>'
-                 + '</span>'
+               ? '<button class="grip" data-grip="' + v.k + '" aria-label="Drag to reorder">'
+                 + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                 + 'stroke-width="1.8" stroke-linecap="round">'
+                 + '<path d="M5 9h14"/><path d="M5 15h14"/></svg></button>'
                : '')
             + '</div>';
       });
@@ -18010,7 +18496,10 @@ var PROC_META={
     if (moreEdit){
       /* Arranging the app is one job. These used to sit under Settings
          beside the fuel burn, which is not where anyone looks for them. */
-      mh += '<div class="scat">Layout</div>'
+      mh += '<div class="scat">Order</div>'
+         +  '<button class="setgo" id="moreReset">Reset to the default order'
+         +    '<span class="ch">\u21ba</span></button>'
+         +  '<div class="scat">Layout</div>'
          +  '<button class="setgo" data-go2="tabs">Bottom bar<span class="ch">\u203a</span></button>'
          +  '<button class="setgo" data-go2="acty">Activity bar<span class="ch">\u203a</span></button>'
          +  '<button class="setgo" data-go2="rail">Layer rail<span class="ch">\u203a</span></button>'
@@ -18025,20 +18514,49 @@ var PROC_META={
     wireMore();
   }
   function wireMore(){
-  $$('#moreList [data-mv]').forEach(function(b){
-    b.addEventListener('click', function(){
-      var p = b.getAttribute('data-mv').split('|');
-      moreMove(p[0], parseInt(p[1], 10));
+  var rst = $('#moreReset');
+  if (rst) rst.addEventListener('click', function(){
+    /* Arm-then-fire, like every other undoable-once action in the app.
+       Nothing is lost that cannot be redone in a few drags, but a list
+       you have arranged is still work, and one stray tap should not
+       undo it. */
+    if (rst._armed){
+      moreOrder = [];
+      moreSaveOrder();
       buildMore();
-    });
+      toast('Back to the default order');
+      return;
+    }
+    rst._armed = true;
+    rst.classList.add('arm');
+    rst.firstChild.nodeValue = 'Tap again to reset';
+    setTimeout(function(){
+      if (!rst || !rst._armed) return;
+      rst._armed = false;
+      rst.classList.remove('arm');
+      try { rst.firstChild.nodeValue = 'Reset to the default order'; } catch(_){ }
+    }, 3000);
   });
-  $$('#moreList [data-hide]').forEach(function(b){
-    b.addEventListener('click', function(){
-      var k = b.getAttribute('data-hide');
-      if (moreHide[k]) delete moreHide[k]; else moreHide[k] = 1;
-      moreSaveHide(); buildMore();
-    });
+
+  var moreRoot = $('#sheetMore');
+  $$('#moreList [data-grip]').forEach(function(g){
+    g.addEventListener('touchstart', function(e){
+      var t = e.touches && e.touches[0]; if (!t) return;
+      moreDragStart(g.getAttribute('data-grip'), t.clientY, moreRoot);
+    }, { passive:true });
   });
+  if (moreRoot && !moreRoot._dragWired){
+    moreRoot._dragWired = true;
+    moreRoot.addEventListener('touchmove', function(e){
+      if (!mDrag) return;
+      e.preventDefault();
+      var t = e.touches && e.touches[0]; if (!t) return;
+      moreDragMove(t.clientY, moreRoot);
+    }, { passive:false });
+    ['touchend', 'touchcancel'].forEach(function(ev){
+      moreRoot.addEventListener(ev, function(){ moreDragEnd(moreRoot); });
+    });
+  }
   $$('#moreList .setgo[data-go2]').forEach(function(b){
     b.addEventListener('click', function(){ setGo2(b.getAttribute('data-go2')); });
   });

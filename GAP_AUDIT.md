@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v205 · 3 Aug 2026**
+**Status as of v213 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,14 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v213 | **Slot editor**, in the reference shape: the bottom bar is the first group in the More editor, with the same grip. Dragging a view onto a slot swaps — the displaced view returns to the list. A view in the bar no longer also appears in the list. Writes `tabCfg`, the same store the old Edit-bottom-bar screen used. More keeps the last slot and cannot be moved. |
+| v212 | **Reset to the default order** in the More editor, armed before it fires. From the same reference: Cancel/Save deliberately not copied (edits commit as you go, nothing destructive to abandon); the bottom-bar slots as the list's first group — the slot editor — logged as its own round of work. |
+| v211 | **Regression fixed (mine, v206):** wrapping the More-list label so it could truncate made it inherit the row's centring, so every name jumped to the middle — `text-align:left`. Edit mode now has **one grip and a drag** instead of two arrows and an eye; the row moves as you cross another, within its group only. **Hiding removed entirely** — anything hidden before is back. |
+| v210 | The Procedure tab is the document list and nothing else — the ENR 4.3 minima block (DA, MDA, glidepath, TCH, threshold elevation) and the fix table are no longer rendered on the card. The dataset is untouched and the IFR procedure picker still reads it. |
+| v209 | The **By name / By code** control is gone from Airports — the list is always alphabetical by name, using an explicit comparator rather than the shared setting, so nothing switched elsewhere can reorder it. The letter headings derive from the same explicit key. Frequencies keeps its control for now. |
+| v208 | Airport card built to spec: **Nearest fields** (five closest, distance and bearing, each opens that field) and **Light** (today plus three days, first/last light) on Info; **Procedure sub-tabs** Airport/Departure/Arrival/Approach/Other with counts, all five always shown; **NOTAM links to NiuSky Pacific**; elevation added to the page header. Weather TAF/Daily/Winds deferred pending the v262 model check. |
+| v207 | Airports (All) and the frequency list are broken up alphabetically: a **sticky letter heading** so the letter you are in stays on screen, and an **A–Z strip** above the list that jumps to it. The letter derives from the same key the list is sorted by, so headings cannot disagree with the order. Nearest, Recent and any filtered list get no headings — they are not alphabetical. |
+| v206 | More sheet edit mode rebuilt: the row label was a bare text node (so it ran under the buttons instead of truncating) and now truncates properly; the three outlined buttons became one joined group of two arrows and an eye; a hidden view dims and carries a HIDDEN tag rather than its button changing to Show. |
 | v205 | **Procedures is the document list**: Airport / Departure / Arrival / Approach / Other first, with the ENR 4.3 fixes and minima moved below under their own heading. **Frequency headings stop repeating themselves** — a group holding one row whose label adds nothing (GROUND / GND) collapses to a single line; distinctive labels and multi-row groups are unchanged. |
 | v204 | **Fuel and contact is one record**: a single editor holding Company, Phone, Fuel and Notes, headed by the field's ident. The card shows company over number; the number is a real `tel:` link so iOS raises its own Call/Cancel sheet, dialling digits only while displaying what was typed. The **TWR pill under the card title is gone** — every frequency is on the Info tab, grouped. |
 | v203 | Card frequencies grouped by call type (Information / Clearance / Ground / Tower / Approach / Area / Common, with Other catching anything unmatched). Runway card now names the favoured end — **Best wind**, only when that end actually has a headwind — with head and cross split onto separate lines and the wind used stated above them. |
