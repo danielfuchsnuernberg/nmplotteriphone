@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v231 · 3 Aug 2026**
+**Status as of v233 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,8 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v233 | The Bars and sizing page ran edge-to-edge — its title was inset and its content was not, because the shared sheet body has no gutter and the page assumed one. Wrapped in its own padded page (`.dgrpad`) rather than padding the body for every sheet. Same lesson as the MY NOTES block in v177. |
+| v232 | **Bug found:** v227 tinted the rail *symbol* with the live set's colour, but the rail fills the whole cell when a layer is on — an amber glyph on an amber fill, so every lit layer read as a blank tile. IFR's cells were amber too because the class meant to turn them blue was never applied to the column. The set now tints the cell (symbol stays dark) and the column carries the set as a class. |
 | v231 | The first heading in a sheet body sat flush against the title bar (third instance of this fault after v222 and v205). Fixed as a **rule on `.dgrbody`** rather than a margin typed into one builder, so the next sheet inherits it. |
 | v230 | The **Bars and sizing** row now matches every view row above it — tinted tile, symbol, label — instead of being a settings-style row with a chevron. Steel tint rather than one of the flying colours, signalling set-up rather than something reached for in the air. |
 | v229 | The six layout editors collapse to a single **Bars and sizing** row in the More sheet, opening a page that groups them: four bars you arrange, two sizes you set. One tap deeper for the things touched least. |

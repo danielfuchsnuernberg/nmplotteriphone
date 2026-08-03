@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v231 · 3 Aug 2026**.
+Status as of **v233 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -145,6 +145,8 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Bars page ran to the screen edge | v233 | Wrapped in a padded page of its own |
+| Rail symbols invisible on lit cells | v232 | Set tints the cell, not the glyph; column carries the set |
 | Heading flush under a sheet title, third time | v231 | Fixed as a rule on the sheet body, not per builder |
 | Layout row did not match the view rows | v230 | Tinted tile, symbol, label — same as every view |
 | Six layout rows cluttering the More sheet | v229 | One row, Bars and sizing, opening a page |

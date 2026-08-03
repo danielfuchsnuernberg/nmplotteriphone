@@ -22,6 +22,35 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v233 2026-08-03 The bars page ran to the edge of the screen.
+
+                       Its title was inset and everything under it was
+                       not - because the gutter belongs to the host, and
+                       the sheet body it was built into has none. The
+                       leg card and the zone cards bring their own; this
+                       page did not, and assumed.
+
+                       Same lesson as the MY NOTES block in v177: a
+                       builder cannot assume its container is padded. It
+                       is wrapped in a page of its own now, padded, so
+                       the next thing built into that body can do the
+                       same without changing the body for everyone.
+       v232 2026-08-03 Every layer that was on looked like an empty amber
+                       block.
+
+                       v227 tinted the SYMBOL with the live set's colour.
+                       The rail has always filled the whole cell when a
+                       layer is on, so that painted an amber glyph on an
+                       amber button - the symbol disappeared into its own
+                       background and five layers read as five blank
+                       tiles. On the IFR rail they were amber too, since
+                       the class that was meant to turn them blue was
+                       never put on the column.
+
+                       The set colours the CELL now, and the symbol stays
+                       dark against it, which is how this rail has always
+                       read. The column carries the set as a class, so one
+                       rule tints everything inside it.
        v231 2026-08-03 A heading with no air under the title bar. Again.
 
                        Bars and sizing, then BARS, flush. Same fault as
@@ -5849,7 +5878,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .dgrbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;padding-bottom:16px}
 .dgrbody > .csec:first-child,
-.dgrbody > .cnote:first-child{margin-top:12px}
+.dgrbody > .cnote:first-child,
+.dgrpad > .csec:first-child{margin-top:12px}
+/* a padded page inside the shared sheet body, for content that has no
+   gutter of its own */
+.dgrpad{padding:0 var(--edge)}
 /* NOT .dgr. That name was already taken by the danger-area rectangle on
    the map - position:absolute, a red border, and pointer-events:none.
    An action row wearing it was absolutely positioned against the page,
@@ -6074,9 +6107,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .rb.rset .lab{font-size:var(--t-2xs);letter-spacing:.12em}
 .rb.rset.on{background:var(--accent);color:#0a0e13}
 .rb.rset.ifr.on{background:var(--accent-2);color:#0a0e13}
-/* the live set colours the layers under it */
-#railLyr .rb.lyr.on{color:var(--accent)}
-#railLyr.ifr .rb.lyr.on{color:var(--accent-2)}
+/* The live set colours the CELL, not the symbol. Colouring the symbol
+   painted it accent-on-accent - an amber glyph on an amber button - so
+   every layer that was on looked like an empty amber block. The symbol
+   stays dark against a filled cell, which is how this rail has always
+   read; only the fill changes with the set. */
+#railLyr.ifr .rb.lyr.on{background:var(--accent-2);color:#0a0e13}
 .rb .tick{font-family:var(--mono);font-size:var(--t-xs);color:var(--text-dim)}
 .rb.on .tick{color:#0a0e13}
 
@@ -8200,7 +8236,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v231-ROT';
+  var VERSION = 'v233-ROT';
   var BUILD   = '2026-08-03';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -13398,6 +13434,9 @@ var PROC_META={
      from inside the rail, and the column closes under your finger. */
   function buildRail(){
     var host = $('#railLyr'); if (!host) return;
+    /* the set is a class on the column, so one rule can tint everything
+       inside it rather than every builder remembering */
+    host.classList.toggle('ifr', railSet === 'ifr');
     host.innerHTML =
         '<button class="rb rset' + (railSet === 'vfr' ? ' on' : '') + '" data-rset="vfr">'
       +   '<span class="lab">VFR</span></button>'
@@ -19632,7 +19671,12 @@ var PROC_META={
      you arrange and two are sizes you set, and those are different jobs
      that happened to be filed together. */
   function openBarsSheet(){
-    var h = '<div class="csec">Bars</div>'
+    /* The gutter belongs to the host, and this sheet's body has none -
+       so everything in it started at the screen edge while the title
+       above it sat properly inset. Same lesson as the MY NOTES block in
+       v177: a builder cannot assume its container is padded. */
+    var h = '<div class="dgrpad">'
+      + '<div class="csec">Bars</div>'
       + '<button class="setgo" data-go2="tabs">Bottom bar'
       +   '<span class="ch">\u203a</span></button>'
       + '<button class="setgo" data-go2="acty">Activity bar'
@@ -19647,7 +19691,8 @@ var PROC_META={
       + '<button class="setgo" data-go2="metrics">Layout metrics'
       +   '<span class="ch">\u203a</span></button>'
       + '<div class="cnote">Each one opens its own editor. Nothing here changes '
-      + 'what the app can do \u2014 only where your thumb finds it.</div>';
+      + 'what the app can do \u2014 only where your thumb finds it.</div>'
+      + '</div>';
     $('#dgrTitle').textContent = 'Bars and sizing';
     $('#dgrBody').innerHTML = h;
     $$('#dgrBody .setgo[data-go2]').forEach(function(b){
