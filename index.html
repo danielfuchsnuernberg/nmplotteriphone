@@ -22,6 +22,39 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v215 2026-08-03 The drag actually works, and the groups are not a
+                       fence.
+
+                       IT WAS LOOKING IN THE WRONG PLACE. The row under
+                       the finger was found with elementFromPoint at the
+                       middle of the WINDOW - and the More sheet is a
+                       right-hand panel, so the middle of the window is
+                       the map behind it. It found nothing most of the
+                       time, which is exactly why the drag half worked.
+                       It uses the finger's own x now.
+
+                       AND YOU CAN MOVE A VIEW ANYWHERE. Crossing into
+                       another group moves the view into that group and
+                       remembers it. Flying, Planning and Data are a way
+                       of reading fourteen rows, not a rule about what
+                       belongs where - if Notes is something you reach
+                       for in the air, it can live under Flying.
+
+                       Reset puts both back: the order and the groups.
+       v214 2026-08-03 Charts came back.
+
+                       v213 took the bar's views out of the list below
+                       it, on the reasoning that a view should not be in
+                       two places at once. The first thing that happened
+                       is that Charts vanished from where you look for
+                       Charts.
+
+                       Reachable somewhere else is not the same as being
+                       where you expect it, and a tidier list is worth
+                       nothing if the thing you wanted is not in it. The
+                       list is complete again. The bar group stays at the
+                       top for arranging; what is in it is also still
+                       listed under its category.
        v213 2026-08-03 The bottom bar is the first group in the list.
 
                        The slot editor, in the shape you sent: the bar's
@@ -7763,7 +7796,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v213';
+  var VERSION = 'v215';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -18324,14 +18357,31 @@ var PROC_META={
 
   /* Views in a category, in the user's order, with anything new falling
      in at the end rather than vanishing. */
+  /* Which group a view sits in: yours if you have moved it, otherwise
+     the one it was built with. */
+  var MORE_CAT_KEY = 'nmp.iphone.morecat';
+  var moreCat = (function(){
+    try { var o = JSON.parse(localStorage.getItem(MORE_CAT_KEY)); if (o && typeof o === 'object') return o; }
+    catch(_){ }
+    return {};
+  })();
+  function moreSaveCat(){
+    try { localStorage.setItem(MORE_CAT_KEY, JSON.stringify(moreCat)); } catch(_){ }
+  }
+  function catOfView(k){
+    var c = moreCat[k];
+    if (c && MORE_CATS.indexOf(c) >= 0) return c;
+    return VIEW_CAT[k] || 'Other';
+  }
+
   function moreCatViews(cat){
     var mine = VIEWS.filter(function(v){
-      /* A view that is in the bottom bar is not also in the list. It was
-         in both, which is why the list ran to fourteen rows for eleven
-         places to go. */
-      return MORE_TILES.indexOf(v.k) < 0
-          && barKeys().indexOf(v.k) < 0
-          && (VIEW_CAT[v.k] || 'Other') === cat;
+      /* v214: back in. v213 took bar views out of the list on the
+         reasoning that they were in two places at once - and the first
+         thing that happened is that Charts went missing from where you
+         look for it. A view being reachable somewhere else is not the
+         same as it being where you expect it. The list is complete. */
+      return MORE_TILES.indexOf(v.k) < 0 && catOfView(v.k) === cat;
     });
     mine.sort(function(a, b){
       var ia = moreOrder.indexOf(a.k), ib = moreOrder.indexOf(b.k);
@@ -18378,14 +18428,21 @@ var PROC_META={
   }
 
   var mDrag = null;
-  function moreDragStart(k, y, root){
-    mDrag = { k:k, y:y, cat:(VIEW_CAT[k] || 'Other'), bar:(barKeys().indexOf(k) >= 0) };
+  function moreDragStart(k, y, root, x){
+    mDrag = { k:k, y:y, x:(x == null ? 0 : x),
+              cat:catOfView(k), bar:(barKeys().indexOf(k) >= 0) };
     var row = root.querySelector('[data-rowk="' + k + '"]');
     if (row) row.classList.add('dragging');
   }
-  function moreDragMove(y, root){
+  function moreDragMove(y, root, x){
     if (!mDrag) return;
-    var over = document.elementFromPoint(window.innerWidth / 2, y);
+    /* THE FINGER'S OWN X. This looked for the row under the middle of the
+       WINDOW - and the More sheet is a right-hand panel, so on a phone
+       and on a tablet alike the middle of the window is the map behind
+       it. It found nothing, most of the time, which is why the drag
+       barely worked. */
+    var over = document.elementFromPoint(
+      (x == null ? mDrag.x : x), y);
     var row = over && over.closest ? over.closest('[data-rowk]') : null;
     if (!row) return;
     var k2 = row.getAttribute('data-rowk');
@@ -18401,7 +18458,15 @@ var PROC_META={
     }
     /* a bar view dragged onto the list leaves the bar the same way */
     if (barKeys().indexOf(mDrag.k) >= 0) return;
-    if ((VIEW_CAT[k2] || 'Other') !== mDrag.cat) return;
+    /* FREE MOVEMENT. Crossing into another group moves the view into it -
+       the groups are a way of reading the list, not a fence. Flying,
+       Planning and Data are yours to fill. */
+    var c2 = catOfView(k2);
+    if (c2 !== mDrag.cat){
+      moreCat[mDrag.k] = c2;
+      moreSaveCat();
+      mDrag.cat = c2;
+    }
     var list = moreCatViews(mDrag.cat).map(function(v){ return v.k; });
     var from = list.indexOf(mDrag.k), to = list.indexOf(k2);
     if (from < 0 || to < 0) return;
@@ -18419,7 +18484,7 @@ var PROC_META={
   }
 
   function moreMove(k, d){
-    var cat = VIEW_CAT[k] || 'Other';
+    var cat = catOfView(k);
     var list = moreCatViews(cat).map(function(v){ return v.k; });
     var i = list.indexOf(k), j = i + d;
     if (i < 0 || j < 0 || j >= list.length) return;
@@ -18465,8 +18530,9 @@ var PROC_META={
            +  '</div>';
       });
       mh += '<div class="cnote">Drag a view up here to put it in the bar. '
-         +  'The one it lands on comes back to the list. More is always the last '
-         +  'slot and cannot be moved.</div>';
+         +  'The one it lands on swaps out. Views in the bar are still listed '
+         +  'below as well - the bar is where they are quickest to reach, not the '
+         +  'only place they exist. More is always the last slot.</div>';
     }
     MORE_CATS.forEach(function(cat){
       var list = moreCatViews(cat);
@@ -18522,7 +18588,8 @@ var PROC_META={
        undo it. */
     if (rst._armed){
       moreOrder = [];
-      moreSaveOrder();
+      moreCat = {};
+      moreSaveOrder(); moreSaveCat();
       buildMore();
       toast('Back to the default order');
       return;
@@ -18542,7 +18609,7 @@ var PROC_META={
   $$('#moreList [data-grip]').forEach(function(g){
     g.addEventListener('touchstart', function(e){
       var t = e.touches && e.touches[0]; if (!t) return;
-      moreDragStart(g.getAttribute('data-grip'), t.clientY, moreRoot);
+      moreDragStart(g.getAttribute('data-grip'), t.clientY, moreRoot, t.clientX);
     }, { passive:true });
   });
   if (moreRoot && !moreRoot._dragWired){
@@ -18551,7 +18618,7 @@ var PROC_META={
       if (!mDrag) return;
       e.preventDefault();
       var t = e.touches && e.touches[0]; if (!t) return;
-      moreDragMove(t.clientY, moreRoot);
+      moreDragMove(t.clientY, moreRoot, t.clientX);
     }, { passive:false });
     ['touchend', 'touchcancel'].forEach(function(ev){
       moreRoot.addEventListener(ev, function(){ moreDragEnd(moreRoot); });

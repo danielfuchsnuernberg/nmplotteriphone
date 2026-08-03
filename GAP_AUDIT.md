@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v213 · 3 Aug 2026**
+**Status as of v215 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,8 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v215 | **Bug found:** the drag's hit test used `elementFromPoint` at the middle of the *window*, but the More sheet is a right-hand panel — so it was testing the map behind it and found nothing most of the time. Now uses the finger's own x. Views can also be dragged **between** groups now and stay there; Reset restores both order and groups. |
+| v214 | **Reverted v213's list filter** — taking bar views out of the list made Charts vanish from where you look for it. Reachable elsewhere is not the same as being where expected. |
 | v213 | **Slot editor**, in the reference shape: the bottom bar is the first group in the More editor, with the same grip. Dragging a view onto a slot swaps — the displaced view returns to the list. A view in the bar no longer also appears in the list. Writes `tabCfg`, the same store the old Edit-bottom-bar screen used. More keeps the last slot and cannot be moved. |
 | v212 | **Reset to the default order** in the More editor, armed before it fires. From the same reference: Cancel/Save deliberately not copied (edits commit as you go, nothing destructive to abandon); the bottom-bar slots as the list's first group — the slot editor — logged as its own round of work. |
 | v211 | **Regression fixed (mine, v206):** wrapping the More-list label so it could truncate made it inherit the row's centring, so every name jumped to the middle — `text-align:left`. Edit mode now has **one grip and a drag** instead of two arrows and an eye; the row moves as you cross another, within its group only. **Hiding removed entirely** — anything hidden before is back. |

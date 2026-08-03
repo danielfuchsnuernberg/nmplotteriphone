@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v213 · 3 Aug 2026**.
+Status as of **v215 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -144,6 +144,8 @@ against it
 | Route chip sheet was a bare word list | v191 | Icons, headed groups, v184 rule |
 | Measure chip under the frequency window | v191 | Centred over what is left of the map |
 | Leg card's remove row escaping the card | v191 | Groups clip their children; tablet sheet clips |
+| Drag barely worked; groups were a fence | v215 | Hit test used the window centre, not the finger; views move between groups |
+| Bar views vanished from the list | v214 | My v213 mistake; the list is complete again |
 | Slot editor — bottom bar reconfigurable | v213 | Bar is the first group in the More editor; drag to swap |
 | No way back from a shuffled view order | v212 | Reset to the default order, arm-then-fire |
 | More list labels jumped to centre | v211 | My v206 regression; text-align:left |
