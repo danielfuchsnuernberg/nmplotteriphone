@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v199 · 3 Aug 2026**.
+Status as of **v205 · 3 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -57,6 +57,14 @@ against it
   bearing end-to-end and a running area would both be cheap.
 
 ## Needs a decision from you
+
+- **[D] Weather sub-tabs on the card** — ForeFlight splits METAR / TAF / MOS /
+  Daily / Winds. We hold METAR only. TAF would need a second feed through the
+  worker; winds aloft and MOS are model data, which is the Open-Meteo argument
+  again. Worth deciding what is wanted before any of it is built.
+- **[D] Density altitude on the weather tab** — computable from temperature,
+  QNH and elevation, all of which we already hold. Cheap, and useful out of a
+  hot strip.
 
 - **[D] Charts.** The largest thing v262 has that this does not: georeferenced
   plate overlay, calibration, `parsePlate`, the IndexedDB chart store. Needs a
@@ -128,6 +136,16 @@ against it
 | Route chip sheet was a bare word list | v191 | Icons, headed groups, v184 rule |
 | Measure chip under the frequency window | v191 | Centred over what is left of the map |
 | Leg card's remove row escaping the card | v191 | Groups clip their children; tablet sheet clips |
+| Procedures led with fixes, not documents | v205 | Plates first by category; ENR 4.3 fixes below |
+| GROUND over GND 121.7 said it twice | v205 | A lone generic label collapses into its heading |
+| Fuel and contact took two taps for one idea | v204 | One editor: company, phone, fuel, notes; phone dials |
+| TWR frequency repeated under the card title | v204 | Removed; every frequency lives on the Info tab |
+| Card frequencies a flat list | v203 | Grouped by call type, Other catches the rest |
+| Runway wind said H7 X3, not which end | v203 | Best wind marked, head and cross split |
+| Leg states told apart by weight, heavy casing | v202 | Magenta flying / cyan to come / grey flown, lighter casing |
+| Area CTAF showed a meaningless "2" | v201 | It was the array index; v262 shows no number either |
+| Six lines of explanation under the route list | v201 | One line stays, the rest folds behind a tap |
+| Fuel wheel headed with the last window's value | v200 | Own readout branch; unknown controls now clear it |
 | Fuel wheel ran past the tank | v198 | Usable fuel is a per-aircraft field, default 540 kg |
 | Fuel on board typed, not dialled | v197 | Wheel in tens, 0–1,200 kg, with quick steps |
 | No way to a point's card from the plan | v197 | Open the card row in the point sheet |

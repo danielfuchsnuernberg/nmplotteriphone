@@ -22,6 +22,149 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v205 2026-08-03 Procedures is the list of documents, and a
+                       frequency heading stops repeating itself.
+
+                       PROCEDURES NOW READS AS WHAT IT IS: Airport,
+                       Departure, Arrival, Approach, Other - the plates
+                       you would open, in that order. The ENR 4.3 fix
+                       lists and minima were in FRONT of them, which put
+                       a table of crossing altitudes where a list of
+                       documents belongs. They are still there, under
+                       their own heading, below the documents.
+
+                       AND GROUND OVER GND 121.7 IS THE SAME WORD TWICE.
+                       Where a group holds one row whose label says
+                       nothing the heading has not already said, the
+                       heading takes the frequency and the row goes. A
+                       label that DOES add something - JACKSONS TWR, LAE
+                       RDO, or one of your own - keeps its line, and so
+                       does any group with more than one entry.
+
+                       You are right that ForeFlight does it the long
+                       way. Copying the shape of another app is worth
+                       doing where the shape is the good idea; repeating
+                       a word because they repeat it is not.
+       v204 2026-08-03 One contact record, and the title block loses a
+                       frequency it did not need.
+
+                       FUEL AND CONTACT was two rows that each opened the
+                       same one-field window - two taps to change two
+                       things that belong together, and no room for the
+                       thing you actually want, which is who to ring.
+
+                       One editor now: Company, Phone, Fuel, Notes, with
+                       the field's own ident at the top of it. The card
+                       shows the two that matter at a glance - the
+                       company, and the number under it - and the rest
+                       only once you have filled it in.
+
+                       THE NUMBER IS A REAL LINK. A tel: href, so iOS
+                       puts up its own Call / Cancel sheet, the same one
+                       Maps uses. Everything that is not a digit is
+                       stripped for the link while the display keeps
+                       whatever you typed, so a number written the way
+                       you would say it still dials.
+
+                       AND THE TWR PILL UNDER THE NAME IS GONE. Every
+                       frequency the field has is on the Info tab now,
+                       grouped by what the call is for. One of them
+                       repeated in the title block was a second place to
+                       keep right and a line of chrome where the name
+                       should breathe.
+       v203 2026-08-03 Two things from the ForeFlight cards worth having.
+
+                       FREQUENCIES ARE GROUPED by what the call is FOR -
+                       information, clearance, ground, tower, approach,
+                       area, common - the way a plate lists them and the
+                       way you work down them on the ground. A flat list
+                       of five labels makes you read all five to find the
+                       one you want. Anything that does not match a group
+                       still shows, under Other, because a frequency you
+                       added with your own label must never vanish into a
+                       taxonomy.
+
+                       AND THE RUNWAY CARD SAYS WHICH END THE WIND
+                       FAVOURS. "H7 X3" is correct and it is not an
+                       answer; the answer is which way to point the
+                       aircraft, and that is one comparison the app can
+                       do for you. Best wind is marked, and only when the
+                       favoured end actually has a headwind - with the
+                       wind behind both ends there is no best, and
+                       claiming one would be worse than saying nothing.
+
+                       Headwind and crosswind are on their own lines now
+                       rather than run together: they are two different
+                       decisions, one about performance and one about
+                       limits.
+
+                       Not copied: 3D View, Taxiways, FBOs and Comments
+                       have no data behind them here, and a button that
+                       opens nothing is worse than no button.
+       v202 2026-08-03 Three colours for the three leg states, and a
+                       lighter casing.
+
+                       v172 gave the states three WEIGHTS of one amber
+                       and a heavy dark casing on the active leg. Weight
+                       is a weak signal on a phone and the casing read as
+                       an outline drawn around a bar.
+
+                       MAGENTA is the leg being flown, because magenta is
+                       what the Garmin puts on the active leg. The app
+                       agreeing with the panel you actually fly is worth
+                       more than the app being internally pretty.
+
+                       CYAN is still to come - the one colour on this map
+                       nothing else uses, so a route ahead cannot be
+                       mistaken for an airway, a zone or a terrain shade.
+
+                       GREY is flown. It has done its job and should stop
+                       competing for the eye.
+
+                       Amber stays on the waypoint markers and their
+                       labels, so the points still read as the plan while
+                       the lines say where you are in it. The casing is
+                       thinner and dimmer - enough to lift a line off
+                       satellite imagery, not enough to look drawn around
+                       it - and flown legs have none at all, since a
+                       dashed grey line does not need lifting off
+                       anything.
+       v201 2026-08-03 A zone number that meant nothing, and six lines of
+                       explanation where frequencies should be.
+
+                       AREA CTAF said "2". That is the array index of the
+                       zone in the dataset - the AIP does not number these
+                       areas and neither does v262, which shows the head,
+                       the frequency and the HF and nothing else. A number
+                       that looks like it means something and does not is
+                       worse than no number. It says Broadcast on now, and
+                       the HF list is joined with middots rather than
+                       commas, as v262 does.
+
+                       AND THE PARAGRAPH IS FOLDED. Six lines under the
+                       route list is six lines of frequencies you cannot
+                       see. What stays is the line you need in the air -
+                       green now, amber your active waypoint, tap to copy,
+                       advisory only. The rest sits behind What am I
+                       looking at?, which is remembered, so anyone who
+                       wants the long version keeps it.
+       v200 2026-08-03 The fuel wheel was headed 20:00Z.
+
+                       qkPaintVal knew about the hold courses, the
+                       altitude and the ETD, and nothing else. The fuel
+                       wheel fell off the end of that chain, so nothing
+                       was written to the readout - and the element still
+                       held the ETD from the last time the window had
+                       been open. 410 kg of fuel under a heading that
+                       said eight in the evening.
+
+                       Two changes. Fuel has its own branch and reads out
+                       in kilos. And anything the painter does not
+                       recognise now gets CLEARED rather than left alone,
+                       so the next control added to that window cannot
+                       inherit the last one's answer. A stale number under
+                       a big heading is worse than a blank one: it reads
+                       as an answer.
        v199 2026-08-03 Reversed v197's panel floor.
 
                        v197 added the header block plus another route row
@@ -4659,7 +4802,61 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .sortseg button{flex:1 1 0;height:32px;border-radius:6px;background:none;border:0;
   font-size:var(--t-xs);font-weight:600;color:var(--text-fainter)}
 .sortseg button.on{background:var(--accent);color:#0a0e13}
+/* A frequency group heading: smaller than a section, enough to break the
+   list into the order you work down it. */
+.fqgh{margin:12px 0 2px;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter)}
+.fqgh:first-child{margin-top:4px}
+/* the collapsed form: the heading IS the label, so it reads like one */
+.fqone .k{font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter)}
+/* A runway end and what the wind is doing to it. */
+.rwend{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;padding:7px 0;
+  border-bottom:1px solid var(--border)}
+.rwend .nm{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  color:var(--text)}
+.rwend .bw{flex:0 0 auto;font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:#0a0e13;background:var(--good);
+  border-radius:3px;padding:1px 5px}
+.rwend .cmp{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--t-xs);
+  color:var(--text-2)}
+.rwend .cmp.ok{color:var(--good)}
+.rwend .cmp.warn{color:var(--bad)}
+.rwend.best{background:rgba(61,220,151,.05)}
+
+/* the one-line key, with the long version folded behind it */
+.fqkey{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.fqkey .lnk{background:none;border:0;padding:0;font-size:var(--t-2xs);font-weight:600;
+  color:var(--accent-2)}
+/* The contact block: the company and the number read first, because
+   they are what you act on. The number is a real tel: link, so iOS puts
+   up its own Call / Cancel sheet rather than the app inventing one. */
 .fldblk{margin-top:2px}
+.fldco{font-size:var(--t-md);font-weight:700;color:var(--text);padding:8px 0 2px}
+.fldtel{display:block;padding:2px 0 10px;font-family:var(--mono);font-size:var(--t-lg);
+  font-weight:700;color:var(--accent-2);text-decoration:none;letter-spacing:.02em}
+.fldtel:active{color:var(--accent)}
+.fldnote{padding:8px 0 2px;font-size:var(--t-sm);color:var(--text-2);line-height:1.5;
+  white-space:pre-wrap}
+.fldedit{width:100%;height:var(--mod-a);margin-top:10px;border-radius:var(--radius);
+  background:var(--bg);border:1px dashed var(--border-strong);
+  font-size:var(--t-sm);font-weight:600;color:var(--text-muted)}
+.fldform{padding:4px 0 2px}
+.fldwho{font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  color:var(--accent);margin-bottom:8px}
+.fldform label{display:block;font-size:var(--t-2xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-fainter);margin:10px 0 4px}
+.fldform input,.fldform textarea{width:100%;background:var(--bg);
+  border:1px solid var(--border-strong);border-radius:var(--radius);color:var(--text);
+  font-family:var(--sans);font-size:var(--t-in);padding:9px 10px;outline:none;
+  -webkit-appearance:none}
+.fldform input:focus,.fldform textarea:focus{border-color:var(--accent)}
+.fldform textarea{min-height:88px;line-height:1.5;resize:none}
+.fldacts{display:flex;gap:var(--gut);margin-top:14px}
+.fldacts button{flex:1 1 0;height:var(--mod-b);border-radius:var(--radius);
+  background:var(--bg-2);border:1px solid var(--border-strong);
+  font-size:var(--t-sm);font-weight:700;color:var(--text-2)}
+.fldacts button.save{background:var(--accent);border-color:var(--accent);color:#0a0e13}
 .fldrow{width:100%;display:flex;align-items:baseline;gap:12px;text-align:left;
   padding:10px 0;border-bottom:1px solid var(--border)}
 .fldrow .k{flex:0 0 34%;font-size:var(--t-sm);color:var(--text-2)}
@@ -7347,7 +7544,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v199-ROT';
+  var VERSION = 'v205-ROT';
   var BUILD   = '2026-08-01';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -10774,13 +10971,28 @@ var PROC_META={
         });
       }
     });
-    return h + '<div class="cnote">Green is the frequency you should be on now, from your '
-      + 'position along the route; amber is your active waypoint. Fields shown between the legs '
-      + 'are within ' + FQ_CORR_NM + ' nm of track without being waypoints. Aerodrome frequencies '
-      + 'are from the NM Plotter dataset plus anything you added yourself. Enroute entries are the '
-      + 'CNTR/RDO frequencies published at the adjoining fields and the CTAF zones crossed, not FIR '
-      + 'sector boundaries. Tap a frequency to copy it. Advisory only.</div>';
+    /* Six lines of explanation under the list is six lines of frequencies
+       you cannot see. The one line you need in the air stays; the rest is
+       behind a tap, where it is still available and no longer in the way. */
+    return h
+      + '<div class="cnote fqkey">Green now \u00b7 amber your active waypoint \u00b7 tap to copy'
+      +   ' \u00b7 advisory only'
+      +   '<button class="lnk" id="fqWhy">' + (fqWhy ? 'Less' : 'What am I looking at?') + '</button>'
+      + '</div>'
+      + (fqWhy
+         ? '<div class="cnote">Fields shown between the legs are within ' + FQ_CORR_NM
+           + ' nm of track without being waypoints. Aerodrome frequencies are from the NM Plotter '
+           + 'dataset plus anything you added yourself. Enroute entries are the CNTR/RDO '
+           + 'frequencies published at the adjoining fields and the CTAF zones crossed, not FIR '
+           + 'sector boundaries.</div>'
+         : '');
   }
+
+  /* remembered, so a pilot who wants the long version keeps it */
+  var FQWHY_KEY = 'nmp.iphone.fqwhy';
+  var fqWhy = (function(){
+    try { return localStorage.getItem(FQWHY_KEY) === '1'; } catch(_){ return false; }
+  })();
 
   var radDrop = $('#dropRad');
   var RAD_KEY = 'nmp.iphone.radh';
@@ -10800,6 +11012,12 @@ var PROC_META={
     $('#radBody').innerHTML = radHTML();
     $$('#radBody .fqr').forEach(function(b){
       b.addEventListener('click', function(){ copyText(b.getAttribute('data-f')); });
+    });
+    var why = $('#radBody #fqWhy');
+    if (why) why.addEventListener('click', function(){
+      fqWhy = !fqWhy;
+      try { localStorage.setItem(FQWHY_KEY, fqWhy ? '1' : '0'); } catch(_){ }
+      drawRad();
     });
   }
   /* ---- My waypoints --------------------------------------------------
@@ -11631,9 +11849,14 @@ var PROC_META={
     var z = GPSFIX ? ctafAt(GPSFIX) : null;
     h += '<div class="fqarea"><span class="k">AREA CTAF</span>';
     if (z){
-      h += '<div class="r"><span class="nm">' + esc(z.id || 'Zone') + '</span>'
+      /* The zone's id is an array index, not a name - the AIP does not
+         number these areas and neither does v262, which shows the head,
+         the frequency and the HF and nothing else. "2" told you nothing
+         and looked like it meant something. */
+      h += '<div class="r"><span class="nm">Broadcast on</span>'
         +  '<button class="v" data-fqc="' + z.ctaf + '">' + z.ctaf + '</button></div>'
-        +  (z.hf ? '<span class="sub">HF ' + esc(z.hf) + '</span>' : '');
+        +  (z.hf ? '<span class="sub">HF '
+                 + esc([].concat(z.hf).join(' \u00b7 ')) + '</span>' : '');
     } else if (!GPSFIX){
       h += '<div class="r"><span class="nm">No GPS fix</span></div>'
         +  '<span class="sub">Start tracking to know which zone you are in</span>';
@@ -13200,14 +13423,64 @@ var PROC_META={
        missing section reads as "nothing to add here". */
     var isSite = (f.cat === 'field' || f.cat === 'strip');
     if (f.id && (isSite || hasAnyFreq(f.id))){
+      /* Grouped by WHAT THE CALL IS FOR, the way a plate lists them and
+         the way you work down them on the ground: information first, then
+         clearance, ground, tower, approach, and the common frequency you
+         fall back to when none of the others exist. A flat list of five
+         labels makes you read all five to find the one you want. */
       var frows = allFreqFor(f.id);
       h += '<div class="csec">Frequencies</div>';
-      frows.forEach(function(r){
-        h += '<div class="kv"><span class="k">' + esc(freqLabel(f.id, r.lb))
-          +  (r.mine ? ' <span style="color:var(--accent);font-size:var(--t-2xs);'
-          +            'letter-spacing:.08em">MINE</span>' : '')
-          +  '</span><span class="v acc">' + esc(r.vl) + '</span></div>';
+      /* Each group carries the labels that mean nothing more than the
+         heading already says. GROUND over GND 121.7 is the same word
+         twice; where that is all there is, the heading takes the
+         frequency and the row disappears. A label that says something
+         the heading does not - JACKSONS TWR, LAE RDO, or one of yours -
+         keeps its own line. */
+      var FQ_GROUPS = [
+        ['Information', /ATIS|AWIS|AWOS|ASOS|VOLMET/i, /^(ATIS|AWIS|AWOS|ASOS)$/i],
+        ['Clearance',   /CLR|CLEAR|DEL/i,              /^(CLR|CLEARANCE|DEL|DELIVERY)$/i],
+        ['Ground',      /GND|GROUND/i,                 /^(GND|GROUND)$/i],
+        ['Tower',       /TWR|TOWER/i,                  /^(TWR|TOWER)$/i],
+        ['Approach',    /APP|ARR|DEP|RADAR/i,          /^(APP|APPROACH|DEP|ARR|RADAR)$/i],
+        ['Area',        /CTR|CNTR|CENTRE|CENTER|RDO|RADIO|FIS/i, /^(CTR|CNTR|RDO|FIS)$/i],
+        ['Common',      /CTAF|UNICOM|AFIS|MBZ/i,       /^(CTAF|UNICOM|AFIS|MTAF|MBZ)$/i]
+      ];
+      var placed = {}, gh = '';
+      FQ_GROUPS.forEach(function(g){
+        var rows = frows.filter(function(r, i){
+          if (placed[i]) return false;
+          if (!g[1].test(String(r.lb || ''))) return false;
+          placed[i] = 1; return true;
+        });
+        if (!rows.length) return;
+        var only = (rows.length === 1) ? rows[0] : null;
+        if (only && !only.mine && g[2]
+            && g[2].test(String(freqLabel(f.id, only.lb) || '').trim())){
+          gh += '<div class="kv fqone"><span class="k">' + g[0] + '</span>'
+             +  '<span class="v acc">' + esc(only.vl) + '</span></div>';
+          return;
+        }
+        gh += '<div class="fqgh">' + g[0] + '</div>';
+        rows.forEach(function(r){
+          gh += '<div class="kv"><span class="k">' + esc(freqLabel(f.id, r.lb))
+             +  (r.mine ? ' <span style="color:var(--accent);font-size:var(--t-2xs);'
+             +            'letter-spacing:.08em">MINE</span>' : '')
+             +  '</span><span class="v acc">' + esc(r.vl) + '</span></div>';
+        });
       });
+      /* anything that does not match a group still shows, under Other -
+         a frequency you added with your own label must never vanish */
+      var rest = frows.filter(function(r, i){ return !placed[i]; });
+      if (rest.length){
+        gh += '<div class="fqgh">Other</div>';
+        rest.forEach(function(r){
+          gh += '<div class="kv"><span class="k">' + esc(freqLabel(f.id, r.lb))
+             +  (r.mine ? ' <span style="color:var(--accent);font-size:var(--t-2xs);'
+             +            'letter-spacing:.08em">MINE</span>' : '')
+             +  '</span><span class="v acc">' + esc(r.vl) + '</span></div>';
+        });
+      }
+      h += gh;
       if (!frows.length){
         h += '<div class="kv"><span class="k">On file</span><span class="v">None</span></div>'
           +  '<div class="cnote" style="margin-top:6px">Nothing published for ' + f.id
@@ -13798,17 +14071,31 @@ var PROC_META={
         + '<div><span class="k">Bearing</span><span class="v">' + r.b.toFixed(0) + '\u00b0</span></div>'
         + '</div>';
       if (w && w.dir !== null){
-        h += '<div class="csec" style="margin-top:12px">Wind component</div><div class="rwyg">';
-        [[r.l, r.b], [r.h, (r.b + 180) % 360]].forEach(function(end){
+        /* Which end the wind favours, said out loud. "H7 X3" is correct
+           and it is not an answer; the answer is which way to point the
+           aircraft, and that is one comparison the app can do for you.
+           Headwind and crosswind are split onto their own lines because
+           they are two different decisions - one is performance, the
+           other is limits. */
+        var ends = [[r.l, r.b], [r.h, (r.b + 180) % 360]].map(function(end){
           var d = ((w.dir - end[1] + 540) % 360) - 180;
-          var head = w.kt * Math.cos(d * Math.PI / 180);
-          var cross = Math.abs(w.kt * Math.sin(d * Math.PI / 180));
-          h += '<div><span class="k">Rwy ' + end[0] + '</span>'
-             + '<span class="v ' + (head >= 0 ? 'ok' : 'warn') + '">'
-             + (head >= 0 ? 'H' : 'T') + Math.abs(head).toFixed(0)
-             + ' X' + cross.toFixed(0) + '</span></div>';
+          return { nm:end[0],
+                   head: w.kt * Math.cos(d * Math.PI / 180),
+                   cross: Math.abs(w.kt * Math.sin(d * Math.PI / 180)) };
         });
-        h += '</div>';
+        var best = (ends[0].head >= ends[1].head) ? 0 : 1;
+        h += '<div class="csec" style="margin-top:12px">Wind '
+          +  String(w.dir).padStart(3, '0') + '\u00b0 at ' + w.kt + ' kt</div>';
+        ends.forEach(function(e, i){
+          h += '<div class="rwend' + (i === best ? ' best' : '') + '">'
+            +  '<span class="nm">Rwy ' + e.nm + '</span>'
+            +  (i === best && e.head > 0 ? '<span class="bw">Best wind</span>' : '')
+            +  '<span class="cmp ' + (e.head >= 0 ? 'ok' : 'warn') + '">'
+            +    (e.head >= 0 ? '\u2193 head ' : '\u2191 tail ')
+            +    Math.abs(e.head).toFixed(0) + '</span>'
+            +  '<span class="cmp">\u2194 cross ' + e.cross.toFixed(0) + '</span>'
+            +  '</div>';
+        });
       }
       h += '</div>';
     });
@@ -13924,10 +14211,16 @@ var PROC_META={
         + '<div class="cnote">Procedures come from AIP ENR 4.3, which covers the five fields '
         + 'with published instrument approaches. A field with none shows nothing here.</div>';
     }
+    /* PROCEDURES IS A LIST OF DOCUMENTS. Airport, Departure, Arrival,
+       Approach, Other - the plates you would open, in that order. The
+       ENR 4.3 fix lists and minima are a different thing and now sit
+       BELOW them, under their own heading, rather than in front of the
+       list the tab is named for. */
     var ph = '';
     procs.forEach(function(pr){
       var m = procMetaFor(pr.nm);
       ph += '<div class="csec">' + esc(pr.nm.replace(f.id + ' ', '')) + '</div>';
+      /* heading only - the detail follows */
       if (m){
         ph += procMinimaHTML(m);
       } else {
@@ -13941,21 +14234,26 @@ var PROC_META={
       });
       ph += '</div>';
     });
-    if (!plates.length){
-      return ph + '<div class="cnote">No plate images loaded on this device. The chart '
-        + 'subsystem is not built here yet.</div>';
-    }
-    var byCat = {};
-    plates.forEach(function(p){ (byCat[catOf(p)] = byCat[catOf(p)] || []).push(p); });
-    var h = ph;
-    CHART_CATS.forEach(function(c){
-      var rows = byCat[c[0]]; if (!rows || !rows.length) return;
-      h += '<div class="csec">' + c[1] + '</div>';
-      rows.forEach(function(p){
-        h += '<button class="prow2" data-cplate="' + p + '">'
-          +  '<span class="bdg">AIP</span><span>' + prettyPlate(p) + '</span></button>';
+    var h = '';
+    if (plates.length){
+      var byCat = {};
+      plates.forEach(function(p){ (byCat[catOf(p)] = byCat[catOf(p)] || []).push(p); });
+      CHART_CATS.forEach(function(c){
+        var rows = byCat[c[0]]; if (!rows || !rows.length) return;
+        h += '<div class="csec">' + c[1] + '</div>';
+        rows.forEach(function(p){
+          h += '<button class="prow2" data-cplate="' + p + '">'
+            +  '<span class="bdg">AIP</span><span>' + prettyPlate(p) + '</span></button>';
+        });
       });
-    });
+    } else {
+      h += '<div class="cnote">No plate images loaded on this device. The chart '
+        +  'subsystem is not built here yet.</div>';
+    }
+    /* the fixes and minima, after the documents */
+    if (ph){
+      h += '<div class="csec">Procedure fixes \u00b7 ENR 4.3</div>' + ph;
+    }
     return h + '<button class="add" data-chgo="' + f.id + '" style="width:100%;'
       + 'height:var(--mod-a);margin-top:12px;border-radius:var(--radius);background:var(--bg);'
       + 'border:1px dashed var(--border-strong);font-size:var(--t-sm);font-weight:600;'
@@ -14107,10 +14405,14 @@ var PROC_META={
     $('#cardName').textContent = f.nm;
     /* Only claims what is published. No TWR frequency in the pack means
        the pack does not carry one - it does not mean uncontrolled. */
-    var tw = twrFreq(f);
+    /* The tower frequency used to sit under the field name as a pill.
+       Every frequency the field has is two taps away on the Info tab,
+       grouped by what the call is for - one of them repeated in the
+       title block is a second place to keep right and a line of chrome
+       where the name should breathe. */
     var twEl = $('#cardTwr');
-    twEl.textContent = tw ? ('TWR ' + tw) : '';
-    twEl.classList.toggle('on', !!tw);
+    twEl.textContent = '';
+    twEl.classList.remove('on');
     $('#cardStar').classList.toggle('on', !!(f.id && isFav(f.id)));
 
     var inRoute = ROUTE.some(function(p){ return p.id === f.id; });
@@ -14938,6 +15240,17 @@ var PROC_META={
       var hh = qkWheelVals.hh, mm = qkWheelVals.mm;
       el.textContent = (hh == null ? '--' : (hh < 10 ? '0' : '') + hh) + ':'
                      + (mm == null ? '--' : (mm < 10 ? '0' : '') + mm) + 'Z';
+    } else if (qkWhat === 'fob'){
+      el.textContent = (qkWheelVals.kg == null ? '\u2014'
+                        : Number(qkWheelVals.kg).toLocaleString()) + ' kg';
+    } else {
+      /* Anything this function does not recognise gets CLEARED, not left
+         alone. Leaving it alone is how a fuel wheel came to be headed
+         20:00Z: the fob branch did not exist, nothing was written, and
+         the readout still held the ETD from the last time the window was
+         open. A stale number under a big heading is worse than a blank
+         one - it reads as an answer. */
+      el.textContent = '';
     }
   }
 
@@ -15121,6 +15434,13 @@ var PROC_META={
           });
           quick.appendChild(b);
         });
+      /* Paint the readout NOW, not on the next frame. The wheel reports
+         its value through __goto, which runs in a rAF - so for one frame
+         the heading above a freshly opened window was whatever the last
+         window had left there. That is how 410 kg came to be labelled
+         20:00Z. */
+      qkWheelVals.kg = kg[idx];
+      qkPaintVal();
       requestAnimationFrame(function(){ refs.kg.__goto(refs.kg.__idx, false); });
       return;
     }
@@ -15648,30 +15968,91 @@ var PROC_META={
     if (!Object.keys(MYFLD[id]).length) delete MYFLD[id];
     saveMyFld();
   }
-  var FLD_ROWS = [['fuel', 'Fuel', 'Jet A1 \u00b7 drums \u00b7 ring ahead'],
-                  ['phone', 'Phone', '+675 ...']];
+  /* One record, one editor. Fuel and Phone were two rows that each
+     opened the same one-field window - two taps to change two things
+     that belong together. The editor holds the lot; the card shows the
+     two that matter at a glance, Company over Phone, and the rest only
+     when you have filled it in. */
+  var FLD_ROWS = [['company', 'Company', 'who to call'],
+                  ['phone',   'Phone',   '+675 472 2000'],
+                  ['fuel',    'Fuel',    'Jet A1 \u00b7 drums \u00b7 ring ahead'],
+                  ['note',    'Notes',   'anything else worth remembering']];
+  var fldEdit = null;                    /* the field whose block is open */
+  /* A phone number as dialled: everything that is not a digit or a
+     leading + is stripped for the link, while the display keeps whatever
+     you typed. iOS puts up its own Call / Cancel sheet. */
+  function telHref(v){
+    var t = String(v || '').trim().replace(/[^\d+]/g, '');
+    return t ? ('tel:' + t) : '';
+  }
   /* one builder, both hosts - the card's Info tab and the airport page */
   function fldBlockHTML(id){
     if (!id) return '';
-    var h = '<div class="csec">Fuel and contact</div><div class="fldblk">';
-    FLD_ROWS.forEach(function(r){
-      var v = fldDetail(id, r[0]);
-      h += '<button class="fldrow" data-fld="' + esc(id) + '|' + r[0] + '">'
-        +  '<span class="k">' + r[1] + '</span>'
-        +  '<span class="v' + (v ? '' : ' dim') + '">' + (v ? esc(v) : 'not set') + '</span>'
-        +  '</button>';
-    });
-    h += '</div><div class="cnote">Yours, not published. Nobody publishes the drum stock at a '
+    var h = '<div class="csec">Contact</div>';
+    if (fldEdit === id){
+      h += '<div class="fldblk"><div class="fldform">'
+        +  '<div class="fldwho">' + esc(id) + '</div>';
+      FLD_ROWS.forEach(function(r){
+        var v = fldDetail(id, r[0]);
+        h += '<label>' + r[1] + '</label>'
+          +  (r[0] === 'note'
+              ? '<textarea data-fldin="' + r[0] + '" placeholder="' + esc(r[2]) + '">'
+                + esc(v) + '</textarea>'
+              : '<input data-fldin="' + r[0] + '" type="'
+                + (r[0] === 'phone' ? 'tel' : 'text') + '" value="' + esc(v)
+                + '" placeholder="' + esc(r[2]) + '">');
+      });
+      h += '<div class="fldacts">'
+        +    '<button data-flda="cancel">Cancel</button>'
+        +    '<button class="save" data-flda="save">Save</button>'
+        +  '</div></div></div>';
+      return h;
+    }
+    var co = fldDetail(id, 'company'), ph = fldDetail(id, 'phone');
+    var fu = fldDetail(id, 'fuel'), nt = fldDetail(id, 'note');
+    h += '<div class="fldblk">';
+    if (!co && !ph && !fu && !nt){
+      h += '<div class="fldrow"><span class="k">On file</span>'
+        +  '<span class="v dim">nothing yet</span></div>';
+    } else {
+      if (co) h += '<div class="fldco">' + esc(co) + '</div>';
+      if (ph) h += '<a class="fldtel" href="' + esc(telHref(ph)) + '">' + esc(ph) + '</a>';
+      if (fu) h += '<div class="fldrow"><span class="k">Fuel</span>'
+                +  '<span class="v">' + esc(fu) + '</span></div>';
+      if (nt) h += '<div class="fldnote">' + esc(nt) + '</div>';
+    }
+    h += '<button class="fldedit" data-fld="' + esc(id) + '">'
+      +  ((co || ph || fu || nt) ? 'Edit' : 'Add contact details') + '</button>'
+      +  '</div>'
+      +  '<div class="cnote">Yours, not published. Nobody publishes the drum stock at a '
       +  'strip or the number of the man with the key \u2014 but you know both.</div>';
     return h;
   }
   function wireFldBlock(sel){
+    function redraw(){
+      try { drawCard(); } catch(_){ }
+      try { if (apPage) rerenderAirports(viewCache['airports']); } catch(_){ }
+    }
     $$(sel + ' [data-fld]').forEach(function(b){
       b.addEventListener('click', function(e){
         e.stopPropagation();
-        var p = b.getAttribute('data-fld').split('|');
-        var row = FLD_ROWS.filter(function(r){ return r[0] === p[1]; })[0];
-        openFldEd(p[0], p[1], row ? row[1] : p[1], row ? row[2] : '');
+        fldEdit = b.getAttribute('data-fld');
+        redraw();
+      });
+    });
+    $$(sel + ' [data-flda]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = fldEdit;
+        if (b.getAttribute('data-flda') === 'save' && id){
+          FLD_ROWS.forEach(function(r){
+            var el = document.querySelector(sel + ' [data-fldin="' + r[0] + '"]');
+            if (el) setFldDetail(id, r[0], el.value);
+          });
+          toast('Saved');
+        }
+        fldEdit = null;
+        redraw();
       });
     });
   }
@@ -17374,9 +17755,11 @@ var PROC_META={
     var zs = f.id ? zonesAt(f, AC.alt) : [];
     if (zs.length) rows.push(['Airspace', zs.map(function(z){ return z.id; }).join(', ')]);
     rows.push(['Mag var', crsVarTxt(f.lat, f.lon)]);
-    FLD_ROWS.forEach(function(r){
-      var v = fldDetail(f.id, r[0]);
-      if (v) rows.push([r[1], v]);
+    /* the page summary lists only what is set, and only the two that
+       earn a line there - the rest lives on the card */
+    ['company', 'phone'].forEach(function(k){
+      var v = fldDetail(f.id, k);
+      if (v) rows.push([k === 'company' ? 'Company' : 'Phone', v]);
     });
 
     var freqs = f.id ? allFreqFor(f.id) : [];
@@ -20290,16 +20673,35 @@ var PROC_META={
            lifts the line off whatever is behind it - satellite imagery,
            terrain shading, the pink of an airway - without needing a
            colour that then has to compete with all three. */
-        if (act){
+        /* THREE COLOURS, not three weights of one.
+
+           MAGENTA is the leg being flown, because magenta is what the
+           Garmin puts on the active leg - the app agreeing with the panel
+           you actually fly is worth more than the app being internally
+           pretty.
+
+           CYAN is still to come. It is the one colour on this map that
+           nothing else uses, so a route ahead cannot be confused with an
+           airway, a zone or a terrain shade.
+
+           GREY is flown. It has done its job and it should stop competing
+           for the eye.
+
+           Amber stays on the waypoint markers and their labels, so the
+           points still read as the plan while the lines say where you
+           are in it. The casing is thinner than v172's - enough to lift
+           the line off satellite imagery, not enough to read as an
+           outline drawn around a bar. */
+        if (!past){
           L.polyline(pts, {
-            color:'#0a0e13', weight:7, opacity:.55,
+            color:'#0a0e13', weight:act ? 5 : 4, opacity:.4,
             interactive:false, lineJoin:'round', lineCap:'round'
           }).addTo(G.leg);
         }
         L.polyline(pts, {
-          color:   past ? '#8a6a20' : (act ? '#ffd166' : '#f0a500'),
-          weight:  act ? 4 : 2,
-          opacity: past ? .45 : (act ? 1 : .85),
+          color:   past ? '#6d7885' : (act ? '#ff4fd8' : '#3fd0ff'),
+          weight:  act ? 3.5 : 2.5,
+          opacity: past ? .5 : (act ? 1 : .9),
           dashArray: past ? '6 5' : null,
           interactive:false, lineJoin:'round', lineCap:'round'
         }).addTo(G.leg);

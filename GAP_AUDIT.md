@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v199 · 3 Aug 2026**
+**Status as of v205 · 3 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,12 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v205 | **Procedures is the document list**: Airport / Departure / Arrival / Approach / Other first, with the ENR 4.3 fixes and minima moved below under their own heading. **Frequency headings stop repeating themselves** — a group holding one row whose label adds nothing (GROUND / GND) collapses to a single line; distinctive labels and multi-row groups are unchanged. |
+| v204 | **Fuel and contact is one record**: a single editor holding Company, Phone, Fuel and Notes, headed by the field's ident. The card shows company over number; the number is a real `tel:` link so iOS raises its own Call/Cancel sheet, dialling digits only while displaying what was typed. The **TWR pill under the card title is gone** — every frequency is on the Info tab, grouped. |
+| v203 | Card frequencies grouped by call type (Information / Clearance / Ground / Tower / Approach / Area / Common, with Other catching anything unmatched). Runway card now names the favoured end — **Best wind**, only when that end actually has a headwind — with head and cross split onto separate lines and the wind used stated above them. |
+| v202 | Leg states now differ by **colour**, not by weight of one amber: magenta flying (matching the Garmin's active leg), cyan to come, grey dashed flown. Casing thinned to 4–5 px at 40% and dropped entirely on flown legs. Amber stays on the waypoint markers. |
+| v201 | Area CTAF was showing the zone's array index ("2") as if it were a name — v262 shows no number at all, so nor does this; HF now joined with middots as v262 does. The six-line explanation under the route list folds behind **What am I looking at?**, leaving one line: green now · amber active waypoint · tap to copy · advisory only. |
+| v200 | **Bug found:** the fuel wheel was headed `20:00Z` — `qkPaintVal` had no branch for it, so nothing was written and the element kept the ETD from the previous open. Fuel now has its own readout in kilos, painted before the frame rather than in a rAF, and any control the painter does not recognise clears the readout instead of inheriting the last one's answer. |
 | v199 | **Reversed v197's panel floor.** Counting the header block plus a second route row stopped the grip going small — worse on the device than what it replaced. Back to v191's floor: the panel's own furniture plus one row. |
 | v198 | **Usable fuel is now a per-aircraft field** (default 540 kg, BK117) rather than a constant — the fleet holds three airframes and a full tank is not the same figure twice. The wheel stops at the tank, Full means it, and the save clamp uses the same reader. |
 | v197 | Fuel on board moved to a wheel (tens, 0–1,200 kg, quick steps, Clear for unknown) and now reads only the wheel — it could previously fall through to whatever was left in the text box. **Open the card** added to the route-point sheet. FPL floor now measures the header block inside the body, so the panel no longer opens with a route point sliced in half. |
