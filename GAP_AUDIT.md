@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v258 · 4 Aug 2026**
+**Status as of v263 · 5 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,11 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v263 | **UTC readout centred** between the sheet title and the local clock, by auto margins rather than absolute positioning so it degrades rather than overlaps on a narrow header. |
+| v262 | **Times sheet opens at the four stamps** rather than its full natural height, measured off the real chrome; drag floor lowered to 160 so the default stays reachable. **UTC date and time added to the header**, marked Z, beside the local clock. |
+| v261 | **North needle redrawn**: two triangles meeting at a pivot hub, amber head and light grey tail. No letter in the glyph (the badge already labels itself) and no red (reserved for destructive actions). |
+| v260 | **Track-up / heading-up merged into the app, off by default.** North arrow redrawn as a filled two-tone needle. `rot.html` and `editrot.py` retired — rotation is no longer a separate build. v262 has no equivalent. |
+| v259 | **FPL panel opening height snapped to whole chip rows.** With no route it opens showing `+ Add`; with a route it never opens part-way down a waypoint. The grip stays pixel-exact and a hand-set height larger than the content is honoured. |
 | v258 | **Zones diffed as well; a view change now rebuilds nothing.** One key covers markers (position + icon html) and paths (shape digest + paint). The zone frequency label needed no special case — its position depends on the viewport, so its key moves and it is replaced. |
 | v257 | **Markers diffed rather than rebuilt on a view change.** Keyed on position plus icon html so a label change still makes a new marker; only applied to view-only renders, so click handlers closing over data can never go stale. |
 | v256 | **A view change no longer rebuilds the route or the recorded tracks.** Retry of v248, this time with the renderer sync proven on the device (scale(1), clip covers map, 5 ms worst over 1950 re-projections). Markers and zones still rebuild. |

@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v258 · 4 Aug 2026**.
+Status as of **v263 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -15,10 +15,17 @@ against it
 
 ## Waiting on you
 
-- **[A] `rot.html` — track-up / heading-up.** Built, gated, rebuilt on every
-  version since v168. Never driven. Three questions: do taps land, does it
-  stutter with terrain on, do the labels stay upright. Cannot merge until
-  those are answered.
+- **[D] If the needle is hard to read in the air, the triangle-and-N is the
+  fallback.** Danny's first reference reads faster than any needle — but it
+  duplicates the badge's own text label and cannot rotate. Revisit only if the
+  needle fails in daylight.
+- **[A] FLY TRACK-UP AND SAY WHETHER IT STAYS.** Merged into the app in v260,
+  off by default — tap the needle top right of the map. It could never have
+  been tested the way I kept asking: track-up needs ground movement, heading-up
+  needs a compass permission a preview frame cannot raise. Now it can be flown.
+  Three things I cannot test from here: do taps land where you point, does it
+  stutter with terrain on, do labels stay upright with the aircraft still
+  turning. If it does not earn its place, it comes out.
 - **[A] Icon alternates.** `nmp-leg` shipped. `nmp-leg-dash` (route continues
   past the destination) and `nmp-ship` (blue GPS chevron over a dashed track)
   are attached and are a one-line swap.
@@ -108,6 +115,13 @@ against it
   place. If they can now, the rebuild is pure cost — and it is the floating.
   Retry it with the renderer sync in place, this time proving the route draws
   correctly at three zooms before shipping.
+- **[A] MAPS / ZOOM / FLOATING IS NOT CLOSED.** Danny's note, 4 Aug: more
+  testing to come, the topic stays open. As of v258 a pan or a zoom rebuilds
+  nothing — route and tracks carried by Leaflet, markers and zones diffed —
+  and the panel reports kept/added/removed for both. Two things are still
+  NOT in the diff and are the next suspects if it still floats: the **terrain
+  tile layer**, and the **own-ship marker** (`G.ship`), which `paintShip()`
+  repaints separately on every frame. Do not treat this as done.
 - **[A] Fly the zoom and say whether it is done.** As of v258 a pan or a zoom
   rebuilds nothing: route and tracks are carried by Leaflet, markers and zones
   are diffed. The panel reports kept/added/removed for both. If it still
@@ -269,6 +283,11 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| UTC readout sat beside the clock rather than centred | v263 | Auto margins; title gives up its grow, scoped to this sheet |
+| Times opened at full height; no date anywhere | v262 | Opens at the stamps; UTC date in the header |
+| North needle redrawn from Danny's reference | v261 | Two triangles and a pivot hub; no letter, no red |
+| Track-up merged into the app; rot.html retired | v260 | Off by default, filled two-tone needle |
+| FPL panel opened through the middle of a row | v259 | Opening height snapped to whole chip rows |
 | Zones rebuilt on every pan and zoom | v258 | Same diff, keyed on shape digest + paint |
 | Markers destroyed and rebuilt on every pan and zoom | v257 | Diffed on view-only renders, keyed on position + icon html |
 | Route rebuilt on every pan and zoom | v256 | View-only render, now that the renderer catches up |
