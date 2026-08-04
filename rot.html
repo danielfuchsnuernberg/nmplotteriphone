@@ -22,6 +22,53 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v253 2026-08-04 The pinch. Measured, then fixed.
+
+                       Your diagnostics screenshot plus one sentence -
+                       "don't let go yet" - settled what four builds of
+                       theory could not.
+
+                       AT REST EVERYTHING WAS ALREADY RIGHT: SVG
+                       renderer, six paths, no canvas, vector-effect
+                       applied, no scale in the container transform,
+                       clip 450x658 over a 375x548 map. Both faults
+                       exist ONLY while two fingers are still down, and
+                       neither survives the release.
+
+                       WHY. To avoid re-projecting geometry on every
+                       frame of a zoom, Leaflet fakes it: a CSS scale()
+                       on the <svg> ELEMENT, letting the browser scale
+                       the whole rendered result. That is an OUTER scale
+                       and it takes the pen with it - which is why the
+                       strokes fatten, and why vector-effect did nothing
+                       in v251: that property works inside the SVG's own
+                       coordinate system, and this scale sits above it.
+                       The same scale shrinks the drawn area, and 450 by
+                       658 is exactly 1.2x the map - Leaflet's default
+                       padding of 0.1. Pinch out by more than 1.2x and
+                       you are looking past the edge of what was drawn.
+                       The leg stops in mid-air because that is where
+                       the drawing stops.
+
+                       FIX, two halves:
+
+                       1. Re-project on every zoom frame. Leaflet is
+                          right to avoid that work in general; we are
+                          not Leaflet. The overlay is SIX PATHS. One rAF
+                          per frame drops the transform and draws the
+                          real geometry at the real scale - which is
+                          what ForeFlight is doing.
+
+                       2. Renderer padding 0.1 -> 0.6, so the drawn area
+                          is 2.2x the viewport rather than 1.2x. Belt
+                          and braces: a frame that slips still has
+                          geometry to show.
+
+                       Every earlier theory was wrong - the canvas one,
+                       the stale-transform one, the load-bearing-rebuild
+                       one. The measurement was worth more than all
+                       three, and I should have built it first.
+
        v252 2026-08-04 Map diagnostics. I stop guessing.
 
                        v250 and v251 changed nothing on the device, and
@@ -9235,7 +9282,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v252-ROT';
+  var VERSION = 'v253-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -23845,7 +23892,16 @@ var PROC_META={
         zoomControl:false, attributionControl:false,
         minZoom:NMX_ZMIN, maxZoom:NMX_ZMAX,
         zoomSnap:0, zoomDelta:0.5, wheelPxPerZoomLevel:18,
-        fadeAnimation:false
+        fadeAnimation:false,
+        /* PADDING. Leaflet draws vectors into an SVG element covering
+           the viewport plus `padding` on each side, default 0.1 - which
+           the diagnostics measured as a 450x658 area over a 375x548
+           map. Pinch out by more than 1.2x and you are looking past the
+           edge of what was drawn, and the route stops in mid-air. 0.6
+           gives 2.2x the viewport, which covers any pinch a thumb can
+           make in one go. It costs geometry that is off screen, and
+           there are six paths. */
+        renderer: L.svg({ padding: 0.6 })
       }).setView(NMX_REGION.view.center, NMX_REGION.view.zoom);
     } catch(err){ LMAP = null; fail('Map failed to start: ' + (err && err.message)); return; }
 
@@ -24009,6 +24065,37 @@ var PROC_META={
       });
     }
     LMAP.on('moveend zoomend resize viewreset', onIdle);
+
+    /* ---- re-project DURING the pinch, not just after it -------------
+       The measurement that settled this: both faults happen only while
+       two fingers are still down, and neither survives the release.
+
+       To avoid re-projecting geometry on every frame of a zoom, Leaflet
+       fakes it - it puts a CSS scale() on the <svg> ELEMENT and lets the
+       browser scale the whole rendered result. That is why the strokes
+       fatten: an outer CSS scale of the element scales everything it has
+       already drawn, including the pen, and vector-effect cannot reach
+       it - that property works inside the SVG's own coordinate system,
+       and this scale is applied above it. It is also why the route is
+       cut off zooming out: the drawn area shrinks with the element.
+
+       Leaflet is right to avoid the work. We are not Leaflet: the
+       overlay is SIX PATHS. Re-projecting them once a frame is nothing,
+       and it is what ForeFlight is doing - drawing the real geometry at
+       the real scale, every frame.
+
+       So on every zoom frame the renderer is made to catch up, which
+       drops the transform and re-projects at the live zoom. One rAF at
+       a time, so a burst of zoom events cannot queue up behind itself.
+       Markers are Leaflet's own and already reposition per frame. */
+    var zsync = 0;
+    LMAP.on('zoom', function(){
+      if (zsync) return;
+      zsync = requestAnimationFrame(function(){
+        zsync = 0;
+        nmxRendererSync();
+      });
+    });
 
     function nmxDbgPaint(){}   /* diagnostic strip removed - it did its job */
 
