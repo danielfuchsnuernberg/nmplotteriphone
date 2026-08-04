@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v268 · 5 Aug 2026**.
+Status as of **v269 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -115,7 +115,15 @@ against it
   place. If they can now, the rebuild is pure cost — and it is the floating.
   Retry it with the renderer sync in place, this time proving the route draws
   correctly at three zooms before shipping.
-- **[?] MARKER DRIFT: 76.7 px once, 1.4 px on the next reading. Do NOT act on
+- **[A] v269 IS AN EXPERIMENT — read the result before building anything.**
+  Per-frame vector re-projection is off (`NMX_ZSYNC = false`). Prediction, on
+  record: if the leg meets AYNZ again and the floating settles, the mismatch
+  was the two-clock problem introduced in v253, and the stroke fix must be
+  redone so markers and vectors move together. If the leg still misses but
+  strokes go fat mid-pinch again, the mismatch is something else. Expect the
+  fat stroke and clipped route to return during a pinch — that is the cost of
+  the test.
+- **[?] MARKER DRIFT: 76.7 px once, 1.4 px, then 27.5 px. Do NOT act on
   the high number.** The second reading says the markers are glued. The first
   was almost certainly the instrument sampling a marker in the same frame it
   was added, before Leaflet positioned it. Harden the instrument to skip a
@@ -316,6 +324,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Per-frame vector sync switched OFF as a controlled test | v269 | One clock for vectors and markers; flag NMX_ZSYNC |
 | Every dropped pin was named PIN 1 | v268 | Name checked against the route as well as the database |
 | Flights mixed times, tracks and routes in one column | v267 | Three headed, counted sections |
 | Airports, Strips, Terminal areas and Enroute fixes wore the wrong glyphs | v265 | Chart convention; Terminal areas stops drawing a mountain |

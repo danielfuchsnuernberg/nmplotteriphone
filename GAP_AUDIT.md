@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v268 · 5 Aug 2026**
+**Status as of v269 · 5 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v269 | **Per-frame vector re-projection disabled behind a flag, as a controlled test.** Since v253 vectors re-projected every zoom frame while markers followed Leaflet's schedule — two clocks for one coordinate, the standing suspect for route legs not meeting their endpoints. |
 | v268 | **Dropped pins get unique names.** `pinName()` checked only `DB`, but Add-to-route and Insert-as-next push into `ROUTE`, so every pin was named PIN 1. Now checked against both. |
 | v267 | **Flights view split into Times / Flights / Routes**, each headed and counted, newest first within each section. Count line now reads routes · tracks · times. |
 | v266 | **Marker drift instrumented.** Every zoom frame, one marker's on-screen position is compared with its projected position; the worst gap and the zoom it occurred at are reported in the diagnostics panel. No fix in this build — the number decides which fix. |
