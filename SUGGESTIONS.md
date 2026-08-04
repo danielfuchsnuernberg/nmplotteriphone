@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v255 · 4 Aug 2026**.
+Status as of **v256 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -108,7 +108,17 @@ against it
   place. If they can now, the rebuild is pure cost — and it is the floating.
   Retry it with the renderer sync in place, this time proving the route draws
   correctly at three zooms before shipping.
-- **[A] Read the re-projection timing off the diagnostics panel.** The
+- **[R] THE MARKERS — the last of the floating.** Airports, waypoints and
+  fixes are still destroyed and re-created on every pan and zoom. The
+  declutter is a collision pass in screen space and the rank gates read the
+  zoom, so *which* markers exist genuinely changes with the view — but a
+  marker on screen before and after a gesture should not be destroyed in
+  between. The fix is a diff keyed on id plus label state: keep, add and
+  remove the difference rather than clearing the group. Now that the renderer
+  is proven, this is the remaining cause.
+- **[A] ~~Read the re-projection timing off the diagnostics panel.~~ Done:
+  worst 5 ms over 1950 re-projections. Affordable.**
+- **[A] Old: read the re-projection timing off the diagnostics panel.** The
   overlay is **253 paths**, not the six I claimed — the route legs plus every
   airspace, airway, danger area and zone ring in the same pane. v254
   re-projects all of them on every frame of a pinch. The panel now reports
@@ -248,6 +258,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Route rebuilt on every pan and zoom | v256 | View-only render, now that the renderer catches up |
 | v253's sync found no renderer and re-clipped instead of re-projecting | v254 | options.renderer included; `_reset()` not `_update()` |
 | Route fat and cut off DURING a pinch | v253, **completed v254** | Re-project every zoom frame; renderer padding 0.1 → 0.6 |
 | Map diagnostics panel, so the next fix is measured | v252 | More > Diagnostics; renderer kind, pen, clip, transform |

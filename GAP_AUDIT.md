@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v255 · 4 Aug 2026**
+**Status as of v256 · 4 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v256 | **A view change no longer rebuilds the route or the recorded tracks.** Retry of v248, this time with the renderer sync proven on the device (scale(1), clip covers map, 5 ms worst over 1950 re-projections). Markers and zones still rebuild. |
 | v255 | **Re-projection cost instrumented.** The overlay is 253 paths, not the six previously assumed; the diagnostics panel now reports last and worst re-projection time so the per-frame cost is measured rather than asserted. |
 | v254 | **v253's renderer sync corrected.** It collected only `map._renderer`, which Leaflet never creates once a renderer is passed as a map option, and it called `_update()` (re-clip) rather than `_reset()` (re-project). Both made v253 a no-op. |
 | v253 | **Fat and clipped route during a pinch — first attempt.** Leaflet fakes a zoom with an outer CSS `scale()` on the `<svg>` element, which scales the pen and shrinks the drawn area; `vector-effect` cannot reach it. Now re-projects on every zoom frame, with renderer padding raised 0.1 → 0.6. |

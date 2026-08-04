@@ -22,6 +22,43 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v256 2026-08-04 The route stops being rebuilt on every pan and
+                       zoom. Second attempt, this time on numbers.
+
+                       Your v255 panel: Found via `map option` - the
+                       sync is finding the renderer actually in use.
+                       Padding 0.6, clip 825x1206 over a 375x548 map,
+                       covers it. transform ends in scale(1) - the outer
+                       scale that fattened the pen is being cleared.
+                       Worst re-projection 5 ms across 1950 of them,
+                       well inside a 16 ms frame.
+
+                       That is the whole case v248 needed and did not
+                       have. v248 failed because the renderer was never
+                       catching up - the sync looked at map._renderer,
+                       which Leaflet does not create once a renderer is
+                       passed as a map option, and it called _update()
+                       (re-clip) rather than _reset() (re-project).
+                       Fixed in v254, measured in v255.
+
+                       So the reason to rebuild the route on every view
+                       change is gone. Route legs and recorded tracks
+                       are latitudes and longitudes, identical at every
+                       zoom; Leaflet carries them. A view change hands
+                       those two groups a stub and leaves them alone.
+
+                       STILL REBUILT, and this is the next job: the
+                       MARKERS. The declutter is a collision pass in
+                       screen space and the rank gates read the zoom, so
+                       which markers exist genuinely changes with the
+                       view - but a marker on screen before AND after a
+                       gesture should not be destroyed in between, and
+                       today it is. That is the airports floating.
+
+                       The panel now counts view-only renders, so
+                       whether this is running at all is one line rather
+                       than another four builds.
+
        v255 2026-08-04 Measure the cost of the fix.
 
                        Danny's v253 diagnostics confirmed v254's
@@ -9344,7 +9381,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v255-ROT';
+  var VERSION = 'v256-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -10620,7 +10657,7 @@ var PROC_META={
   /* Re-projection cost, filled in by the map's renderer sync and read by
      the diagnostics panel. Declared out here because those two live in
      different scopes and the boot test found that the hard way. */
-  var NMX_SYNC = { ms:0, peak:0, n:0 };
+  var NMX_SYNC = { ms:0, peak:0, n:0, viewOnly:0 };
 
   var TERR_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
   var TERR_MAXNATIVE = 14, TERR_SAMPLE_Z = 11, M2FT = 3.28084;
@@ -19516,6 +19553,7 @@ var PROC_META={
       +  L1('Re-project, last', (Math.round(NMX_SYNC.ms * 100) / 100) + ' ms')
       +  L1('Re-project, worst', (Math.round(NMX_SYNC.peak * 100) / 100) + ' ms')
       +  L1('Re-projects so far', NMX_SYNC.n)
+      +  L1('View-only renders', NMX_SYNC.viewOnly)
       +  L1('Renderers', 1 + Object.keys(LMAP._paneRenderers || {}).length);
     return h;
   }
@@ -22974,7 +23012,7 @@ var PROC_META={
      is understood and proven. The next attempt has to start there -
      with why _update does not land - and not with skipping work.
      ------------------------------------------------------------------ */
-  function renderMap(){
+  function renderMap(viewOnly){
     var map = $('#map'), host = $('#mapLayers');
     if (!map || !host) return;
     if (NMX_setBase) NMX_setBase(LAYERS.base);
@@ -22994,6 +23032,36 @@ var PROC_META={
 
     var G = nmxGroups();
     if (!G) return;                      /* no Leaflet, no overlay */
+
+    /* A VIEW CHANGE DOES NOT REBUILD THE ROUTE OR THE TRACKS.
+       ---------------------------------------------------------------
+       Second attempt. v248 did this and the route came out clipped and
+       fat - not because the idea was wrong, but because the renderer
+       was never catching up: the sync was looking at map._renderer,
+       which Leaflet does not create once a renderer is passed as a map
+       option, and it called _update() (re-clip) instead of _reset()
+       (re-project). Both fixed in v254, and measured on the device in
+       v255: transform reads scale(1), clip covers the map, worst
+       re-projection 5 ms over 1950 of them.
+
+       So the reason to rebuild on every view change is gone. Route legs
+       and recorded tracks are latitudes and longitudes - identical at
+       every zoom - and Leaflet carries them for free. The stub swallows
+       clearLayers() and addLayer() for the duration, so nothing touches
+       them and anything built for them is dropped unadded.
+
+       STILL REBUILT, and this is the next job: G.mk, the markers. The
+       declutter is a collision pass in screen space and the rank gates
+       read the zoom, so which markers exist really does change with the
+       view - but a marker that is on screen before AND after should not
+       be destroyed in between, and today it is. That is the airports
+       floating. */
+    if (viewOnly){
+      var NMX_KEEP = { addLayer:function(){ return this; },
+                       clearLayers:function(){ return this; } };
+      G = { box:G.box, mk:G.mk, ship:G.ship, leg:NMX_KEEP, trk:NMX_KEEP };
+      NMX_SYNC.viewOnly++;
+    }
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers(); G.trk.clearLayers();
 
     /* APPROACH RING on the field you should be talking to. Lifted from
@@ -24174,7 +24242,9 @@ var PROC_META={
         syncVIEW();
         /* errors used to vanish here, which is how a broken render kept
            looking like a positioning bug */
-        try { renderMap(); paintShip(); nmxDraws++; }
+        /* a VIEW change: see renderMap's header. Data changes call it
+           with no argument and get the full pass. */
+        try { renderMap(true); paintShip(); nmxDraws++; }
         catch(err){ nmxErr = (err && err.message) || String(err); }
         nmxDbgPaint();
       });
