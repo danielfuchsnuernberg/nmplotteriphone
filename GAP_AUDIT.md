@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v249 · 4 Aug 2026**
+**Status as of v251 · 4 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,8 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v251 | **Map vectors keep their stroke width through a zoom** (`vector-effect:non-scaling-stroke`), matching ForeFlight's constant-weight legs. v250 fixed the weight after a gesture; this fixes it during one. |
+| v250 | **Fat, clipped route diagnosed and fixed.** `SVG._update()` refuses to run while `_animatingZoom` is set, so the clip bounds and container transform went stale across overlapping zoom gestures — affecting new paths as much as old ones. Every renderer is now made to catch up at the top of `renderMap`. |
 | v249 | **v248 reverted.** Leaving the route for Leaflet to carry exposed a stale SVG renderer transform and clip bounds: the route drew clipped in mid-air at low zoom and several times too thick at high zoom. The full rebuild was masking it. Back to the full rebuild until the in-place update is proven. |
 | v248 | **Zoom part three: a view change no longer destroys the route or the recorded tracks.** `renderMap(viewOnly)` splits view changes from data changes; the two geometry-only groups are left for Leaflet to carry. Markers and zones still rebuild, for stated reasons. |
 | v247 | **Zoom part two: our own gestures were setting the zoom mid-pinch.** An armed drag-zoom survived a pinch and resumed from the pre-pinch level when a finger lifted; and every pinch also fired the two-finger step zoom-out at its end. |

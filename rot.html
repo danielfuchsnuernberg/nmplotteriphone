@@ -22,6 +22,95 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v251 2026-08-04 The pen stops scaling with the map.
+
+                       From your ForeFlight screenshots: the magenta and
+                       cyan legs are the same weight zoomed right out
+                       over Madang-to-Moresby as they are zoomed in on
+                       UPRAP. That constancy is most of what reads as
+                       glued, and it is stricter than what v250 gives.
+
+                       v250 makes the renderer catch up AFTER a gesture,
+                       so the weight is right once the gesture ends.
+                       DURING one it is still wrong, and for a reason
+                       that is nobody's bug: to keep geometry welded to
+                       the tiles without re-projecting every frame,
+                       Leaflet SCALES the whole SVG container. A scaled
+                       container scales the stroke with it, so a 2.5 px
+                       leg swells through the pinch and snaps back at
+                       the end.
+
+                       vector-effect:non-scaling-stroke tells the
+                       renderer to apply the transform to the GEOMETRY
+                       and not to the PEN. The line goes where the map
+                       goes and stays the width it was drawn at, every
+                       frame, whatever the container is doing.
+
+                       One rule, on every vector on the map - legs,
+                       tracks, airways, zones, danger areas, the measure
+                       line - because a constant pen is right for all of
+                       them and one rule that cannot be forgotten beats
+                       six that can.
+
+                       NOTE: ForeFlight's legs are also plainly THICKER
+                       than ours - nearer 8 px than 2.5. That is a
+                       separate choice and I have not made it for you.
+
+       v250 2026-08-04 The fat, clipped route: found it.
+
+                       v249 behaved exactly like v248, which was the
+                       useful result - it proved the fault predates
+                       both, and that rebuilding the paths was never
+                       masking anything. I had that wrong yesterday.
+
+                       Leaflet keeps two things on its SVG renderer that
+                       every path depends on: the container transform,
+                       and `_bounds` - a padded rectangle in layer
+                       coordinates that every path is CLIPPED to. Both
+                       are recomputed in SVG._update(), and that method
+                       opens with
+
+                         this._map._animatingZoom && this._bounds
+                           || ( ...do the work )
+
+                       so while `_animatingZoom` is set it does nothing
+                       at all. The flag clears on a transitionend or a
+                       250 ms timeout - and this app drives zoom from
+                       THREE places that overlap: Leaflet's own pinch,
+                       our double-tap-slide calling setZoomAround once a
+                       frame, and the +/- buttons. Overlapping gestures
+                       leave the flag set across the update that
+                       mattered.
+
+                       Miss that update and the container keeps the
+                       PREVIOUS zoom's scale, so a 2.5 px stroke draws
+                       several times too thick; and `_bounds` keeps the
+                       previous zoom's rectangle, so geometry is cut
+                       off where that rectangle ended. Fat lines, and a
+                       leg stopping dead in open ground. Rebuilding does
+                       not help, because a NEW path is clipped to the
+                       same stale bounds and lives in the same stale
+                       container. That is why the revert changed
+                       nothing.
+
+                       renderMap now makes every renderer catch up
+                       before it draws: the flag is dropped for the
+                       duration of the call and put back, _update()
+                       recomputes bounds and resets the container, and
+                       firing 'update' re-projects and re-clips every
+                       path already on the map. One call, at the top of
+                       renderMap, because there are three call sites
+                       into it and this belongs to all of them.
+
+                       This reaches into Leaflet's internals and I would
+                       rather it did not. The alternative is drawing a
+                       route that is cut off in mid-air.
+
+                       IF THIS IS RIGHT, it also unblocks v248: once the
+                       renderer reliably catches up, the overlay no
+                       longer has to be rebuilt on every view change,
+                       and that is the floating.
+
        v249 2026-08-04 v248 reverted. It broke the route.
 
                        Flown, leaving the legs for Leaflet to carry gave
@@ -8257,6 +8346,31 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 /* an action makes the toast tappable and holds it longer - used by
    Direct To, which discards the legs behind you */
 .toast.act{pointer-events:auto;display:flex;align-items:center;gap:12px}
+/* ---- lines keep their weight through a zoom ------------------
+   ForeFlight's route legs are exactly as thick zoomed right in as
+   they are zoomed right out, and that constancy is most of what
+   reads as "glued". Ours were not, for a reason that is nobody's
+   bug: to keep geometry welded to the tiles without re-projecting
+   every frame, Leaflet SCALES the whole SVG container during a
+   zoom. A scaled container scales the stroke with it, so a 2.5 px
+   leg swells through the gesture and snaps back at the end.
+
+   v250 makes the renderer catch up AFTER a gesture, which fixes
+   the weight once the gesture is over. This fixes it DURING:
+   vector-effect:non-scaling-stroke tells the renderer to apply
+   the transform to the geometry and not to the pen. The line goes
+   where the map goes and stays the width it was drawn at, every
+   frame, whatever the container is doing.
+
+   It applies to every vector on the map - route legs, tracks,
+   airways, zones, danger areas, the measure line - because a
+   constant pen is right for all of them, and because one rule
+   that cannot be forgotten beats six that can.
+
+   Specificity is (0,2,2) and nothing else in the file sets
+   vector-effect, so there is nothing to outbid. */
+.leaflet-overlay-pane svg path{vector-effect:non-scaling-stroke}
+
 .toast .undo{flex:0 0 auto;background:none;border:0;padding:0;
   font-family:inherit;font-size:var(--t-sm);font-weight:700;
   letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
@@ -9077,7 +9191,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v249-ROT';
+  var VERSION = 'v251-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -22610,6 +22724,13 @@ var PROC_META={
     if (typeof terrSync === 'function') terrSync();
     if (LAYERS.wxcat && wxProxy() && wxState === 'idle') wxRefresh(false, function(){ renderMap(); });
 
+    /* THE RENDERER FIRST. Everything below is clipped to its bounds and
+       drawn inside its container, so if it has not caught up with the
+       view, nothing drawn here can be right - new paths included. There
+       are three call sites into renderMap and this belongs to all of
+       them, so it lives here rather than at any one of them. */
+    if (typeof nmxRendererSync === 'function') nmxRendererSync();
+
     var G = nmxGroups();
     if (!G) return;                      /* no Leaflet, no overlay */
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers(); G.trk.clearLayers();
@@ -23676,6 +23797,60 @@ var PROC_META={
        the OLD layer coordinates until we rebuild. A rAF lands before
        the browser paints, so there is no frame showing markers in the
        wrong place. A timeout would show one. */
+    /* ---- make the vector renderer catch up ---------------------------
+       THE ACTUAL FAULT behind the fat, clipped route.
+
+       Leaflet keeps two things on its SVG renderer that every path
+       depends on: a container transform, and `_bounds` - a padded
+       rectangle in layer coordinates that every path is CLIPPED to.
+       Both are recomputed in SVG._update(), and that method opens with
+
+           this._map._animatingZoom && this._bounds || ( ...do the work )
+
+       so while `_animatingZoom` is set it does nothing at all. The flag
+       is cleared by _onZoomTransitionEnd, which runs on a transitionend
+       or a 250 ms timeout - and this app drives zoom from three places
+       that overlap each other: Leaflet's pinch, our double-tap-slide
+       calling setZoomAround({animate:false}) once a frame, and the +/-
+       buttons. Overlapping gestures leave the flag set across the
+       update that mattered.
+
+       When that update is missed the container keeps the PREVIOUS
+       zoom's scale - so a 2.5 px stroke draws several times too thick -
+       and `_bounds` keeps the previous zoom's rectangle, so geometry is
+       cut off where that rectangle ended. A route leg stopping dead in
+       open ground, and lines you can see the pixels on. Rebuilding the
+       paths does not help: a new path is clipped to the same stale
+       `_bounds` and lives in the same stale container, which is why
+       v248's revert changed nothing.
+
+       So after a view change, before anything is redrawn, every
+       renderer is made to update: the flag is dropped for the duration
+       of the call and put back, `_update()` recomputes bounds and
+       resets the container, and firing 'update' re-projects and
+       re-clips every path already on the map.
+
+       This reaches into Leaflet's internals, which I would rather not
+       do. The alternative is to keep drawing a route that is cut off
+       in mid-air. */
+    function nmxRendererSync(){
+      if (!LMAP) return;
+      try {
+        var rs = [];
+        if (LMAP._renderer) rs.push(LMAP._renderer);
+        var pr = LMAP._paneRenderers || {};
+        for (var k in pr) if (pr[k] && rs.indexOf(pr[k]) < 0) rs.push(pr[k]);
+        var was = LMAP._animatingZoom;
+        LMAP._animatingZoom = false;
+        for (var i = 0; i < rs.length; i++){
+          var r = rs[i];
+          if (!r || typeof r._update !== 'function') continue;
+          try { r._update(); r.fire('update'); } catch(_){ }
+        }
+        LMAP._animatingZoom = was;
+      } catch(_){ }
+    }
+
     var settle = 0, nmxGesture = false;
     function onIdle(){
       /* During a continuous zoom, setZoomAround fires viewreset and

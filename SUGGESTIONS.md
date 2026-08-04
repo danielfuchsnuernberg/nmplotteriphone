@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v249 · 4 Aug 2026**.
+Status as of **v251 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -98,18 +98,21 @@ against it
 
 ## Needs a decision from you
 
-- **[R] ZOOM PART FOUR — find out why Leaflet's renderer does not update
-  in place.** This is now the gating question, not an optimisation. v248
-  stopped rebuilding the route on view change and it came out clipped in
-  mid-air and several times too thick: a stale container transform and stale
-  `_bounds` on the SVG renderer. The full rebuild masks it by re-projecting
-  every path on the way in. Nothing else can be made cheap until that update
-  is reliable. First suspect: `_animatingZoom` left set across overlapping
-  gestures, which makes `Renderer._update` early-return; second: the
-  drag-zoom's per-frame `setZoomAround({animate:false})` racing Leaflet's own
-  animation. Reproduce with a deliberate stale-transform test before changing
-  anything.
-- **[R] ZOOM PART FIVE — the markers.** v248 stopped the route and tracks
+- **[A] ZOOM PART FOUR — confirm v250 fixed the fat, clipped route.** The
+  cause was `SVG._update()` refusing to run while `_animatingZoom` is set,
+  leaving stale clip bounds and a stale container transform. If the route now
+  draws at its proper weight and runs to its waypoints at every zoom, that is
+  confirmed — and part five below becomes possible.
+- **[D] If v250 works, retry v248.** The whole reason to rebuild the overlay
+  on every view change was that paths could not be trusted to update in
+  place. If they can now, the rebuild is pure cost — and it is the floating.
+  Retry it with the renderer sync in place, this time proving the route draws
+  correctly at three zooms before shipping.
+- **[D] Line weights against ForeFlight's.** Their legs are nearer 8 px than
+  our 2.5/3.5, and read as considerably more confident on a moving map. Now
+  that width is constant at every zoom, it is worth deciding what that width
+  should be. Not changed without you.
+- **[R] ZOOM PART SIX — the markers.** v248 stopped the route and tracks
   being rebuilt on a view change. `G.mk` still is, and legitimately: the
   declutter is a collision pass in screen space and the rank gates read the
   zoom, so *which* markers exist changes with the view. The fix is a diff —
@@ -118,7 +121,7 @@ against it
   never destroyed. Bigger than it sounds because a marker's icon also changes
   with zoom (dot against dot-plus-label), so the diff key has to carry the
   label state.
-- **[R] ZOOM PART SIX — the zones.** `G.box` is geometry except that zone
+- **[R] ZOOM PART SEVEN — the zones.** `G.box` is geometry except that zone
   frequency labels are placed inside the *visible* part of their zone. Split
   the labels from the shapes and the shapes stop being rebuilt too.
 - **[R] ~~ZOOM PART TWO — stop rebuilding the overlay on every view change.~~**
@@ -235,6 +238,8 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Stroke width scaled with the map during a zoom | v251 | non-scaling-stroke on every map vector |
+| Route drawn fat and clipped: stale renderer bounds and transform | v250 | Renderers made to catch up before every draw |
 | ~~Route and tracks left for Leaflet to carry~~ | v248, **reverted v249** | Exposed a stale renderer transform: clipped and fattened the route |
 | Pinch hijacked by an armed drag-zoom; pinch also fired the two-finger step | v247 | Second finger ends the drag; tap told from pinch |
 | Map re-zoomed itself; two gestures, two zoom ranges | v246 | Limits named on the map; one NMX_ZMIN/ZMAX |
