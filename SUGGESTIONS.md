@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v256 · 4 Aug 2026**.
+Status as of **v257 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -108,7 +108,13 @@ against it
   place. If they can now, the rebuild is pure cost — and it is the floating.
   Retry it with the renderer sync in place, this time proving the route draws
   correctly at three zooms before shipping.
-- **[R] THE MARKERS — the last of the floating.** Airports, waypoints and
+- **[R] THE ZONES — the last group still rebuilding.** `G.box` (airspace,
+  danger areas, CTA/TMA, airways, broadcast zones) is still cleared and
+  rebuilt on every view change. It is mostly fixed geometry; only the zone
+  frequency labels need the viewport, because they are placed inside the
+  *visible* part of their zone. Split the labels from the shapes and the
+  shapes can be diffed the same way the markers now are.
+- **[A] ~~THE MARKERS — the last of the floating.~~ Done v257.** Airports, waypoints and
   fixes are still destroyed and re-created on every pan and zoom. The
   declutter is a collision pass in screen space and the rank gates read the
   zoom, so *which* markers exist genuinely changes with the view — but a
@@ -258,6 +264,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Markers destroyed and rebuilt on every pan and zoom | v257 | Diffed on view-only renders, keyed on position + icon html |
 | Route rebuilt on every pan and zoom | v256 | View-only render, now that the renderer catches up |
 | v253's sync found no renderer and re-clipped instead of re-projecting | v254 | options.renderer included; `_reset()` not `_update()` |
 | Route fat and cut off DURING a pinch | v253, **completed v254** | Re-project every zoom frame; renderer padding 0.1 → 0.6 |

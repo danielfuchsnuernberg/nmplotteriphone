@@ -22,6 +22,44 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v257 2026-08-04 The markers are diffed, not rebuilt. The last of
+                       the floating.
+
+                       Airports, waypoints and fixes were cleared and
+                       re-created on every pan and zoom, so a marker on
+                       screen BEFORE and AFTER a gesture was still
+                       destroyed in between - new DOM, one frame late,
+                       which is what floating looks like.
+
+                       They could not simply be left alone the way the
+                       route legs were: the declutter is a collision
+                       pass in SCREEN space and the rank gates read the
+                       zoom, so which markers exist genuinely changes
+                       with the view. So the wanted set is DIFFED
+                       against what is already on the map - keep, add
+                       and remove only the difference.
+
+                       THE KEY IS POSITION PLUS ICON HTML. Position
+                       alone would be wrong: a marker's icon changes
+                       with zoom, from a bare dot to a dot with a label,
+                       and reusing the old one would strand a stale
+                       label at the wrong zoom. Change the html, get a
+                       new marker - and only the ones that changed.
+
+                       DIFFING ONLY ON A VIEW-ONLY RENDER, which is what
+                       makes it safe. A kept marker keeps its click
+                       handler, and those handlers close over data:
+                       openChip(i) over a route index, openCard(id) over
+                       an ident. On a view change that data is unchanged
+                       by definition. On a data change nothing is kept,
+                       because a data change still clears and rebuilds
+                       exactly as before.
+
+                       The panel counts markers kept, added and removed,
+                       so whether this is working is a number rather
+                       than a feeling. On a small pan, kept should be
+                       large and added should be near zero.
+
        v256 2026-08-04 The route stops being rebuilt on every pan and
                        zoom. Second attempt, this time on numbers.
 
@@ -9381,7 +9419,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v256-ROT';
+  var VERSION = 'v257-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -10657,7 +10695,8 @@ var PROC_META={
   /* Re-projection cost, filled in by the map's renderer sync and read by
      the diagnostics panel. Declared out here because those two live in
      different scopes and the boot test found that the hard way. */
-  var NMX_SYNC = { ms:0, peak:0, n:0, viewOnly:0 };
+  var NMX_SYNC = { ms:0, peak:0, n:0, viewOnly:0,
+                   mkKept:0, mkAdded:0, mkGone:0 };
 
   var TERR_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
   var TERR_MAXNATIVE = 14, TERR_SAMPLE_Z = 11, M2FT = 3.28084;
@@ -19554,6 +19593,9 @@ var PROC_META={
       +  L1('Re-project, worst', (Math.round(NMX_SYNC.peak * 100) / 100) + ' ms')
       +  L1('Re-projects so far', NMX_SYNC.n)
       +  L1('View-only renders', NMX_SYNC.viewOnly)
+      +  L1('Markers kept', NMX_SYNC.mkKept)
+      +  L1('Markers added', NMX_SYNC.mkAdded)
+      +  L1('Markers removed', NMX_SYNC.mkGone)
       +  L1('Renderers', 1 + Object.keys(LMAP._paneRenderers || {}).length);
     return h;
   }
@@ -23012,6 +23054,69 @@ var PROC_META={
      is understood and proven. The next attempt has to start there -
      with why _update does not land - and not with skipping work.
      ------------------------------------------------------------------ */
+  /* ---- marker diff -------------------------------------------------
+     The last of the floating. Airports, waypoints and fixes were
+     cleared and re-created on every pan and zoom, so a marker that was
+     on screen before AND after a gesture was still destroyed in
+     between - new DOM, one frame late, which is exactly what "floating"
+     looks like.
+
+     They cannot simply be left alone the way the route legs were: the
+     declutter is a collision pass in SCREEN space and the rank gates
+     read the zoom, so which markers exist genuinely changes with the
+     view. So instead of clearing the group, the wanted set is diffed
+     against what is already on the map: keep, add and remove only the
+     difference.
+
+     THE KEY IS POSITION PLUS ICON HTML. Position alone is not enough -
+     a marker's icon changes with zoom, from a bare dot to a dot with a
+     label - and reusing the old one would leave a stale label at the
+     wrong zoom. Change the html, get a new marker; that is correct, and
+     it is only the ones that actually changed.
+
+     DIFFING ONLY ON A VIEW-ONLY RENDER. A data change rebuilds as it
+     always did, which is what keeps this safe: a kept marker keeps its
+     click handler, and those handlers close over data - openChip(i)
+     over a route index, openCard(id) over an ident. On a view change
+     that data is by definition unchanged. On a data change nothing is
+     kept, so nothing can go stale. */
+  function nmxMkKey(l){
+    try {
+      var ll = l.getLatLng ? l.getLatLng() : null;
+      var ic = l.options && l.options.icon && l.options.icon.options;
+      if (!ll || !ic) return null;
+      return ll.lat.toFixed(6) + ',' + ll.lng.toFixed(6) + '|' + (ic.html || '');
+    } catch(_){ return null; }
+  }
+  function nmxMkDiff(real){
+    var prev = {}, seen = {};
+    try {
+      real.eachLayer(function(l){
+        var k = nmxMkKey(l);
+        if (k && !prev[k]) prev[k] = l;
+      });
+    } catch(_){ }
+    return {
+      /* the builder clears before it draws; here that is a no-op */
+      clearLayers: function(){ return this; },
+      addLayer: function(l){
+        var k = nmxMkKey(l);
+        if (k && prev[k]){ seen[k] = prev[k]; NMX_SYNC.mkKept++; return this; }
+        real.addLayer(l);
+        if (k) seen[k] = l;
+        NMX_SYNC.mkAdded++;
+        return this;
+      },
+      commit: function(){
+        for (var k in prev){
+          if (!seen[k]){
+            try { real.removeLayer(prev[k]); NMX_SYNC.mkGone++; } catch(_){ }
+          }
+        }
+      }
+    };
+  }
+
   function renderMap(viewOnly){
     var map = $('#map'), host = $('#mapLayers');
     if (!map || !host) return;
@@ -23059,7 +23164,8 @@ var PROC_META={
     if (viewOnly){
       var NMX_KEEP = { addLayer:function(){ return this; },
                        clearLayers:function(){ return this; } };
-      G = { box:G.box, mk:G.mk, ship:G.ship, leg:NMX_KEEP, trk:NMX_KEEP };
+      G = { box:G.box, mk:nmxMkDiff(G.mk), ship:G.ship,
+            leg:NMX_KEEP, trk:NMX_KEEP };
       NMX_SYNC.viewOnly++;
     }
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers(); G.trk.clearLayers();
@@ -23532,6 +23638,9 @@ var PROC_META={
         drawn++;
       });
     }
+    /* remove whatever the diff did not want this time. Only present on
+       a view-only render; a full one cleared and rebuilt as before. */
+    if (G.mk && typeof G.mk.commit === 'function') G.mk.commit();
     nmxMarks = drawn;
   }
 
