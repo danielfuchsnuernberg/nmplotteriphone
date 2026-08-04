@@ -22,6 +22,185 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v239 2026-08-04 Mark drops the waypoint where you ARE.
+
+                       It marked the middle of the screen. That is your
+                       position only by coincidence - pan once, or stop
+                       following, and the button quietly records
+                       somewhere you have never been.
+
+                       It takes the GPS fix now. Where there is no
+                       usable fix it still marks the centre, because a
+                       button that does nothing on the ground is no use
+                       either, but the two are never dressed the same:
+
+                         fix    -> named 'Position HHMMZ', src:'gps',
+                                   accuracy stored with it
+                         no fix -> named 'Map centre HHMMZ',
+                                   src:'centre', and the toast says
+                                   MAP CENTRE - NO GPS
+
+                       A mark you might later fly to must not be able to
+                       pass for a position it was not.
+
+                       STALE IS NOT A FIX. Older than 15 s and it is
+                       treated as absent: at 120 kt that is half a mile,
+                       and half a mile is the difference between a ridge
+                       and the valley beside it. The age comes from
+                       pos.timestamp, the fix's own clock, not from when
+                       the app last looked.
+
+                       The map is not moved. If you are not following,
+                       the new mark may be off screen - the toast
+                       carries its coordinates.
+
+       v238 2026-08-04 Terrain shading is a bar at the bottom, not a
+                       window over the middle.
+
+                       Flown and wrong: a modal .gpsov covered the thing
+                       the slider changes. You set a number, dismissed
+                       the window to see what it did, and opened it
+                       again. The control and its effect were never on
+                       screen together.
+
+                       It is #fqWin's treatment at the bottom edge now -
+                       floats over a live map, no backdrop, nothing
+                       modal, map pannable beside and behind it. Two
+                       rows of reading and one to drag: the reference,
+                       the highest ground in view, the slider full width
+                       of the bar. Third row keeps the two things that
+                       are still CONTROLS - the amber margin and one
+                       snap - as chips on a single line.
+
+                       What went: the legend, the 'following cruise
+                       altitude' source line, and the four-line advisory
+                       paragraph. A HUD you read is a HUD covering the
+                       map. The framing survives as a caption on the
+                       chip row - 'shape only, advisory' - rather than
+                       being dropped, because that framing is not mine
+                       to delete quietly.
+
+                       The header repaints on its own on every drag
+                       frame; the body under the finger is never
+                       rebuilt. Same rule as before, now with the
+                       readout outside the rebuilt region rather than
+                       inside it.
+
+                       The bar does not expand. A control that grows
+                       under your thumb is the covered-map problem again
+                       in a smaller box.
+
+       v237 2026-08-04 Measuring inside an airspace works.
+
+                       Tapping inside a live airspace opened the airspace
+                       instead of dropping a measure point - which is the
+                       one place you most want to measure.
+
+                       There WAS a lockout: pointer-events:none on the
+                       marker and overlay panes, added when the tool was
+                       built. It never worked and could not have.
+                       Leaflet's own stylesheet sets
+
+                         .leaflet-marker-icon.leaflet-interactive,
+                         .leaflet-pane > svg path.leaflet-interactive
+                           { pointer-events:auto }
+
+                       and pointer-events is not inherited the way
+                       opacity is: a child that says `auto` takes the tap
+                       however many ancestors said `none`. Every
+                       interactive layer kept its tap - airspace, danger
+                       areas, CTA/TMA, airways, broadcast zones, route
+                       legs, airfield markers.
+
+                       The lockout now names those same four selectors
+                       under #map.measuring, which is (1,3,2) against
+                       Leaflet's (0,2,2). `meas.js` computes the
+                       specificity rather than trusting the eye, and
+                       fails if any one of the four is missed.
+
+                       jsdom does no hit testing, so the gate proves the
+                       rule, not the behaviour. That part needs a finger.
+
+       v236 2026-08-04 The two tiles at the top of More are symbols only.
+
+                       Downloads and Settings each carried a glyph AND
+                       its name. Every other control in the app picks
+                       one; these two were the exception, and a caption
+                       under a symbol that already says the same thing
+                       is a word you read twice and act on once.
+
+                       The names moved to aria-label, so the buttons
+                       still announce themselves. Height is --mod-b now
+                       - the app's touch-primary control height - rather
+                       than a stack of padding that had been sized by
+                       the caption underneath it. Glyphs to 22px so they
+                       carry the row on their own.
+
+       v235 2026-08-04 Times - an activity, like GPS.
+
+                       Four stamps left to right in the order you fly
+                       them: Engine Start, Skids Up, Skids Down, Engine
+                       Shut down. The record is ONE ENGINE RUN - an
+                       engine pair with a LIST of skids pairs under it,
+                       because one start-up covers more than one sector.
+                       Skids Up with the last sector closed opens the
+                       next one: no extra control, no mode.
+
+                       Both totals carry h:mm and the decimal, on the
+                       sheet and on the filed card. Sectors and totals
+                       share one three-column grid, so every h:mm sits
+                       on one vertical and every decimal on another.
+                       Amber is h:mm, blue is decimal, everywhere.
+
+                       Nothing runs in the background, and nothing needs
+                       to. A stamp is an absolute epoch millisecond
+                       written to storage the instant it is taken;
+                       elapsed is worked out on read. Close the app,
+                       lock the phone, restart it - the figures are
+                       right when you come back. A web app gets no
+                       background execution on iOS. It gets no
+                       lock-screen button either: you cannot stamp
+                       without opening the app.
+
+                       Shutting down with skids still up is not blocked.
+                       You cannot be shut down with skids up, so it is a
+                       missed Skids Down: the sector goes red, says so,
+                       and contributes nothing. Blocking the button
+                       would lock you out on the ground over a stamp
+                       missed in the air. Tapping a set stamp undoes it;
+                       EDITING one is not built yet.
+
+                       Filing is explicit, not automatic on shut-down -
+                       a wrongly tapped shutdown should not commit a
+                       record. It files into FLIGHTS as a third kind
+                       beside a saved route and a recorded track, blue
+                       edge against the track's green, and counts as a
+                       flight rather than earning the bar a third noun.
+
+                       Not on the layer rail. RAIL_POOL is ten map
+                       layers and every cell means draw it or do not;
+                       Times would be the only one that opens something,
+                       and it would cost a slot. It is an activity, the
+                       same shape as GPS - a More row, and a bar slot if
+                       you want it.
+
+       v234 2026-08-03 Switching sets no longer turns your layers off.
+
+                       That was my idea in v227 - switch to IFR and the
+                       VFR layers go off, so the map carries one picture
+                       at a time - and it did not survive being flown.
+                       You turn the airports on, reach across for an
+                       airway, and the airports go out from under you.
+
+                       A control that changes which BUTTONS you can see
+                       has no business deciding what is DRAWN. The two
+                       sets are two groups of switches on one rail, not
+                       two modes of the map. Every layer stays exactly as
+                       you left it, in both sets, and is still lit when
+                       you come back to it.
+
+                       Turning something off is a thing you do on
+                       purpose, one button at a time.
        v233 2026-08-03 The bars page ran to the edge of the screen.
 
                        Its title was inset and everything under it was
@@ -5578,9 +5757,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   text-transform:uppercase;color:var(--text-fainter)}
 
 /* Measure: the chip, the leg labels, and the pane lockout that stops a
-   tap being two things at once. */
+   tap being two things at once.
+
+   The pane rule below is not enough on its own and never was. Leaflet's
+   own stylesheet carries
+
+       .leaflet-marker-icon.leaflet-interactive,
+       .leaflet-pane > svg path.leaflet-interactive { pointer-events:auto }
+
+   and pointer-events is NOT inherited the way opacity is: a child that
+   sets `auto` takes taps again however many ancestors said `none`. So
+   every interactive layer - airspace, danger areas, CTA/TMA, airways,
+   broadcast zones, route legs, airfield markers - kept its tap while
+   measuring. Tapping inside an airspace opened the airspace instead of
+   dropping a point, which is the whole reason you would be measuring
+   inside one.
+
+   The lockout has to name those same elements and outbid them. Leaflet's
+   selector is (0,2,2); prefixing #map.measuring makes it (1,3,2). */
 #map.measuring .leaflet-marker-pane,
 #map.measuring .leaflet-overlay-pane{pointer-events:none}
+#map.measuring .leaflet-marker-icon.leaflet-interactive,
+#map.measuring .leaflet-image-layer.leaflet-interactive,
+#map.measuring .leaflet-pane > svg path.leaflet-interactive,
+#map.measuring svg.leaflet-image-layer.leaflet-interactive path{pointer-events:none}
 .measchip{position:absolute;left:50%;transform:translateX(-50%);top:10px;z-index:530;
   display:none;min-width:210px;padding:8px 12px;border-radius:10px;
   background:rgba(10,14,19,.9);border:1px solid rgba(127,227,255,.45);
@@ -6573,10 +6773,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .sheet.on{transform:translateX(0)}
 .sheet .top{display:flex;gap:1px;margin:0 10px 16px;background:var(--border);
   border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.stile{flex:1 1 0;background:var(--bg-2);padding:12px 0;
-  display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-2)}
-.stile svg{width:20px;height:20px}
-.stile .lab{font-size:var(--t-sm);font-weight:600}
+/* Symbol only. A tile that carried both a glyph and its name was the
+   one place in the sheet doing both; the rule is pick one. The names
+   live on aria-label, so the control still announces itself.
+   Height is --mod-b, the app's touch-primary control height, rather
+   than the stack of padding that used to be sized by the caption. */
+.stile{flex:1 1 0;height:var(--mod-b);background:var(--bg-2);
+  display:flex;align-items:center;justify-content:center;color:var(--text-2)}
+.stile svg{width:22px;height:22px}
 .shead{display:flex;align-items:baseline;justify-content:space-between;padding:0 12px 6px}
 .shead .k{font-size:var(--t-xs);font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:var(--text-fainter)}
@@ -7649,6 +7853,183 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .toast .undo{flex:0 0 auto;background:none;border:0;padding:0;
   font-family:inherit;font-size:var(--t-sm);font-weight:700;
   letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+
+/* ---- Times (an activity, like GPS) --------------------------
+   The window is .gpsov's proportions with three departures, and
+   only three: it aligns to the BOTTOM edge, runs full width, and
+   its lower corners are square because they sit on the screen
+   edge. The header is .gpsh unchanged - reused, not restated.
+
+   Sectors and totals share one three-column grid, so every h:mm
+   sits on one vertical and every decimal on another. Amber is
+   h:mm, blue is decimal, in the sheet and on the filed card. */
+.tmov{position:fixed;inset:0;z-index:1200;display:none;
+  align-items:flex-end;justify-content:center;
+  padding:calc(16px + env(safe-area-inset-top)) 0 0;
+  background:rgba(3,5,8,.72);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.tmov.on{display:flex}
+.tmwin{width:100%;max-width:520px;max-height:100%;
+  display:flex;flex-direction:column;
+  background:var(--panel);border-top:1px solid var(--border-strong);
+  border-radius:14px 14px 0 0;overflow:hidden;
+  box-shadow:0 -18px 46px rgba(0,0,0,.7);
+  padding-bottom:var(--sabp)}
+.gpsclk{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-xs);
+  font-weight:700;letter-spacing:.06em;color:var(--text-dim)}
+.tmb{padding:12px 14px 0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* the four stamps. Two fixed label lines on every one, so all four
+   are the same shape and nothing wraps raggedly. */
+.tmstamps{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gut)}
+.tmst{height:76px;padding:8px 2px 7px;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  background:var(--bg-2);border:1px solid var(--border-strong);border-radius:var(--radius)}
+.tmst .l1,.tmst .l2{font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);
+  white-space:nowrap;line-height:1.35}
+.tmst .l2{color:var(--text-2)}
+.tmst .v{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  letter-spacing:.02em;color:var(--text-fainter);white-space:nowrap}
+.tmst.set{background:rgba(255,176,32,.12);border-color:rgba(255,176,32,.45)}
+.tmst.set .l1{color:var(--text-dim)}
+.tmst.set .l2{color:var(--text)}
+.tmst.set .v{color:var(--accent)}
+.tmst.arm{border-color:rgba(52,211,153,.5)}
+.tmst.arm .l2{color:var(--good)}
+.tmst:active{background:var(--inset)}
+
+.tmcol{display:grid;grid-template-columns:1fr 66px 54px;gap:8px;
+  margin:18px 0 5px;padding:0 10px}
+.tmcol i{font-style:normal;font-family:var(--mono);font-size:var(--t-2xs);
+  letter-spacing:.11em;text-transform:uppercase;color:var(--text-fainter);text-align:right}
+.tmcol i:first-child{text-align:left}
+
+.tmsecs{background:var(--inset);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden}
+.tmsec{display:grid;grid-template-columns:1fr 66px 54px;gap:8px;align-items:center;
+  padding:8px 10px}
+.tmsec + .tmsec{border-top:1px solid var(--border)}
+.tmsec .nm{min-width:0;font-family:var(--mono);font-size:var(--t-xs);
+  letter-spacing:.04em;color:var(--text-dim);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.tmsec .nm b{color:var(--text-2);font-weight:700;margin-right:7px}
+.tmsec .hm,.tmsec .dc{font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  text-align:right;white-space:nowrap}
+.tmsec .hm{color:var(--text-2)}
+.tmsec .dc{color:var(--accent-2)}
+.tmsec.open{background:rgba(52,211,153,.07)}
+.tmsec.open .nm b,.tmsec.open .hm{color:var(--good)}
+.tmsec.gap .hm,.tmsec.gap .dc{color:var(--bad)}
+.tmempty{padding:11px 10px;font-size:var(--t-xs);color:var(--text-faint);
+  letter-spacing:.03em}
+
+.tmtot{display:grid;grid-template-columns:1fr 66px 54px;gap:8px;align-items:center;
+  padding:10px;background:var(--inset);border:1px solid var(--border);
+  border-radius:var(--radius)}
+.tmtot + .tmtot{margin-top:var(--gut)}
+.tmtot .nm{min-width:0}
+.tmtot .nm b{display:block;font-family:var(--mono);font-size:var(--t-sm);font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--text)}
+.tmtot .nm span{display:block;margin-top:3px;font-family:var(--mono);font-size:var(--t-2xs);
+  letter-spacing:.05em;color:var(--text-faint);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.tmtot .hm,.tmtot .dc{font-family:var(--mono);font-weight:700;font-size:21px;
+  text-align:right;white-space:nowrap}
+.tmtot .hm{color:var(--accent)}
+.tmtot .dc{color:var(--accent-2)}
+.tmtot.idle .hm,.tmtot.idle .dc{color:var(--text-fainter)}
+.tmtot.run{border-color:rgba(52,211,153,.42)}
+.tmtot.run .hm,.tmtot.run .dc{color:var(--good)}
+
+/* destructive row last, per the v184 sheet rule */
+.tmacts{margin:16px -14px 0;border-top:1px solid var(--border)}
+.tmact{width:100%;height:var(--mod-b);display:flex;align-items:center;
+  padding:0 14px;font-size:var(--t-sm);font-weight:600;background:none}
+.tmact + .tmact{border-top:1px solid var(--border)}
+.tmact.file{color:var(--accent-2)}
+.tmact.del{color:var(--bad)}
+.tmact:active{background:var(--inset)}
+.tmact[disabled]{color:var(--text-fainter)}
+
+/* ---- Terrain bar --------------------------------------------
+   Was a modal .gpsov, which is wrong for a control you work while
+   looking at the map: it covered the thing the slider changes, so
+   you set a number, dismissed the window, looked, and opened it
+   again. This is .fqwin's treatment at the bottom edge instead -
+   floats over the map, map stays live behind and beside it, and
+   nothing about it is modal.
+
+   Two rows and no more: what the reference IS, what the highest
+   ground in view is, and the slider. Everything else - the amber
+   margin, the GPS and cruise snaps, the legend, the advisory -
+   is set-up rather than flying, and lives one tap down under
+   More. The bar does not grow; a control that expands under your
+   thumb is the covered-map problem again in a smaller box. */
+.terrbar{position:fixed;z-index:900;display:none;
+  left:var(--pedge);right:var(--pedge);
+  bottom:calc(var(--tabbar) + var(--sabp) + 8px);
+  background:rgba(13,18,25,.94);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  border:1px solid var(--accent);border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.55);
+  padding:9px 11px 7px}
+.terrbar.on{display:block}
+@media (orientation:landscape) and (max-height:500px){
+  /* the tab bar is gone in the landscape HUD, so the bar sits on
+     the safe area instead of on a bar that is not there */
+  .terrbar{bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
+}
+.terrbar .tbh{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
+.terrbar .tbref{flex:0 0 auto;font-family:var(--mono);font-size:20px;font-weight:700;
+  letter-spacing:.01em;color:var(--accent);white-space:nowrap}
+.terrbar .tbref u{text-decoration:none;font-size:var(--t-2xs);margin-left:2px;
+  color:var(--text-faint)}
+.terrbar .tbhi{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:var(--t-2xs);
+  letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.terrbar .tbhi b{font-weight:700;color:var(--text-2);margin-left:5px}
+.terrbar .tbhi.warn b{color:var(--bad)}
+.terrbar .tbx{flex:0 0 auto;width:26px;height:26px;margin:-4px -5px -4px 0;
+  display:flex;align-items:center;justify-content:center;
+  background:none;color:var(--text-fainter);font-size:19px;line-height:1}
+/* The track is the full width of the bar. A slider you have to hit
+   inside a padded column is a slider you miss. */
+.terrbar input[type=range]{display:block;width:100%;margin:0}
+/* Row three: the two things that are still controls rather than
+   reading matter - the amber margin and a snap back to a known
+   altitude. Chips, one line, no wrapping. */
+.terrbar .tbrow{display:flex;align-items:center;gap:var(--gut);margin-top:8px}
+.terrbar .tbseg{display:flex;flex:0 0 auto;border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm);overflow:hidden}
+.terrbar .tbseg button{height:26px;padding:0 8px;font-family:var(--mono);
+  font-size:var(--t-2xs);font-weight:700;letter-spacing:.04em;
+  color:var(--text-muted);background:var(--bg)}
+.terrbar .tbseg button + button{border-left:1px solid var(--border-strong)}
+.terrbar .tbseg button.on{background:rgba(255,176,32,.16);color:var(--accent)}
+.terrbar .tbsnap{flex:0 0 auto;height:26px;padding:0 10px;
+  border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;
+  letter-spacing:.04em;color:var(--text-2);background:var(--bg);white-space:nowrap}
+.terrbar .tbcap{flex:1 1 auto;min-width:0;font-size:var(--t-2xs);line-height:1.35;
+  color:var(--text-fainter);text-align:right}
+/* the shading switch sits in the header, not in the row of chips -
+   it is the only control here that decides whether the rest does
+   anything at all */
+.terrbar .tbon{flex:0 0 auto;height:22px;padding:0 8px;border-radius:var(--radius-sm);
+  border:1px solid var(--border-strong);background:var(--bg);
+  font-family:var(--mono);font-size:var(--t-2xs);font-weight:700;letter-spacing:.09em;
+  color:var(--text-muted)}
+.terrbar .tbon.on{background:rgba(255,176,32,.16);border-color:rgba(255,176,32,.5);
+  color:var(--accent)}
+.terrbar.dim .tbref{color:var(--text-fainter)}
+
+/* a filed times record is a third kind of object in the Flights
+   list: blue edge against the recorded track's green. */
+.flc.tim{border-left:2px solid var(--accent-2)}
+.flc.tim .rt{color:var(--accent-2)}
+.flc .st i{font-style:normal;font-family:var(--mono);font-size:var(--t-sm);
+  font-weight:700;color:var(--accent-2);margin-left:5px}
 </style>
 </head>
 <body>
@@ -7824,14 +8205,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 </div>
 
 <!-- Terrain window: shading reference altitude and margin -->
-<div class="gpsov" id="terrWin">
-  <div class="gpswin">
-    <div class="gpsh">
-      <span class="t"><b>TERRAIN</b> &middot; Shading</span>
-      <button class="gpsx" id="terrWinX" aria-label="Close">&times;</button>
-    </div>
-    <div class="qkbody" id="terrWinBody"></div>
+<!-- Terrain shading: floats at the bottom over a live map, the same
+     idea as #fqWin at the top right. Not a modal - you work it while
+     watching what it changes. -->
+<div class="terrbar" id="terrWin">
+  <div class="tbh">
+    <span class="tbref" id="terrRefOut">&mdash;<u>FT</u></span>
+    <span class="tbhi" id="terrHiOut">Highest<b>&mdash;</b></span>
+    <button class="tbon" id="terrOn">OFF</button>
+    <button class="tbx" id="terrWinX" aria-label="Close">&times;</button>
   </div>
+  <div id="terrWinBody"></div>
 </div>
 
 <!-- Frequency window: floats over the map, fixed top right -->
@@ -7861,8 +8245,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <!-- More sheet -->
 <div class="sheet" id="sheetMore">
   <div class="top">
-    <button class="stile" id="stDl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg><span class="lab">Downloads</span></button>
-    <button class="stile" id="stSet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg><span class="lab">Settings</span></button>
+    <button class="stile" id="stDl" aria-label="Downloads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg></button>
+    <button class="stile" id="stSet" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg></button>
   </div>
   <div class="shead"><span class="k">Views</span></div>
   <div class="slist" id="moreList"></div>
@@ -7907,6 +8291,41 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       <div class="gpsprog" id="gpsProg"></div>
     </div>
     <div class="gpstabs" id="gpsTabs"></div>
+  </div>
+</div>
+
+<!-- Times: an activity, opened from the bar or the More list.
+     Bottom-anchored .gpsov; the header is .gpsh unchanged. -->
+<div class="tmov" id="tmOv">
+  <div class="tmwin">
+    <div class="gpsh">
+      <span class="t"><b>Times</b> &middot; Flight</span>
+      <span class="gpsclk" id="tmClk">--:--</span>
+      <button class="gpsx" id="tmClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="tmb">
+      <div class="tmstamps" id="tmStamps"></div>
+
+      <div class="tmcol"><i>Sectors</i><i>h:mm</i><i>dec</i></div>
+      <div class="tmsecs" id="tmSecs"></div>
+
+      <div class="tmcol"><i>Total</i><i>h:mm</i><i>dec</i></div>
+      <div class="tmtot idle" id="tmTotEng">
+        <span class="nm"><b>Engine</b><span id="tmSubEng">start &middot; shut down</span></span>
+        <span class="hm" id="tmHmEng">--:--</span>
+        <span class="dc" id="tmDcEng">--.-</span>
+      </div>
+      <div class="tmtot idle" id="tmTotSkd">
+        <span class="nm"><b>Skids</b><span id="tmSubSkd">no sectors yet</span></span>
+        <span class="hm" id="tmHmSkd">--:--</span>
+        <span class="dc" id="tmDcSkd">--.-</span>
+      </div>
+
+      <div class="tmacts">
+        <button class="tmact file" id="tmFile" disabled>File to Flights</button>
+        <button class="tmact del" id="tmClr">Clear all times</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -8208,8 +8627,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v233';
-  var BUILD   = '2026-08-03';
+  var VERSION = 'v239';
+  var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
      activity strip and sizeCard - and the earliest of them runs long
@@ -8294,6 +8713,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     if (!keepFpl) $('#dropFpl').classList.remove('on');
     $('#sheetMore').classList.remove('on');
     if (gps) gps.classList.remove('on');
+    if ($('#tmOv')) $('#tmOv').classList.remove('on');
     if (actEd) actEd.classList.remove('on');
     if (typeSc) typeSc.classList.remove('on');
     if (railEd) railEd.classList.remove('on');
@@ -12058,103 +12478,84 @@ var PROC_META={
           if (TERR_STEPS.indexOf(m) >= 0) TERR_SHADE.margin = m; } catch(_){ }
   })();
 
+  /* The bar is two things you read and one you drag, and that is all.
+     The amber margin and the snap chips stay because they are controls;
+     the legend, the source line and the long advisory paragraph went,
+     because a HUD you read is a HUD covering the map. One short caption
+     keeps the framing. */
   function terrWinHTML(){
-    var ref = terrRefAlt(), hi = terrHighestInView();
-    var following = (TERR_REF == null);
-    var h = '<div class="twon"><span>Shading</span>'
-          + '<button data-tw="off" class="' + (layOn('terrain') ? 'on' : '') + '">'
-          +   (layOn('terrain') ? 'On' : 'Off') + '</button></div>'
-          + '<div class="twval">' + ref.toLocaleString() + '<u>ft</u></div>'
-          + '<div class="twsrc">' + (following
-              ? 'following cruise altitude'
-              : 'set here \u00b7 cruise is ' + AC.alt.toLocaleString() + '\'') + '</div>';
-
-    /* A slider, not four buttons. Four taps to move 2,000 ft is four
-       taps too many with one hand on the collective, and each one
-       rebuilt this whole window. The readout above moves live with the
-       thumb; the shading itself repaints on a throttle while dragging
-       and once properly on release, because repainting the terrain
-       layer on every pixel of a drag would stutter. */
-    h += '<div class="twslide">'
+    var following = (TERR_REF == null), ref = terrRefAlt();
+    var h = '<div class="twslide">'
       +    '<input type="range" id="twRange" min="' + TERR_MIN + '" max="' + TERR_MAX + '"'
       +      ' step="100" value="' + Math.max(TERR_MIN, Math.min(TERR_MAX, ref)) + '"'
       +      ' aria-label="Shading reference altitude">'
-      +    '<div class="twends"><span>' + TERR_MIN.toLocaleString() + '</span>'
-      +      '<span>' + TERR_MAX.toLocaleString() + ' ft</span></div>'
       +  '</div>';
 
-    h += '<div class="twrow2">'
-      +    (GPSFIX && GPSFIX.alt != null
-            ? '<button data-tw="gps">GPS \u00b7 ' + Math.round(GPSFIX.alt).toLocaleString() + '\'</button>'
-            : '')
-      +    (following ? '' : '<button data-tw="cruise">Follow cruise</button>')
-      +  '</div>';
-
-    h += '<div class="twsec">Amber margin below</div><div class="twseg">';
+    h += '<div class="tbrow"><span class="tbseg">';
     TERR_STEPS.forEach(function(m){
       h += '<button data-twm="' + m + '"' + (TERR_SHADE.margin === m ? ' class="on"' : '') + '>'
         +  m.toLocaleString() + '</button>';
     });
-    h += '</div>';
-
-    h += '<div class="twleg">'
-      +    '<span><i style="background:#f03c3c"></i>at or above ' + ref.toLocaleString() + '\'</span>'
-      +    '<span><i style="background:#ffb020"></i>within ' + TERR_SHADE.margin.toLocaleString() + '\'</span>'
-      +  '</div>';
-
-    h += '<div class="twhi"><span class="k">Highest in view</span><span class="v'
-      +  (hi != null && hi >= ref - TERR_SHADE.margin ? ' warn' : '') + '">'
-      +  (hi == null ? '\u2014' : hi.toLocaleString() + '\'') + '</span></div>';
-
-    h += '<div class="cnote" style="padding:12px 0 0">Terrain shape only \u2014 excludes towers, '
-      +  'wires and trees, and says nothing about obstacles. Cross-check the chart and the '
-      +  'Garmin. Advisory only.</div>';
+    h += '</span>';
+    /* One snap, not two: whichever is not where you already are. */
+    if (!following) h += '<button class="tbsnap" data-tw="cruise">CRUISE</button>';
+    else if (GPSFIX && GPSFIX.alt != null)
+      h += '<button class="tbsnap" data-tw="gps">GPS ' + Math.round(GPSFIX.alt).toLocaleString() + '</button>';
+    h += '<span class="tbcap">shape only \u00b7 advisory</span></div>';
     return h;
+  }
+
+  /* The header is repainted on its own, on every drag frame, without
+     touching the markup the finger is on. Rebuilding the body under a
+     drag drops it - that was true of the old window and is still true. */
+  function paintTerrHead(v){
+    var ref = (v == null ? terrRefAlt() : v);
+    var hi  = terrHighestInView();
+    var o = $('#terrRefOut');
+    if (o) o.innerHTML = ref.toLocaleString() + '<u>FT</u>';
+    var hEl = $('#terrHiOut');
+    if (hEl){
+      hEl.innerHTML = 'Highest<b>' + (hi == null ? '\u2014' : hi.toLocaleString() + "'") + '</b>';
+      hEl.classList.toggle('warn', hi != null && hi >= ref - TERR_SHADE.margin);
+    }
+    var on = layOn('terrain');
+    var b = $('#terrOn');
+    if (b){ b.textContent = on ? 'ON' : 'OFF'; b.classList.toggle('on', on); }
+    if (terrWin) terrWin.classList.toggle('dim', !on);
   }
 
   function drawTerrWin(){
     if (!terrWin || !terrWin.classList.contains('on')) return;
     var b = $('#terrWinBody');
     b.innerHTML = terrWinHTML();
+    paintTerrHead();
+
     Array.prototype.slice.call(b.querySelectorAll('[data-tw]')).forEach(function(x){
       x.addEventListener('click', function(){
         var v = x.getAttribute('data-tw');
         if (v === 'gps'){ if (GPSFIX && GPSFIX.alt != null) setTerrRef(Math.round(GPSFIX.alt / 100) * 100); return; }
         if (v === 'cruise'){ setTerrRef(null); return; }
-        if (v === 'off'){
-          layToggle('terrain'); syncRail(); renderMap();
-          if (typeof drawLayersPop === 'function') drawLayersPop();
-          drawTerrWin(); return;
-        }
-        setTerrRef(Math.max(500, Math.min(25000, terrRefAlt() + parseInt(v, 10))));
       });
     });
+
     var rg = b.querySelector('#twRange');
     if (rg){
-      var val = b.querySelector('.twval'), src = b.querySelector('.twsrc');
-      var legHi = b.querySelector('.twleg span:first-child');
       var throttled = 0;
       var paint = function(){
         if (terrLayer && terrLayer.repaintAll) terrLayer.repaintAll();
       };
       rg.addEventListener('input', function(){
         var v = parseInt(rg.value, 10);
-        /* Only the three pieces of text that change, not the window -
-           rebuilding the markup underneath a finger drops the drag. */
-        if (val)   val.innerHTML = v.toLocaleString() + '<u>ft</u>';
-        if (src)   src.textContent = 'set here \u00b7 cruise is ' + AC.alt.toLocaleString() + '\'';
-        if (legHi) legHi.innerHTML = '<i style="background:#f03c3c"></i>at or above '
-                                   + v.toLocaleString() + '\'';
         TERR_REF = v;
+        paintTerrHead(v);
         var now = Date.now();
         if (now - throttled > 180){ throttled = now; paint(); }
       });
-      /* the real commit: writes the setting, repaints once, rebuilds the
-         window so Follow cruise and the highest-in-view figure catch up */
       var commit = function(){ setTerrRef(parseInt(rg.value, 10)); };
       rg.addEventListener('change', commit);
       rg.addEventListener('touchend', commit);
     }
+
     Array.prototype.slice.call(b.querySelectorAll('[data-twm]')).forEach(function(x){
       x.addEventListener('click', function(){
         TERR_SHADE.margin = parseInt(x.getAttribute('data-twm'), 10);
@@ -12164,6 +12565,7 @@ var PROC_META={
       });
     });
   }
+
   function openTerrWin(){
     closeAll();
     terrWin = terrWin || $('#terrWin');
@@ -12446,6 +12848,13 @@ var PROC_META={
   }
   $('#fqWinX').addEventListener('click', closeFqWin);
   $('#terrWinX').addEventListener('click', closeTerrWin);
+  /* The shading switch lives in the header, which is not rebuilt, so it
+     is wired once here rather than by drawTerrWin. */
+  $('#terrOn').addEventListener('click', function(){
+    layToggle('terrain'); syncRail(); renderMap();
+    if (typeof drawLayersPop === 'function') drawLayersPop();
+    paintTerrHead();
+  });
   $('#pinX').addEventListener('click', closePinWin);
   $('#mineX').addEventListener('click', closeMineWin);
   $('#mineWin').addEventListener('click', function(e){
@@ -13272,21 +13681,47 @@ var PROC_META={
       b.classList.toggle('on', layOn(b.getAttribute('data-lyr')));
     });
   }
-  /* ---- Mark: drop a waypoint at the map centre ---- */
+  /* ---- Mark: drop a waypoint where you ARE ---------------------------
+     It used to mark the middle of the screen, which is only your
+     position by coincidence - the moment you pan, or the moment you
+     stop following, the button lies about what it just recorded.
+
+     So: the GPS fix when there is a usable one, the map centre when
+     there is not. The two are never dressed the same. A fix-derived
+     mark is named 'Position HHMMZ'; a centre-derived one is named 'Map
+     centre HHMMZ', carries src:'centre', and the toast says so. A mark
+     you might later fly to must never be able to pass for a position it
+     was not.
+
+     STALE IS NOT A FIX. A fix older than MARK_MAX_AGE is treated as
+     absent: at 120 kt, fifteen seconds is half a mile, and half a mile
+     is the difference between a ridge and the valley beside it. */
+  var MARK_MAX_AGE = 15000;
+  function markFix(){
+    if (!GPSFIX || GPSFIX.lat == null || GPSFIX.lon == null) return null;
+    if (GPSFIX.t == null) return null;
+    return (Date.now() - GPSFIX.t) <= MARK_MAX_AGE ? GPSFIX : null;
+  }
   $('#rbMark').addEventListener('click', function(e){
     e.stopPropagation();
     var n = 0;
     DB.forEach(function(p){ if (p.mk) n++; });
-    var id = 'MARK ' + (n + 1);
+    var id  = 'MARK ' + (n + 1);
+    var fix = markFix();
+    var hhmm = new Date().toISOString().slice(11, 16).replace(':', '') + 'Z';
     var p = {
-      id: id, nm: 'Marked ' + new Date().toISOString().slice(11, 16) + 'Z',
-      cat: 'mine', mk: true,
-      lat: (VIEW.n + VIEW.s) / 2, lon: (VIEW.w + VIEW.e) / 2
+      id: id,
+      nm: (fix ? 'Position ' : 'Map centre ') + hhmm,
+      cat: 'mine', mk: true, src: (fix ? 'gps' : 'centre'),
+      lat: fix ? fix.lat : (VIEW.n + VIEW.s) / 2,
+      lon: fix ? fix.lon : (VIEW.w + VIEW.e) / 2
     };
+    if (fix && fix.acc != null) p.acc = Math.round(fix.acc);
     DB.push(p); saveMarks();
     if (!LAYERS.mine){ LAYERS.mine = true; saveLayers(); syncRail(); drawLayersPop(); }
     renderMap();
-    toast(id + ' \u00b7 ' + ddm(p.lat, true) + ' ' + ddm(p.lon, false));
+    toast(id + ' \u00b7 ' + (fix ? 'position' : 'MAP CENTRE \u2014 no GPS')
+        + ' \u00b7 ' + ddm(p.lat, true) + ' ' + ddm(p.lon, false));
   });
 
   /* ---- REC: tap to start or stop, hold to reset ---- */
@@ -15346,6 +15781,8 @@ var PROC_META={
     freq:     '<circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"/><path d="M5.4 5.4a9.4 9.4 0 0 0 0 13.2M18.6 5.4a9.4 9.4 0 0 1 0 13.2"/>',
     flights:  '<path d="M2.6 13.4l18.8-6.6-3 6.6 3 6.6z"/>',
     notes:    '<path d="M5.4 4.4h13.2v15.2H5.4z"/><path d="M8.6 8.8h6.8M8.6 12h6.8M8.6 15.2h4.4"/>',
+    times:    '<circle cx="12" cy="13.4" r="7.8"/><path d="M12 13.4V9.2"/>'
+            + '<path d="M12 13.4l3 2.2"/><path d="M9.6 2.8h4.8"/><path d="M12 2.8v2.8"/>',
     gps:      '<circle cx="12" cy="12" r="4.4"/><path d="M12 1.8v3.4M12 18.8v3.4M22.2 12h-3.4M5.2 12H1.8"/>',
     more:     '<path d="M4 7h16M4 12h16M4 17h16"/>'
   };
@@ -15359,6 +15796,7 @@ var PROC_META={
   var VIEWS = [
     { k:'map',      t:'Map'      },
     { k:'gps',      t:'GPS', act:true },
+    { k:'times',    t:'Times', act:true },
     { k:'airports', t:'Airports' },
     { k:'fuel',     t:'Fuel'     },
     { k:'charts',   t:'Charts'   },
@@ -15407,7 +15845,7 @@ var PROC_META={
     return false;
   }
   function loadCfg(){
-    var fill = ['charts','freq','notes','flights','calc','fuel','airports','map'];
+    var fill = ['charts','freq','notes','flights','calc','fuel','airports','map','times'];
     var base = ['airports','map','charts','fuel'];
     try{
       var s = localStorage.getItem(STORE_KEY);
@@ -17692,7 +18130,10 @@ var PROC_META={
   }
 
   function flightsHTML(){
-    var nRec = FLIGHTS.filter(function(f){ return f.rec; }).length;
+    /* A filed times record is a flight - an engine run, more so than a
+       GPS track is - so it counts with them rather than earning the bar
+       a third noun. */
+    var nRec = FLIGHTS.filter(function(f){ return f.rec || f.tim; }).length;
     var nRt  = FLIGHTS.length - nRec;
     var h = '<div class="flbar"><span class="cnt">'
           + nRt + (nRt === 1 ? ' route' : ' routes')
@@ -17709,6 +18150,19 @@ var PROC_META={
     FLIGHTS.slice().sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); }).forEach(function(f){
       /* A recorded flight is a different thing from a planned route and
          is not described by waypoints, distance-by-plan or ETE. */
+      if (f.tim){
+        var nSec = (f.secs || []).length;
+        h += '<button class="flc tim" data-flid="' + f.id + '">'
+          +  '<span class="top"><b>' + esc(f.nm) + '</b>'
+          +    '<span class="ts">' + noteAge(f.ts) + '</span></span>'
+          +  '<div class="rt">' + tmStamp(f.es) + ' \u2192 ' + tmStamp(f.ex)
+          +    ' \u00b7 ' + nSec + (nSec === 1 ? ' sector' : ' sectors') + '</div>'
+          +  '<div class="st">'
+          +    '<span>ENGINE <b>' + tmHM(f.engMs) + '</b><i>' + tmDec(f.engMs) + '</i></span>'
+          +    '<span>SKIDS <b>' + tmHM(f.skidsMs) + '</b><i>' + tmDec(f.skidsMs) + '</i></span>'
+          +  '</div></button>';
+        return;
+      }
       if (f.rec){
         var mins = Math.round((f.sec || 0) / 60);
         h += '<button class="flc rec" data-flid="' + f.id + '">'
@@ -17763,6 +18217,194 @@ var PROC_META={
     var v = viewCache['flights'];
     if (v){ v.querySelector('.vbody').innerHTML = flightsHTML(); wireFlights(v); }
   }
+
+  /* ============================================================
+     TIMES - an activity, like GPS.
+
+     The record is ONE ENGINE RUN: an engine pair, and a list of
+     skids pairs under it, because one start-up covers more than
+     one sector. Skids Up with the last sector closed opens the
+     next one - no extra control and no mode.
+
+     Every stamp is an ABSOLUTE epoch millisecond written to
+     storage the instant it is taken. Nothing counts and nothing
+     has to keep running: elapsed is worked out on read, so the
+     figures are right whether the app was open the whole time or
+     shut for six hours. A web app gets no background execution on
+     iOS - it does not need any.
+
+     A filed run goes into FLIGHTS as a third kind of record
+     alongside a saved route and a recorded track.
+     ============================================================ */
+  var TM_KEY = 'nmp.iphone.times';
+  var TM = { es:null, ex:null, secs:[] };
+  (function(){
+    try {
+      var a = JSON.parse(localStorage.getItem(TM_KEY));
+      if (a && typeof a === 'object' && Object.prototype.toString.call(a.secs) === '[object Array]') TM = a;
+    } catch(_){ }
+  })();
+  function tmSave(){ try { localStorage.setItem(TM_KEY, JSON.stringify(TM)); } catch(_){ } }
+
+  var TM_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  /* device local time, 24 h - not Zulu */
+  function tmClock(d){
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  /* a stamp from a previous day carries its date, so 23:12 is never
+     ambiguous the morning after a night job */
+  function tmStamp(ts){
+    var d = new Date(ts), n = new Date();
+    if (d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth()
+        && d.getDate() === n.getDate()) return tmClock(d);
+    return d.getDate() + ' ' + TM_MON[d.getMonth()] + ' ' + tmClock(d);
+  }
+  function tmHM(ms){
+    var m = Math.floor(ms / 60000);
+    return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+  }
+  /* nearest tenth of an hour - 0.1 is six minutes */
+  function tmDec(ms){ return (Math.round(ms / 360000) / 10).toFixed(1); }
+
+  function tmOpenSec(){ var s = TM.secs[TM.secs.length - 1]; return (s && s.dn == null) ? s : null; }
+  function tmLastSec(){ return TM.secs[TM.secs.length - 1] || null; }
+  function tmSecMs(s){
+    return s.dn == null ? Math.max(0, Date.now() - s.up) : Math.max(0, s.dn - s.up);
+  }
+  /* a sector left open when the engine was shut down is a missed Skids
+     Down, not airborne time - it contributes nothing until corrected */
+  function tmSkidsMs(){
+    var t = 0;
+    TM.secs.forEach(function(s){ if (s.dn != null || TM.ex == null) t += tmSecMs(s); });
+    return t;
+  }
+  function tmEngMs(){
+    if (TM.es == null) return null;
+    return Math.max(0, (TM.ex == null ? Date.now() : TM.ex) - TM.es);
+  }
+  function tmRunning(){ return TM.es != null && TM.ex == null; }
+
+  var TM_BTN = [
+    { k:'es', l1:'Engine', l2:'Start'   },
+    { k:'su', l1:'Skids',  l2:'Up'      },
+    { k:'sd', l1:'Skids',  l2:'Down'    },
+    { k:'ex', l1:'Engine', l2:'Shut dn' }
+  ];
+
+  function tmPaint(){
+    var ov = $('#tmOv');
+    if (!ov) return;
+    var s = tmLastSec();
+    var v = { es:TM.es, ex:TM.ex, su:(s ? s.up : null), sd:(s ? s.dn : null) };
+
+    var h = '';
+    TM_BTN.forEach(function(b){
+      /* Skids Up is armed for the NEXT sector once the last one is closed */
+      var arm = (b.k === 'su' && tmRunning() && !tmOpenSec() && TM.secs.length > 0);
+      h += '<button class="tmst' + (v[b.k] != null ? ' set' : '') + (arm ? ' arm' : '')
+        +  '" data-tm="' + b.k + '">'
+        +  '<span class="l1">' + b.l1 + '</span><span class="l2">' + b.l2 + '</span>'
+        +  '<span class="v">' + (v[b.k] == null ? '--:--' : tmClock(new Date(v[b.k]))) + '</span>'
+        +  '</button>';
+    });
+    $('#tmStamps').innerHTML = h;
+    $$('#tmStamps .tmst').forEach(function(b){
+      b.addEventListener('click', function(){ tmTap(b.getAttribute('data-tm')); });
+    });
+
+    var sh = '';
+    if (!TM.secs.length){
+      sh = '<div class="tmempty">No sectors yet \u2014 Skids Up starts one.</div>';
+    } else {
+      TM.secs.forEach(function(x, i){
+        var open = x.dn == null, orphan = open && TM.ex != null;
+        sh += '<div class="tmsec' + (open && !orphan ? ' open' : '') + (orphan ? ' gap' : '') + '">'
+           +  '<span class="nm"><b>' + (i + 1) + '</b>' + tmStamp(x.up) + ' \u2192 '
+           +      (x.dn != null ? tmStamp(x.dn) : (orphan ? 'no skids down' : 'airborne')) + '</span>'
+           +  '<span class="hm">' + (orphan ? '\u2014' : tmHM(tmSecMs(x))) + '</span>'
+           +  '<span class="dc">' + (orphan ? '\u2014' : tmDec(tmSecMs(x))) + '</span>'
+           +  '</div>';
+      });
+    }
+    $('#tmSecs').innerHTML = sh;
+
+    var e = tmEngMs();
+    var eRow = $('#tmTotEng');
+    eRow.classList.toggle('idle', e == null);
+    eRow.classList.toggle('run', e != null && TM.ex == null);
+    $('#tmHmEng').textContent = e == null ? '--:--' : tmHM(e);
+    $('#tmDcEng').textContent = e == null ? '--.-'  : tmDec(e);
+    $('#tmSubEng').textContent = e == null ? 'start \u00b7 shut down'
+      : (TM.ex == null ? 'running since ' + tmStamp(TM.es)
+                       : tmStamp(TM.es) + ' \u2192 ' + tmStamp(TM.ex));
+
+    var closed = TM.secs.filter(function(x){ return x.dn != null; }).length;
+    var k = tmSkidsMs(), any = TM.secs.length > 0;
+    var sRow = $('#tmTotSkd');
+    sRow.classList.toggle('idle', !any);
+    sRow.classList.toggle('run', !!tmOpenSec() && TM.ex == null);
+    $('#tmHmSkd').textContent = any ? tmHM(k) : '--:--';
+    $('#tmDcSkd').textContent = any ? tmDec(k) : '--.-';
+    $('#tmSubSkd').textContent = !any ? 'no sectors yet'
+      : (closed + (closed === 1 ? ' sector' : ' sectors') + (tmOpenSec() ? ' + 1 airborne' : ''));
+
+    $('#tmFile').disabled = (TM.es == null || TM.ex == null);
+    $('#tmClk').textContent = tmClock(new Date());
+  }
+
+  /* Tapping a stamp that is already set undoes it. That is the
+     correction for a mis-tap; a late press needs the time edited,
+     which is not built yet. */
+  function tmTap(k){
+    var s;
+    if (k === 'es') TM.es = (TM.es == null) ? Date.now() : null;
+    if (k === 'ex') TM.ex = (TM.ex == null) ? Date.now() : null;
+    if (k === 'su'){
+      s = tmOpenSec();
+      if (s) TM.secs.pop();
+      else   TM.secs.push({ up: Date.now(), dn: null });
+    }
+    if (k === 'sd'){
+      s = tmOpenSec();
+      if (s) s.dn = Date.now();
+      else { s = tmLastSec(); if (s) s.dn = null; }
+    }
+    tmSave(); tmPaint();
+  }
+
+  function tmFile(){
+    if (TM.es == null || TM.ex == null) return;
+    var e = tmEngMs(), k = tmSkidsMs(), d = new Date(TM.es);
+    FLIGHTS.unshift({
+      id:'t' + Date.now(),
+      nm:'Times \u00b7 ' + d.getDate() + ' ' + TM_MON[d.getMonth()],
+      ts:TM.es,
+      tim:true,
+      es:TM.es, ex:TM.ex,
+      secs:TM.secs.map(function(x){ return { up:x.up, dn:x.dn }; }),
+      engMs:e, skidsMs:k
+    });
+    saveFlights();
+    TM = { es:null, ex:null, secs:[] };
+    tmSave(); tmPaint();
+    try { refreshFlightsView(); } catch(_){ }
+    toast('Filed \u00b7 engine ' + tmHM(e) + ', skids ' + tmHM(k));
+    hideTimes();
+  }
+
+  function openTimes(){ closeAll(); tmPaint(); $('#tmOv').classList.add('on'); renderTabs(); }
+  function hideTimes(){ $('#tmOv').classList.remove('on'); renderTabs(); }
+  function timesOpen(){ var o = $('#tmOv'); return !!o && o.classList.contains('on'); }
+
+  $('#tmClose').addEventListener('click', hideTimes);
+  $('#tmFile').addEventListener('click', tmFile);
+  $('#tmClr').addEventListener('click', function(){
+    TM = { es:null, ex:null, secs:[] }; tmSave(); tmPaint();
+  });
+  /* a running total is right on sight rather than a minute stale */
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) tmPaint(); });
+  setInterval(function(){ if (timesOpen()) tmPaint(); }, 20000);
+  tmPaint();
 
   /* ---- sheet: rename, load, duplicate, delete ---- */
   var flEd = $('#flEd'), flEditing = null, flLoadArm = null, flDelArm = null;
@@ -18668,10 +19310,13 @@ var PROC_META={
   function renderTabs(){
     var moreOpen = $('#sheetMore').classList.contains('on');
     var gpsOpen  = gps && gps.classList.contains('on');
-    var busy     = moreOpen || gpsOpen;
+    var tmOpen   = timesOpen();
+    var busy     = moreOpen || gpsOpen || tmOpen;
     var h = '';
     tabCfg.slice(0, tabSlots()).forEach(function(k){
-      var lit = (k === 'gps') ? gpsOpen : (!busy && activeTab === k);
+      var lit = (k === 'gps') ? gpsOpen
+              : (k === 'times') ? tmOpen
+              : (!busy && activeTab === k);
       h += '<button class="tab' + (lit ? ' on' : '') + '" data-tab="' + k + '">'
          + '<span class="ic">' + svg(k) + '</span>'
          + '<span class="lab">' + vTitle(k) + '</span></button>';
@@ -18697,6 +19342,10 @@ var PROC_META={
       if (k === 'gps'){
         if (gps.classList.contains('on')) { hideGps(); return; }
         openGps();
+      }
+      if (k === 'times'){
+        if (timesOpen()) { hideTimes(); return; }
+        openTimes();
       }
       return;
     }
@@ -18852,13 +19501,13 @@ var PROC_META={
     + 'stroke-linecap="round"><rect x="3.2" y="4.2" width="5.2" height="15.6" rx="1.6"/>'
     + '<path d="M12.5 7.5h8"/><path d="M12.5 12h8"/><path d="M12.5 16.5h5"/></svg>';
   var MORE_TINT = {
-    map:'#7fb3d5', gps:'#f0a500', airports:'#3ddc97', freq:'#e84393',
+    map:'#7fb3d5', gps:'#f0a500', times:'#f0a500', airports:'#3ddc97', freq:'#e84393',
     holds:'#b39ddb', chk:'#f0a500', fuel:'#f0a500', calc:'#f0a500',
     flights:'#3ddc97', mine:'#f0a500', mbz:'#f0a500', notes:'#f0a500',
     charts:'#7fb3d5', cloud:'#7fb3d5'
   };
   var VIEW_CAT = {
-    map:'Flying', gps:'Flying', airports:'Flying', freq:'Flying',
+    map:'Flying', gps:'Flying', times:'Flying', airports:'Flying', freq:'Flying',
     holds:'Flying', chk:'Flying',
     fuel:'Planning', calc:'Planning', flights:'Planning', mine:'Planning',
     mbz:'Planning', notes:'Planning',
@@ -19832,9 +20481,9 @@ var PROC_META={
      structure you fly in cloud - navaids, the airway system, the fixes
      and the controlled airspace around them.
 
-     Switching turns the other set OFF rather than stacking both. A map
-     carrying everything is a map carrying nothing, and the one tap that
-     strips it back to IFR structure is the point of having the two.
+     Switching changes the rail, never the map: what is on stays on in
+     both sets. See v234 - the other way round looked tidy and flew
+     badly.
 
      No second button on the rail: the two sets are two cells at the top
      of the open rail, both visible, so switching is one tap on something
@@ -19870,8 +20519,16 @@ var PROC_META={
   }
   function railSetTo(which){
     if (which === railSet) return;
-    /* the set you are leaving goes off the map with it */
-    railKeys(railSet).forEach(function(k){ if (layOn(k)) layToggle(k); });
+    /* SWITCHING SETS CHANGES THE RAIL, NOT THE MAP.
+
+       It used to turn the leaving set off - my idea, and wrong once it
+       was flown: you turn the airports on, reach for an airway, and the
+       airports go out from under you. A control that switches which
+       buttons you can see has no business deciding what is drawn.
+
+       Every layer stays exactly as you left it, in both sets, and comes
+       back lit when you return. Turning something off is a thing you do
+       on purpose, one button at a time. */
     railSet = which;
     try { localStorage.setItem(RSET_KEY, railSet); } catch(_){ }
     saveLayers();

@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v233 · 3 Aug 2026**.
+Status as of **v239 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -32,11 +32,31 @@ against it
   coordinates, but they have not reached this session — I do not have the
   numbers, and I will not approximate a fix position. Send the pages and it is
   a short build. *(Was listed [R]; that was wrong.)*
+- **[R] Edit a Times stamp.** Tapping a set stamp undoes it, which loses
+  the time. A late press — Skids Down three minutes after it happened,
+  hands full on short final — needs the time corrected, not discarded.
+  This is the thing background recording could not have given you
+  anyway, and the gap is real in the air. Next round unless you say
+  otherwise.
+- **[D] Times on a filed card is read-only.** Tapping one opens nothing.
+  Worth deciding whether a filed run should be editable, or frozen once
+  filed and corrected only before you file it.
+- **[D] Times and REC are two records of one flight.** REC gives a track
+  and elapsed; Times gives engine and skids. They are filed separately
+  and nothing joins them. If you run both, you get two cards for one
+  sortie. Not obviously wrong — leaving it until you have flown it.
 - **[R] Terrain profile: flown vs to-come.** The map has three leg states; the
   profile is one undifferentiated fill. Shade the flown portion back and drop a
   tick at your actual position.
 - **[R] Airfield label decluttering** — dots at low zoom, labels appearing as
   you zoom in. Long-standing, no blocker.
+- **[D] Show the source on a mark's card.** Every mark now carries
+  `src:'gps'` or `src:'centre'`, and a GPS one carries the accuracy it was
+  taken at. The name says which, but the card does not show either. Cheap to
+  add and it is the sort of thing you want to see before you fly to one.
+- **[D] Marks taken before v239 have no `src`.** They are all screen-centre
+  marks but nothing on them says so. Worth deciding whether to leave them,
+  label them 'source unknown', or leave well alone.
 - **[R] Edit coordinates on a saved waypoint.** You can rename it, set its
   elevation and delete it; you cannot nudge its position.
 - **[R] Checklists round two** — a per-aircraft *set* (start-up → pre-takeoff →
@@ -50,6 +70,11 @@ against it
   zones, Checklists, Notes. Grouping in v186 made it more obvious.
 - **[R] More sheet row dividers step further right down the list.** Each
   hairline ends at a different x. Looks unintentional.
+- **[D] Other floating windows may have the same fault as the terrain
+  window did.** The frequency window and the point window both sit over the
+  map; the terrain one was the only modal among them and it was the one you
+  work while looking at what it changes. Worth deciding whether any other
+  `.gpsov` is really a HUD wearing a modal's clothes.
 - **[R] Toolbar declutter and the landscape HUD over real tiles.** Polish.
 - **[R] Measure tool refinements** — nothing specific requested, but total
   bearing end-to-end and a running area would both be cheap.
@@ -83,6 +108,11 @@ against it
   does not make them right; worth deciding whether to override the names
   locally or leave the source visible.
 
+- **[?] Other `pointer-events:none` lockouts may have the same hole.** The
+  measure lockout looked right for as long as the tool has existed and did
+  nothing, because a child re-enabled itself. Worth one pass over every other
+  place the app disables taps on a container to check none of them is relying
+  on inheritance that pointer-events does not have.
 - **[?] 101 empty `catch` blocks.** Most are legitimate (storage in private
   mode, a DOM node not there yet), but it is a lot of places a fault can die
   quietly. Worth one pass with fresh eyes.
@@ -145,6 +175,12 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Mark dropped the waypoint at the screen centre, not at you | v239 | GPS fix, with a named and flagged fallback |
+| Terrain shading window covered the map it was changing | v238 | Bottom bar, non-modal, slider full width |
+| Tapping inside an airspace opened it instead of measuring | v237 | Lockout now outbids Leaflet's own `pointer-events:auto` |
+| Downloads and Settings tiles said it twice | v236 | Symbol only; names moved to aria-label |
+| Times — four stamps, sectors, filed to Flights | v235 | An activity like GPS; one engine run, a list of skids pairs |
+| Switching sets turned your layers off | v234 | My v227 idea, reversed after flying it |
 | Bars page ran to the screen edge | v233 | Wrapped in a padded page of its own |
 | Rail symbols invisible on lit cells | v232 | Set tints the cell, not the glyph; column carries the set |
 | Heading flush under a sheet title, third time | v231 | Fixed as a rule on the sheet body, not per builder |

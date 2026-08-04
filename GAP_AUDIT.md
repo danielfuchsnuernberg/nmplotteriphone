@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v233 · 3 Aug 2026**
+**Status as of v239 · 4 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,12 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v239 | **Mark drops the waypoint at the GPS fix rather than the map centre.** Falls back to the centre with no usable fix, but names and flags it differently so the two cannot be confused. A fix older than 15 s counts as absent. |
+| v238 | **Terrain shading moved from a modal window to a non-modal bottom bar.** The slider and the terrain it shades are now on screen together. Legend, source line and the long advisory paragraph dropped from the control; the framing kept as a one-line caption. v262 still has this as a panel — the two builds now differ here on purpose. |
+| v237 | **Measure tool: tapping inside an airspace now drops a point instead of opening the airspace.** The existing pane lockout never worked — Leaflet sets `pointer-events:auto` on interactive children, which is not overridden by `none` on an ancestor. The lockout now names the same four selectors under `#map.measuring`. |
+| v236 | **The two tiles at the top of More are symbols only.** Downloads and Settings each carried a glyph and its name; every other control in the app picks one. Names moved to `aria-label`, height to `--mod-b`. |
+| v235 | **Times — a new activity, with no equivalent in v262.** Four stamps left to right in the order flown: Engine Start, Skids Up, Skids Down, Engine Shut down. The record is one engine run holding a *list* of skids pairs, because one start-up covers more than one sector. Both totals carry h:mm and the decimal. Filed into `FLIGHTS` as a third kind of record beside a saved route and a recorded track. Nothing runs in the background and nothing needs to: a stamp is an absolute timestamp, elapsed is computed on read. **This is a gap in the other direction — the iPhone build now has something the desktop does not.** |
+| v234 | **Reversed v227's set behaviour.** Switching VFR↔IFR no longer turns the leaving set's layers off — it changes which buttons the rail shows, nothing else. Every layer stays as left, in both sets, and is still lit on return. A control that changes what you can see has no business deciding what is drawn. |
 | v233 | The Bars and sizing page ran edge-to-edge — its title was inset and its content was not, because the shared sheet body has no gutter and the page assumed one. Wrapped in its own padded page (`.dgrpad`) rather than padding the body for every sheet. Same lesson as the MY NOTES block in v177. |
 | v232 | **Bug found:** v227 tinted the rail *symbol* with the live set's colour, but the rail fills the whole cell when a layer is on — an amber glyph on an amber fill, so every lit layer read as a blank tile. IFR's cells were amber too because the class meant to turn them blue was never applied to the column. The set now tints the cell (symbol stays dark) and the column carries the set as a class. |
 | v231 | The first heading in a sheet body sat flush against the title bar (third instance of this fault after v222 and v205). Fixed as a **rule on `.dgrbody`** rather than a margin typed into one builder, so the next sheet inherits it. |
