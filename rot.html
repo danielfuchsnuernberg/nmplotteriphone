@@ -22,6 +22,68 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v255 2026-08-04 Measure the cost of the fix.
+
+                       Danny's v253 diagnostics confirmed v254's
+                       diagnosis outright: Kind read `none` and Clip
+                       size read `(no _bounds)`, because with a renderer
+                       passed as a map option Leaflet never creates
+                       map._renderer - which is the only place the sync
+                       was looking. It ran every frame against an empty
+                       list.
+
+                       AND IT CORRECTED ME. I said the overlay was six
+                       paths and that re-projecting them per frame was
+                       nothing. The panel says 253 - the route legs plus
+                       every airspace, airway, danger area and zone ring
+                       in the same pane. I counted the legs and forgot
+                       the rest, and that number was the whole
+                       justification for doing the work per frame.
+
+                       So v254 re-projects 253 paths on every frame of a
+                       pinch. That may be fine on the device and may
+                       stutter; guessing is what got us four builds
+                       deep. The panel now reports the last and worst
+                       re-projection in milliseconds and how many have
+                       run, so the answer comes off the phone.
+
+                       If it is slow, the fix is a dedicated renderer
+                       for the route alone - a handful of paths
+                       re-projected per frame, with the airspace left on
+                       Leaflet's cheap transform until the fingers lift.
+
+       v254 2026-08-04 v253 was a no-op. Two faults in my own fix.
+
+                       ONE. Leaflet resolves a path's renderer as
+
+                         layer.options.renderer || paneRenderer
+                           || map.options.renderer || map._renderer
+
+                       so the moment a renderer is handed in as a map
+                       option - which v253 did, for the padding - THAT
+                       instance is the one in use and map._renderer is
+                       never created. The sync collected only _renderer
+                       and _paneRenderers. It found an empty list and
+                       did nothing. v253 could not have worked.
+
+                       TWO. Even before that, it did the wrong work.
+                       _update() recomputes the clip bounds and
+                       re-clips; it does NOT re-project. The point
+                       arrays come from _project(), which Leaflet calls
+                       only on zoomend. So it was re-clipping the
+                       PREVIOUS zoom's geometry, which cannot change
+                       anything visible during a pinch.
+
+                       _reset() is the whole thing: _update() for the
+                       bounds, _updateTransform() at the live zoom -
+                       which resolves to a scale of 1, so the outer CSS
+                       scale that fattens the pen goes away - and
+                       _reset() on every path, which re-projects it.
+
+                       The diagnostics now report which renderer was
+                       found and its padding, so a repeat of fault one
+                       is one screenshot away rather than four builds.
+
        v253 2026-08-04 The pinch. Measured, then fixed.
 
                        Your diagnostics screenshot plus one sentence -
@@ -9282,7 +9344,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v253-ROT';
+  var VERSION = 'v255-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -10554,6 +10616,11 @@ var PROC_META={
      its own minZoom/maxZoom and every gesture clamps to them, so there
      is no second opinion about where zoom stops. */
   var NMX_ZMIN = 4, NMX_ZMAX = 17;
+
+  /* Re-projection cost, filled in by the map's renderer sync and read by
+     the diagnostics panel. Declared out here because those two live in
+     different scopes and the boot test found that the hard way. */
+  var NMX_SYNC = { ms:0, peak:0, n:0 };
 
   var TERR_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
   var TERR_MAXNATIVE = 14, TERR_SAMPLE_Z = 11, M2FT = 3.28084;
@@ -19399,7 +19466,9 @@ var PROC_META={
           + L1('Version', VERSION + ' \u00b7 ' + BUILD);
     if (!LMAP) return h + '<div class="cnote">Leaflet is not running.</div>';
 
-    var r = LMAP._renderer, kind = 'none';
+    var r = (LMAP.options && LMAP.options.renderer) || LMAP._renderer, kind = 'none';
+    var rsrc = (LMAP.options && LMAP.options.renderer) ? 'map option'
+             : (LMAP._renderer ? 'map default' : 'none');
     if (r) kind = (r._container && r._container.tagName === 'CANVAS') ? 'Canvas' : 'SVG';
     var pane = LMAP.getPane && LMAP.getPane('overlayPane');
     var paths = pane ? pane.querySelectorAll('path').length : -1;
@@ -19407,6 +19476,9 @@ var PROC_META={
 
     h += '<div class="csec">Renderer</div>'
       +  L1('Kind', kind)
+      +  L1('Found via', rsrc)
+      +  L1('Padding', (r && r.options && r.options.padding != null)
+                       ? r.options.padding : '(default)')
       +  L1('Paths in overlay pane', paths)
       +  L1('Canvases in overlay pane', cvs);
 
@@ -19441,6 +19513,9 @@ var PROC_META={
     h += '<div class="csec">State</div>'
       +  L1('Zoom', (Math.round(LMAP.getZoom() * 100) / 100))
       +  L1('_animatingZoom', !!LMAP._animatingZoom)
+      +  L1('Re-project, last', (Math.round(NMX_SYNC.ms * 100) / 100) + ' ms')
+      +  L1('Re-project, worst', (Math.round(NMX_SYNC.peak * 100) / 100) + ' ms')
+      +  L1('Re-projects so far', NMX_SYNC.n)
       +  L1('Renderers', 1 + Object.keys(LMAP._paneRenderers || {}).length);
     return h;
   }
@@ -24028,22 +24103,62 @@ var PROC_META={
        This reaches into Leaflet's internals, which I would rather not
        do. The alternative is to keep drawing a route that is cut off
        in mid-air. */
+    /* Cost, measured rather than assumed. I told Danny the overlay was
+       six paths and it is 253 - the route legs plus every airspace,
+       airway, danger area and zone ring in the same pane. Re-projecting
+       all of them once a frame may be fine and may not; these two
+       numbers say which, in the diagnostics, on his phone. */
     function nmxRendererSync(){
       if (!LMAP) return;
+      var t0 = (window.performance && performance.now) ? performance.now() : 0;
       try {
+        /* EVERY renderer, and options.renderer FIRST.
+           Leaflet resolves a path's renderer as
+
+             layer.options.renderer || paneRenderer
+               || map.options.renderer || map._renderer
+
+           so once a renderer is handed in as a map option - which it is,
+           for the padding - that instance is the one in use and
+           map._renderer is never created. v253 collected only _renderer
+           and _paneRenderers, found nothing, and did nothing at all.
+           That is why v253 changed exactly as much as v251 did. */
         var rs = [];
-        if (LMAP._renderer) rs.push(LMAP._renderer);
+        function add(r){ if (r && rs.indexOf(r) < 0) rs.push(r); }
+        add(LMAP.options && LMAP.options.renderer);
+        add(LMAP._renderer);
         var pr = LMAP._paneRenderers || {};
-        for (var k in pr) if (pr[k] && rs.indexOf(pr[k]) < 0) rs.push(pr[k]);
+        for (var k in pr) add(pr[k]);
+
         var was = LMAP._animatingZoom;
         LMAP._animatingZoom = false;
         for (var i = 0; i < rs.length; i++){
           var r = rs[i];
-          if (!r || typeof r._update !== 'function') continue;
-          try { r._update(); r.fire('update'); } catch(_){ }
+          if (!r) continue;
+          /* _reset(), NOT _update().
+
+             _update() recomputes the clip bounds and re-clips. It does
+             NOT re-project: the point arrays come from _project(), which
+             Leaflet calls only on zoomend. So the previous version was
+             re-clipping the PREVIOUS zoom's geometry - which cannot
+             change anything you can see during a pinch.
+
+             _reset() is the whole thing: _update() for the bounds,
+             _updateTransform() at the live zoom - which resolves to a
+             scale of 1, so the outer CSS scale that fattens the pen goes
+             away - and _reset() on every path, which re-projects it. */
+          try {
+            if (typeof r._reset === 'function') r._reset();
+            else if (typeof r._update === 'function'){ r._update(); r.fire('update'); }
+          } catch(_){ }
         }
         LMAP._animatingZoom = was;
       } catch(_){ }
+      if (t0){
+        NMX_SYNC.ms = performance.now() - t0;
+        if (NMX_SYNC.ms > NMX_SYNC.peak) NMX_SYNC.peak = NMX_SYNC.ms;
+        NMX_SYNC.n++;
+      }
     }
 
     var settle = 0, nmxGesture = false;

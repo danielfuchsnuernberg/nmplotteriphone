@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v253 · 4 Aug 2026**.
+Status as of **v255 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -108,11 +108,16 @@ against it
   place. If they can now, the rebuild is pure cost — and it is the floating.
   Retry it with the renderer sync in place, this time proving the route draws
   correctly at three zooms before shipping.
-- **[A] Watch the pinch for lag on a busy map.** Re-projecting every frame is
-  cheap at six paths. With airspace, airways and danger areas all lit it is
-  more, and the honest number is unknown. If a pinch ever stutters with
-  everything on, that is this, and the answer is to re-project only the
-  route and let the rest keep Leaflet's transform.
+- **[A] Read the re-projection timing off the diagnostics panel.** The
+  overlay is **253 paths**, not the six I claimed — the route legs plus every
+  airspace, airway, danger area and zone ring in the same pane. v254
+  re-projects all of them on every frame of a pinch. The panel now reports
+  last/worst milliseconds; anything approaching 16 ms is a dropped frame.
+- **[D] If it is slow: a dedicated renderer for the route.** Put the legs in
+  their own pane with their own `L.svg`, re-project only that per frame, and
+  leave the airspace on Leaflet's cheap transform until the fingers lift. The
+  route is what has to be right during a pinch; the zones can float for a
+  second.
 - **[D] Line weights against ForeFlight's.** Their legs are nearer 8 px than
   our 2.5/3.5, and read as considerably more confident on a moving map. Now
   that width is constant at every zoom, it is worth deciding what that width
@@ -243,7 +248,8 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
-| Route fat and cut off DURING a pinch | v253 | Re-project every zoom frame; renderer padding 0.1 → 0.6 |
+| v253's sync found no renderer and re-clipped instead of re-projecting | v254 | options.renderer included; `_reset()` not `_update()` |
+| Route fat and cut off DURING a pinch | v253, **completed v254** | Re-project every zoom frame; renderer padding 0.1 → 0.6 |
 | Map diagnostics panel, so the next fix is measured | v252 | More > Diagnostics; renderer kind, pen, clip, transform |
 | Stroke width scaled with the map during a zoom | v251 | non-scaling-stroke on every map vector |
 | Route drawn fat and clipped: stale renderer bounds and transform | v250 | Renderers made to catch up before every draw |

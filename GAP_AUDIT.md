@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v253 · 4 Aug 2026**
+**Status as of v255 · 4 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,7 +32,9 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
-| v253 | **Fat and clipped route during a pinch fixed.** Leaflet fakes a zoom with an outer CSS `scale()` on the `<svg>` element, which scales the pen and shrinks the drawn area; `vector-effect` cannot reach it. Now re-projects on every zoom frame, with renderer padding raised 0.1 → 0.6. |
+| v255 | **Re-projection cost instrumented.** The overlay is 253 paths, not the six previously assumed; the diagnostics panel now reports last and worst re-projection time so the per-frame cost is measured rather than asserted. |
+| v254 | **v253's renderer sync corrected.** It collected only `map._renderer`, which Leaflet never creates once a renderer is passed as a map option, and it called `_update()` (re-clip) rather than `_reset()` (re-project). Both made v253 a no-op. |
+| v253 | **Fat and clipped route during a pinch — first attempt.** Leaflet fakes a zoom with an outer CSS `scale()` on the `<svg>` element, which scales the pen and shrinks the drawn area; `vector-effect` cannot reach it. Now re-projects on every zoom frame, with renderer padding raised 0.1 → 0.6. |
 | v252 | **Map diagnostics panel** (More > Diagnostics). Reports build, renderer kind, path/canvas counts, computed stroke-width and vector-effect on a real route path, container transform, clip rectangle vs map size, `_animatingZoom`. v262 has no equivalent. |
 | v251 | **Map vectors keep their stroke width through a zoom** (`vector-effect:non-scaling-stroke`), matching ForeFlight's constant-weight legs. v250 fixed the weight after a gesture; this fixes it during one. |
 | v250 | **Fat, clipped route diagnosed and fixed.** `SVG._update()` refuses to run while `_animatingZoom` is set, so the clip bounds and container transform went stale across overlapping zoom gestures — affecting new paths as much as old ones. Every renderer is now made to catch up at the top of `renderMap`. |
