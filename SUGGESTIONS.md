@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v257 · 4 Aug 2026**.
+Status as of **v258 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -108,7 +108,12 @@ against it
   place. If they can now, the rebuild is pure cost — and it is the floating.
   Retry it with the renderer sync in place, this time proving the route draws
   correctly at three zooms before shipping.
-- **[R] THE ZONES — the last group still rebuilding.** `G.box` (airspace,
+- **[A] Fly the zoom and say whether it is done.** As of v258 a pan or a zoom
+  rebuilds nothing: route and tracks are carried by Leaflet, markers and zones
+  are diffed. The panel reports kept/added/removed for both. If it still
+  floats, the next suspects are the terrain tile layer and the own-ship
+  marker, neither of which is in the diff.
+- **[?] ~~THE ZONES — the last group still rebuilding.~~ Done v258.** `G.box` (airspace,
   danger areas, CTA/TMA, airways, broadcast zones) is still cleared and
   rebuilt on every view change. It is mostly fixed geometry; only the zone
   frequency labels need the viewport, because they are placed inside the
@@ -264,6 +269,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Zones rebuilt on every pan and zoom | v258 | Same diff, keyed on shape digest + paint |
 | Markers destroyed and rebuilt on every pan and zoom | v257 | Diffed on view-only renders, keyed on position + icon html |
 | Route rebuilt on every pan and zoom | v256 | View-only render, now that the renderer catches up |
 | v253's sync found no renderer and re-clipped instead of re-projecting | v254 | options.renderer included; `_reset()` not `_update()` |

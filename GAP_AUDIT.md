@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v257 · 4 Aug 2026**
+**Status as of v258 · 4 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v258 | **Zones diffed as well; a view change now rebuilds nothing.** One key covers markers (position + icon html) and paths (shape digest + paint). The zone frequency label needed no special case — its position depends on the viewport, so its key moves and it is replaced. |
 | v257 | **Markers diffed rather than rebuilt on a view change.** Keyed on position plus icon html so a label change still makes a new marker; only applied to view-only renders, so click handlers closing over data can never go stale. |
 | v256 | **A view change no longer rebuilds the route or the recorded tracks.** Retry of v248, this time with the renderer sync proven on the device (scale(1), clip covers map, 5 ms worst over 1950 re-projections). Markers and zones still rebuild. |
 | v255 | **Re-projection cost instrumented.** The overlay is 253 paths, not the six previously assumed; the diagnostics panel now reports last and worst re-projection time so the per-frame cost is measured rather than asserted. |

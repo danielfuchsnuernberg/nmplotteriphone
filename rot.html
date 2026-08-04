@@ -22,6 +22,38 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v258 2026-08-04 The zones too. Nothing is rebuilt on a view
+                       change any more.
+
+                       v257's numbers off the device: 148 markers kept
+                       against 26 added over 37 view-only renders, worst
+                       re-projection 3 ms. The diff works, so the same
+                       treatment now covers G.box - airspace, danger
+                       areas, CTA and TMA, airways, broadcast zones.
+
+                       ONE KEY FOR BOTH KINDS. A marker is position plus
+                       icon html. A path is shape plus paint: the full
+                       vertex list would be a long string for an airway,
+                       so it is digested to how many points and the
+                       first, middle and last of them, with the colour,
+                       weight and dash. Two zones would have to share
+                       all three points at six decimal places to
+                       collide, and the cost of a collision is one zone
+                       kept on a view change where its geometry did not
+                       change anyway.
+
+                       The zone FREQUENCY LABEL needed no special case.
+                       It is a marker placed inside the VISIBLE part of
+                       its zone, so its position - and therefore its
+                       key - moves when the view moves, and it is
+                       replaced. That falls out of the rule.
+
+                       Where this leaves it: a pan or a zoom now rebuilds
+                       NOTHING. The route and tracks are carried by
+                       Leaflet; the markers and zones are diffed. The
+                       only work left on a view change is the difference
+                       itself.
+
        v257 2026-08-04 The markers are diffed, not rebuilt. The last of
                        the floating.
 
@@ -9419,7 +9451,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v257-ROT';
+  var VERSION = 'v258-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -10696,7 +10728,8 @@ var PROC_META={
      the diagnostics panel. Declared out here because those two live in
      different scopes and the boot test found that the hard way. */
   var NMX_SYNC = { ms:0, peak:0, n:0, viewOnly:0,
-                   mkKept:0, mkAdded:0, mkGone:0 };
+                   mkKept:0, mkAdded:0, mkGone:0,
+                   bxKept:0, bxAdded:0, bxGone:0 };
 
   var TERR_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
   var TERR_MAXNATIVE = 14, TERR_SAMPLE_Z = 11, M2FT = 3.28084;
@@ -19596,6 +19629,9 @@ var PROC_META={
       +  L1('Markers kept', NMX_SYNC.mkKept)
       +  L1('Markers added', NMX_SYNC.mkAdded)
       +  L1('Markers removed', NMX_SYNC.mkGone)
+      +  L1('Zones kept', NMX_SYNC.bxKept)
+      +  L1('Zones added', NMX_SYNC.bxAdded)
+      +  L1('Zones removed', NMX_SYNC.bxGone)
       +  L1('Renderers', 1 + Object.keys(LMAP._paneRenderers || {}).length);
     return h;
   }
@@ -23080,15 +23116,51 @@ var PROC_META={
      over a route index, openCard(id) over an ident. On a view change
      that data is by definition unchanged. On a data change nothing is
      kept, so nothing can go stale. */
-  function nmxMkKey(l){
+  /* One key for both kinds of overlay object.
+
+     A MARKER is its position plus its icon html - the html because the
+     icon changes with zoom, from a bare dot to a dot with a label, and
+     keeping the old one would strand a stale label.
+
+     A PATH is its shape plus its paint. The full vertex list would be
+     a long string for an airway, so it is digested: how many points,
+     and the first, middle and last of them. Two different zones would
+     have to share all three, at six decimal places, to collide - and
+     the cost of a collision is one zone kept when it should have been
+     redrawn, on a view change where its geometry did not change
+     anyway.
+
+     A zone's FREQUENCY LABEL is a marker whose position depends on the
+     viewport - it is placed inside the visible part of its zone - so
+     its key moves when the view moves and it is correctly replaced.
+     That falls out of the same rule rather than needing its own. */
+  function nmxLayerKey(l){
     try {
-      var ll = l.getLatLng ? l.getLatLng() : null;
-      var ic = l.options && l.options.icon && l.options.icon.options;
-      if (!ll || !ic) return null;
-      return ll.lat.toFixed(6) + ',' + ll.lng.toFixed(6) + '|' + (ic.html || '');
-    } catch(_){ return null; }
+      if (l.getLatLng){
+        var ll = l.getLatLng();
+        var ic = l.options && l.options.icon && l.options.icon.options;
+        if (!ll) return null;
+        return 'm|' + ll.lat.toFixed(6) + ',' + ll.lng.toFixed(6)
+             + '|' + ((ic && ic.html) || '');
+      }
+      if (l.getLatLngs){
+        var pts = l.getLatLngs();
+        while (pts && pts.length && Array.isArray(pts[0])) pts = pts[0];
+        if (!pts || !pts.length) return null;
+        var n = pts.length, o = l.options || {};
+        var at = function(i){
+          var q = pts[i];
+          return q ? (q.lat.toFixed(6) + ',' + q.lng.toFixed(6)) : '';
+        };
+        return 'p|' + n + '|' + at(0) + '|' + at(n >> 1) + '|' + at(n - 1)
+             + '|' + (o.color || '') + '|' + (o.weight || '')
+             + '|' + (o.dashArray || '') + '|' + (o.fillColor || '');
+      }
+    } catch(_){ }
+    return null;
   }
-  function nmxMkDiff(real){
+  function nmxMkKey(l){ return nmxLayerKey(l); }
+  function nmxMkDiff(real, tally){
     var prev = {}, seen = {};
     try {
       real.eachLayer(function(l){
@@ -23101,16 +23173,16 @@ var PROC_META={
       clearLayers: function(){ return this; },
       addLayer: function(l){
         var k = nmxMkKey(l);
-        if (k && prev[k]){ seen[k] = prev[k]; NMX_SYNC.mkKept++; return this; }
+        if (k && prev[k]){ seen[k] = prev[k]; NMX_SYNC[tally + 'Kept']++; return this; }
         real.addLayer(l);
         if (k) seen[k] = l;
-        NMX_SYNC.mkAdded++;
+        NMX_SYNC[tally + 'Added']++;
         return this;
       },
       commit: function(){
         for (var k in prev){
           if (!seen[k]){
-            try { real.removeLayer(prev[k]); NMX_SYNC.mkGone++; } catch(_){ }
+            try { real.removeLayer(prev[k]); NMX_SYNC[tally + 'Gone']++; } catch(_){ }
           }
         }
       }
@@ -23164,8 +23236,14 @@ var PROC_META={
     if (viewOnly){
       var NMX_KEEP = { addLayer:function(){ return this; },
                        clearLayers:function(){ return this; } };
-      G = { box:G.box, mk:nmxMkDiff(G.mk), ship:G.ship,
-            leg:NMX_KEEP, trk:NMX_KEEP };
+      /* The zones go through the same diff as the markers. G.box is
+         mostly fixed geometry - airspace, danger areas, CTA/TMA,
+         airways, broadcast zones - and the one part of it that DOES
+         depend on the viewport, the frequency label placed inside the
+         visible part of its zone, is a marker whose key moves with the
+         view and is replaced for free. */
+      G = { box:nmxMkDiff(G.box, 'bx'), mk:nmxMkDiff(G.mk, 'mk'),
+            ship:G.ship, leg:NMX_KEEP, trk:NMX_KEEP };
       NMX_SYNC.viewOnly++;
     }
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers(); G.trk.clearLayers();
@@ -23641,6 +23719,7 @@ var PROC_META={
     /* remove whatever the diff did not want this time. Only present on
        a view-only render; a full one cleared and rebuilt as before. */
     if (G.mk && typeof G.mk.commit === 'function') G.mk.commit();
+    if (G.box && typeof G.box.commit === 'function') G.box.commit();
     nmxMarks = drawn;
   }
 
