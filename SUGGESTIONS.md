@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v263 · 5 Aug 2026**.
+Status as of **v266 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -115,6 +115,14 @@ against it
   place. If they can now, the rebuild is pure cost — and it is the floating.
   Retry it with the renderer sync in place, this time proving the route draws
   correctly at three zooms before shipping.
+- **[A] WAYPOINTS STILL FLOAT — measurement shipped in v266, awaiting a
+  reading.** Marker drift is now measured every zoom frame: the gap between
+  where an icon sits and where its coordinates project to. Near zero means
+  they are welded and the visible effect is something else (most likely labels
+  re-placing as the declutter changes which markers are drawn). Tens of pixels
+  means Leaflet is carrying them on a pane transform while their real position
+  has moved on, and they need what the vectors got in v253 — repositioned per
+  frame rather than transformed. Do not fix until the number is known.
 - **[A] MAPS / ZOOM / FLOATING IS NOT CLOSED.** Danny's note, 4 Aug: more
   testing to come, the topic stays open. As of v258 a pan or a zoom rebuilds
   nothing — route and tracks carried by Leaflet, markers and zones diffed —
@@ -221,6 +229,16 @@ against it
   list tiles and the rail all draw icons that have only ever been eyeballed.
   One pass with the same measurement would say whether they are siblings or
   just look like it.
+- **[?] Other v101-era map-only fixes may have the same blind spot.** The
+  double-tap hardening was written for `#lmap` and read for two years as
+  though it covered the app. Worth one pass over anything else pinned to the
+  map element that arguably belongs to the whole app.
+- **[D] `proc` looks like a dead duplicate of `fixes`.** Both are titled
+  "Procedure fixes" in LAYER_META with different glyphs, and `proc` is in
+  neither rail pool. Delete or keep — your call.
+- **[D] Three triangles remain**: Enroute fixes, Danger & restricted, and
+  `proc`. Danger keeps its exclamation so it reads apart; worth a look on the
+  icon sheet to decide whether that is enough.
 - **[?] 101 empty `catch` blocks.** Most are legitimate (storage in private
   mode, a DOM node not there yet), but it is a lot of places a fault can die
   quietly. Worth one pass with fresh eyes.
@@ -283,6 +301,8 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Airports, Strips, Terminal areas and Enroute fixes wore the wrong glyphs | v265 | Chart convention; Terminal areas stops drawing a mountain |
+| Fast double tap broke the layout outside the map | v264 | touch-action:manipulation across .app; scroll net |
 | UTC readout sat beside the clock rather than centred | v263 | Auto margins; title gives up its grow, scoped to this sheet |
 | Times opened at full height; no date anywhere | v262 | Opens at the stamps; UTC date in the header |
 | North needle redrawn from Danny's reference | v261 | Two triangles and a pivot hub; no letter, no red |
