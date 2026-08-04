@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v246 · 4 Aug 2026**.
+Status as of **v247 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -212,6 +212,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Pinch hijacked by an armed drag-zoom; pinch also fired the two-finger step | v247 | Second finger ends the drag; tap told from pinch |
 | Map re-zoomed itself; two gestures, two zoom ranges | v246 | Limits named on the map; one NMX_ZMIN/ZMAX |
 | Times actions were two full-width rows | v245 | Two buttons on one line; Clear arms first |
 | Downloads/Settings tiles: low glyphs, wrong shape, mismatched sizes | v244 | .tb recipe, gapped row, one 16-unit optical square |

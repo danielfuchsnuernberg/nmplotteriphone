@@ -22,6 +22,40 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v247 2026-08-04 Zoom, part two: our gestures stop fighting
+                       Leaflet's.
+
+                       v246 stopped the map re-zooming itself on a layer
+                       change. You said the jumps were fewer but still
+                       there, so I went looking for what else sets zoom
+                       without being asked. Two more, both ours:
+
+                       A. A SECOND FINGER DID NOT END THE DRAG-ZOOM.
+                          Double-tap-and-slide arms `dz` and disables
+                          Leaflet's dragging. A pinch starting while
+                          that was armed only set `multi` and returned -
+                          `dz` stayed live. The moment one finger came
+                          off, touches.length was 1 again, touchmove
+                          resumed, and the zoom was driven from dz.z0:
+                          the level captured BEFORE the pinch. The map
+                          snapped back to a zoom you had already left.
+                          Two fingers now end the drag outright.
+
+                       B. A PINCH ALSO FIRED THE TWO-FINGER STEP.
+                          Two-finger tap zooms out one level. A pinch is
+                          also two fingers, and arrives at touchend the
+                          same way, so every pinch took an extra level
+                          off at the end. They are told apart now by
+                          what happened in between: a pinch changes the
+                          zoom and takes time, a tap does neither. Under
+                          300 ms AND zoom unchanged within 0.05 is a
+                          tap; anything else is a pinch and is left
+                          alone.
+
+                       Still not fixed, and still the reason the layers
+                       float: the overlay is rebuilt on every view
+                       change. That is its own build.
+
        v246 2026-08-04 Zoom, part one: one range, and Leaflet stops
                        setting the zoom by itself.
 
@@ -8957,7 +8991,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v246-ROT';
+  var VERSION = 'v247-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -23572,9 +23606,25 @@ var PROC_META={
          suspended for the duration so the map cannot pan underneath. */
       var dz = null;          /* {y0, z0, ll, moved} while the drag is live */
       var DZ_PER_LEVEL = 110; /* px of travel per zoom level */
+      var multiAt = 0, multiZ0 = null;   /* when the pinch began, and at what zoom */
 
       host.addEventListener('touchstart', function(e){
-        if (e.touches && e.touches.length > 1){ multi = e.touches.length; return; }
+        if (e.touches && e.touches.length > 1){
+          multi = e.touches.length;
+          /* A SECOND FINGER ENDS THE DRAG-ZOOM.
+             It did not, and that was a zoom jump you could feel. The
+             drag-zoom armed on a double tap stayed armed while a pinch
+             ran; the moment one finger came off, touches.length was 1
+             again, touchmove resumed, and the zoom was driven from
+             dz.z0 - the level captured BEFORE the pinch. Two fingers
+             mean Leaflet's pinch has it now. */
+          if (dz) endDrag();
+          /* remember where the pinch started, so a two-finger TAP can
+             be told from a pinch when the fingers come off */
+          multiAt = Date.now();
+          try { multiZ0 = LMAP.getZoom(); } catch(_){ multiZ0 = null; }
+          return;
+        }
         var t = e.touches && e.touches[0];
         if (!t) return;
         if (t.target && t.target.closest && t.target.closest('.fld')) return;
@@ -23641,7 +23691,21 @@ var PROC_META={
         /* a tap on a marker is a marker tap, not a zoom */
         if (t.target && t.target.closest && t.target.closest('.fld')){ multi = 0; return; }
 
-        if (multi >= 2){ multi = 0; touchZoomAt = Date.now(); zoomAt(t.clientX, t.clientY, -1); return; }
+        if (multi >= 2){
+          /* A TWO-FINGER TAP zooms out one step. A PINCH must not: it
+             has already set the zoom itself, and taking another level
+             off the end of it is the map moving after you stopped.
+             They arrive here identically - two fingers, then none - so
+             they are told apart by what happened in between: a pinch
+             changes the zoom and takes time; a tap does neither. */
+          var quick = (Date.now() - multiAt) < 300;
+          var stillZ = (multiZ0 == null) ||
+                       Math.abs(LMAP.getZoom() - multiZ0) < 0.05;
+          multi = 0; multiAt = 0; multiZ0 = null;
+          touchZoomAt = Date.now();
+          if (quick && stillZ) zoomAt(t.clientX, t.clientY, -1);
+          return;
+        }
         multi = 0;
 
         var now = Date.now();
