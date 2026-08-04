@@ -22,6 +22,37 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v267 2026-08-05 Flights splits into three, and the drift number
+                       is in.
+
+                       MARKER DRIFT, WORST: 76.7 px at z17. The markers
+                       are not glued - not by a pixel or two, by most of
+                       an inch. So the floating is the markers
+                       themselves and not labels re-placing, which was
+                       the other thing the number could have meant.
+
+                       AND IT LOOKS LIKE MINE. v253 made the vector
+                       renderer re-project every frame, so the route
+                       became exact - while the markers stayed on
+                       Leaflet's animation transform. Before that
+                       everything was uniformly wrong TOGETHER, which
+                       reads as consistent. Now the route is right and
+                       the markers lag it, which reads as floating.
+                       Fixed next build, properly: rushing it is what
+                       cost v250 through v254.
+
+                       FLIGHTS IS THREE SECTIONS. Times, Flights,
+                       Routes, each headed and counted. They were
+                       interleaved by time, so a stopwatch record, a GPS
+                       track and a saved plan sat in one column wearing
+                       three different card layouts with nothing to say
+                       why. Newest first WITHIN each section, so the
+                       ordering is kept where it means something.
+
+                       The count line follows: routes, tracks, times -
+                       rather than folding a filed times record in with
+                       the GPS tracks as v235 did.
+
        v266 2026-08-05 Measure the floating before fixing it. Again.
 
                        The waypoints still float. Four builds ago I
@@ -9786,7 +9817,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v266';
+  var VERSION = 'v267';
   var BUILD   = '2026-08-05';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -19605,11 +19636,13 @@ var PROC_META={
     /* A filed times record is a flight - an engine run, more so than a
        GPS track is - so it counts with them rather than earning the bar
        a third noun. */
-    var nRec = FLIGHTS.filter(function(f){ return f.rec || f.tim; }).length;
-    var nRt  = FLIGHTS.length - nRec;
+    var nTim = FLIGHTS.filter(function(f){ return f.tim; }).length;
+    var nRec = FLIGHTS.filter(function(f){ return f.rec; }).length;
+    var nRt  = FLIGHTS.length - nRec - nTim;
     var h = '<div class="flbar"><span class="cnt">'
           + nRt + (nRt === 1 ? ' route' : ' routes')
-          + (nRec ? ' \u00b7 ' + nRec + (nRec === 1 ? ' flight' : ' flights') : '')
+          + (nRec ? ' \u00b7 ' + nRec + (nRec === 1 ? ' track' : ' tracks') : '')
+          + (nTim ? ' \u00b7 ' + nTim + (nTim === 1 ? ' times' : ' times') : '')
           + '</span>'
           + '<button data-fl="save"' + (ROUTE.length < 2 ? ' disabled' : '')
           + '>Save current</button></div>';
@@ -19619,11 +19652,33 @@ var PROC_META={
                + 'and tap Save current, or record a flight with REC.</div>';
     }
 
-    FLIGHTS.slice().sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); }).forEach(function(f){
+    /* THREE KINDS, THREE SECTIONS. They were interleaved by time, which
+       put a stopwatch record, a GPS track and a saved plan in one column
+       with nothing between them - three different objects wearing three
+       different card layouts and no heading to say so. Sorted newest
+       first WITHIN each section, so the ordering you had is kept where
+       it means something. */
+    var SECT = [
+      ['Times',   function(f){ return !!f.tim; }],
+      ['Flights', function(f){ return !!f.rec; }],
+      ['Routes',  function(f){ return !f.tim && !f.rec; }]
+    ];
+    var ordered = [];
+    SECT.forEach(function(sec){
+      var rows = FLIGHTS.filter(sec[1])
+                        .sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+      if (!rows.length) return;
+      ordered.push({ head: sec[0] + ' \u00b7 ' + rows.length });
+      rows.forEach(function(r){ ordered.push({ row: r }); });
+    });
+
+    ordered.forEach(function(item){
+      if (item.head){ h += '<div class="csec">' + esc(item.head) + '</div>'; return; }
+      var f = item.row;
       /* A recorded flight is a different thing from a planned route and
          is not described by waypoints, distance-by-plan or ETE. */
       if (f.tim){
-        var nSec = (f.secs || []).length;
+        var nSec2 = (f.secs || []).length, nSec = nSec2;
         h += '<button class="flc tim" data-flid="' + f.id + '">'
           +  '<span class="top"><b>' + esc(f.nm) + '</b>'
           +    '<span class="ts">' + noteAge(f.ts) + '</span></span>'

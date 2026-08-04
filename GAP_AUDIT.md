@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v266 · 5 Aug 2026**
+**Status as of v267 · 5 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v267 | **Flights view split into Times / Flights / Routes**, each headed and counted, newest first within each section. Count line now reads routes · tracks · times. |
 | v266 | **Marker drift instrumented.** Every zoom frame, one marker's on-screen position is compared with its projected position; the worst gap and the zoom it occurred at are reported in the diagnostics panel. No fix in this build — the number decides which fix. |
 | v265 | **Four layer glyphs corrected to chart convention.** Airports takes the ICAO aerodrome symbol, Enroute fixes takes the triangle, Strips becomes a plain open circle, Terminal areas stops drawing the same mountain as Terrain shading. |
 | v264 | **Native double-tap zoom disabled across the whole app**, not just the map — `touch-action` does not inherit, so the v101/v102 fix covered `#lmap` and nothing else. Plus a viewport-scroll recovery net. |
