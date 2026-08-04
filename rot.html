@@ -22,6 +22,46 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v249 2026-08-04 v248 reverted. It broke the route.
+
+                       Flown, leaving the legs for Leaflet to carry gave
+                       a route CLIPPED in mid-air at low zoom - the leg
+                       stopping dead in open ground short of any
+                       waypoint - and several times too thick at high
+                       zoom, visible pixels on a 2.5 px line.
+
+                       Both are one fault, and it is not the route: the
+                       SVG container was left holding a stale zoom
+                       transform and stale clip bounds. Stroke width
+                       scales with that transform, and Leaflet clips
+                       every path to the renderer's _bounds - a padded
+                       rectangle recomputed when the renderer updates.
+                       When that update does not land, paths keep the
+                       previous zoom's scale and the previous zoom's
+                       clip rectangle. Fat lines, and geometry cut off
+                       where the old rectangle ended.
+
+                       Rebuilding every path on every view change was
+                       MASKING that, because a path projects itself on
+                       the way onto the map. The mask is expensive and
+                       it is exactly what makes the overlay feel
+                       unglued - but it was load-bearing, and removing
+                       it without first making the in-place update
+                       reliable put a cut-off route in front of a pilot.
+                       That is the wrong way round, and a route line
+                       that stops in open ground is worse than one that
+                       flickers.
+
+                       So it is back to the full rebuild. The next
+                       attempt starts with WHY Leaflet's renderer
+                       _update does not land - _animatingZoom left set
+                       across overlapping gestures is the first thing to
+                       check - and not with skipping work.
+
+                       v246 and v247 stand: the map no longer re-zooms
+                       itself, and our gestures no longer fight
+                       Leaflet's.
+
        v248 2026-08-04 Zoom, part three: a view change stops destroying
                        the route.
 
@@ -9037,7 +9077,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v248-ROT';
+  var VERSION = 'v249-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -22528,38 +22568,38 @@ var PROC_META={
     return L.divIcon({ className:'nmx-di', html:html, iconSize:[0, 0], iconAnchor:[0, 0] });
   }
 
-  /* renderMap(viewOnly)
+  /* renderMap()
      ------------------------------------------------------------------
-     A VIEW CHANGE AND A DATA CHANGE ARE NOT THE SAME THING, and until
-     v248 this function treated them as one. It cleared every overlay
-     group and rebuilt the lot, and it ran on moveend, zoomend, resize
-     AND viewreset - so every pan and every zoom destroyed the route,
-     the tracks, the zones and every marker and drew them again a frame
-     later. That is what "the layers float" is. They were not being
-     carried by the map; they were being thrown away and redrawn.
+     v248 tried to make a view change cheap by leaving the route legs
+     and the recorded tracks alone - they are latitudes and longitudes
+     and do not depend on where you are looking, so Leaflet ought to
+     carry them for free.
 
-     Leaflet already moves and scales what is on the map, for free and
-     in the same frame as the tiles. Anything whose geometry does not
-     depend on where you are looking should therefore be left alone on
-     a view change - and the route legs and the recorded tracks are
-     exactly that: latitudes and longitudes, identical at every zoom.
+     IT WAS REVERTED IN v249, and the reason matters more than the idea.
+     Flown, the route came out CLIPPED at low zoom - the leg stopping
+     dead in open ground - and several times too thick at high zoom, to
+     the point of visible pixels on a 2.5 px line.
 
-     So a view-only render leaves G.leg and G.trk untouched. It does it
-     by handing those two a stub for the duration rather than by
-     threading a flag through four hundred lines of builder: nothing
-     clears them, and anything built for them is dropped on the floor
-     unadded (an unadded L.polyline creates no DOM, so this costs an
-     object, not a layout).
+     Both are one fault: the SVG container was left holding a stale zoom
+     transform and stale clip bounds. Stroke width scales with the
+     container transform, and Leaflet clips every path to the renderer's
+     _bounds, a padded rectangle recomputed when the renderer updates.
+     If that update does not land, the paths keep the previous zoom's
+     scale and the previous zoom's clip rectangle - fat lines, and
+     geometry cut off where the old rectangle ended.
 
-     STILL REBUILT on a view change, and honestly so:
-       G.mk  - the declutter is a collision pass in SCREEN space and
-               the rank gates read the zoom, so which markers exist
-               genuinely changes with the view.
-       G.box - mostly geometry, but the zone frequency labels are
-               placed inside the VISIBLE part of their zone, which
-               needs the bounds. Splitting that is the next step.
+     Rebuilding every path on every view change MASKED that, because a
+     path added to the map projects itself on the way in. The mask was
+     expensive and it is what made the overlay feel unglued - but it was
+     load-bearing, and removing it without first making the in-place
+     update reliable put a cut-off route in front of a pilot. That is
+     the wrong way round.
+
+     So: full rebuild, as before, until the renderer's in-place update
+     is understood and proven. The next attempt has to start there -
+     with why _update does not land - and not with skipping work.
      ------------------------------------------------------------------ */
-  function renderMap(viewOnly){
+  function renderMap(){
     var map = $('#map'), host = $('#mapLayers');
     if (!map || !host) return;
     if (NMX_setBase) NMX_setBase(LAYERS.base);
@@ -22572,13 +22612,6 @@ var PROC_META={
 
     var G = nmxGroups();
     if (!G) return;                      /* no Leaflet, no overlay */
-    if (viewOnly){
-      /* swallows clearLayers() and addLayer(); the real groups are left
-         exactly as they are, so Leaflet keeps carrying them */
-      var NMX_KEEP = { addLayer:function(){ return this; },
-                       clearLayers:function(){ return this; } };
-      G = { box:G.box, mk:G.mk, ship:G.ship, leg:NMX_KEEP, trk:NMX_KEEP };
-    }
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers(); G.trk.clearLayers();
 
     /* APPROACH RING on the field you should be talking to. Lifted from
@@ -23118,12 +23151,12 @@ var PROC_META={
     });
   }
 
-  /* This used to hand renderMap straight to the listener, which passed
-     the Event object in as viewOnly - accidentally the right answer,
-     and that is a worse kind of correct than being wrong: the next
-     reader has no way to tell it was meant. A resize changes the
-     viewport and not the data, so it now says so out loud. */
-  window.addEventListener('resize', function(){ renderMap(true); });
+  /* Wrapped rather than passed bare: handing renderMap straight to a
+     listener gives it the Event object as its first argument, which is
+     harmless today and a trap the moment renderMap takes a parameter.
+     It did take one in v248, and this was how it silently became a
+     different call. */
+  window.addEventListener('resize', function(){ renderMap(); });
   drawLayersPop();
   buildRail();
   renderMap();
@@ -23654,12 +23687,9 @@ var PROC_META={
       settle = requestAnimationFrame(function(){
         settle = 0;
         syncVIEW();
-        /* A VIEW CHANGE. The route and the tracks are not rebuilt - see
-           renderMap's header. Everything that changes DATA calls
-           renderMap() with no argument and gets the full pass. */
         /* errors used to vanish here, which is how a broken render kept
            looking like a positioning bug */
-        try { renderMap(true); paintShip(); nmxDraws++; }
+        try { renderMap(); paintShip(); nmxDraws++; }
         catch(err){ nmxErr = (err && err.message) || String(err); }
         nmxDbgPaint();
       });

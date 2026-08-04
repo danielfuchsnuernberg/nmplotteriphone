@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v248 · 4 Aug 2026**
+**Status as of v249 · 4 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v249 | **v248 reverted.** Leaving the route for Leaflet to carry exposed a stale SVG renderer transform and clip bounds: the route drew clipped in mid-air at low zoom and several times too thick at high zoom. The full rebuild was masking it. Back to the full rebuild until the in-place update is proven. |
 | v248 | **Zoom part three: a view change no longer destroys the route or the recorded tracks.** `renderMap(viewOnly)` splits view changes from data changes; the two geometry-only groups are left for Leaflet to carry. Markers and zones still rebuild, for stated reasons. |
 | v247 | **Zoom part two: our own gestures were setting the zoom mid-pinch.** An armed drag-zoom survived a pinch and resumed from the pre-pinch level when a finger lifted; and every pinch also fired the two-finger step zoom-out at its end. |
 | v246 | **Zoom part one.** Map now names its own min/max zoom, so Leaflet's `_updateZoomLevels` can no longer call `setZoom()` on a layer add or remove; the drag gesture and the map share one range. Part two — the overlay rebuild on every view change — is identified, measured and not yet done. |
