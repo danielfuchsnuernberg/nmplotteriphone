@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v245 · 4 Aug 2026**
+**Status as of v246 · 4 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v246 | **Zoom part one.** Map now names its own min/max zoom, so Leaflet's `_updateZoomLevels` can no longer call `setZoom()` on a layer add or remove; the drag gesture and the map share one range. Part two — the overlay rebuild on every view change — is identified, measured and not yet done. |
 | v245 | **Times actions are two buttons on one line rather than two full-width rows**, saving ~90 px of a sheet you look past. Clear now arms then fires, since a smaller destructive control sitting beside the one you want costs more on a mis-tap. |
 | v244 | **More sheet's two tiles rebuilt on the toolbar's own icon-button recipe.** Glyphs were sitting low (`display:block` missing), the joined pill said 'pick one state' for two destinations, and the two marks were different optical sizes. Settings mark unified across the sheet, toolbar and landscape HUD. |
 | v243 | **Times sheet: stops above the tab bar, drag-resizable by a grip, dismissed by dragging under the threshold or tapping the map above it.** Drag lifted from the FPL panel rather than written fresh. |

@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v245 · 4 Aug 2026**.
+Status as of **v246 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -97,6 +97,21 @@ against it
   bearing end-to-end and a running area would both be cheap.
 
 ## Needs a decision from you
+
+- **[R] ZOOM PART TWO — stop rebuilding the overlay on every view change.**
+  The measured cause of the floating. `renderMap()` clears every layer group
+  and re-creates the lot, bound to `moveend`, `zoomend`, `resize` AND
+  `viewreset`. Every pan and every zoom throws away hundreds of markers and
+  lines and draws them again a frame later, which is why nothing feels glued.
+  The fix is to split *data changed* from *view changed*: a view change should
+  rebuild nothing, because Leaflet already carries what is there. Only the
+  genuinely viewport-dependent parts — which airfields are in view, label
+  decluttering, highest-in-view — need a view-driven pass, and that should add
+  and remove the difference rather than clear everything.
+  This is a build of its own with a real regression surface (every layer, the
+  ship, the route, the profile all read from the same render). `zoom.js` holds
+  the present behaviour as a measured baseline so the change can be proved
+  rather than felt.
 
 
 
@@ -197,6 +212,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Map re-zoomed itself; two gestures, two zoom ranges | v246 | Limits named on the map; one NMX_ZMIN/ZMAX |
 | Times actions were two full-width rows | v245 | Two buttons on one line; Clear arms first |
 | Downloads/Settings tiles: low glyphs, wrong shape, mismatched sizes | v244 | .tb recipe, gapped row, one 16-unit optical square |
 | Times sheet covered the tab bar; no way to size or flick it away | v243 | Stops above the bar; grip drag; tap above to dismiss |

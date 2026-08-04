@@ -22,6 +22,61 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v246 2026-08-04 Zoom, part one: one range, and Leaflet stops
+                       setting the zoom by itself.
+
+                       Research first. Three separate causes behind
+                       "the map jumps to a different zoom" and "every
+                       layer floats":
+
+                       CAUSE 1 - LEAFLET WAS ALLOWED TO SET THE ZOOM.
+                       With options.minZoom/maxZoom undefined, Leaflet
+                       derives the range from whatever layers are on the
+                       map. _updateZoomLevels() runs on EVERY layer add
+                       and remove and ends with
+
+                         void 0 === this.options.maxZoom
+                           && this.getZoom() > this._layersMaxZoom
+                           && this.setZoom(this._layersMaxZoom)
+
+                       Toggle terrain, switch basemap, let the weather
+                       layer come or go, and the map re-zooms itself.
+                       Both limits are named now, so that branch cannot
+                       run. FIXED.
+
+                       CAUSE 2 - TWO OPINIONS ABOUT THE RANGE. The
+                       double-tap-drag clamped privately to 4..17 while
+                       the map's ceiling came from whichever raster was
+                       on. A gesture that stops at 17 and another that
+                       goes to 19 is a zoom that does not stay where you
+                       put it. NMX_ZMIN/NMX_ZMAX are the one range, read
+                       by the map and by the gesture. FIXED.
+
+                       Also dropped worldCopyJump: it re-projects the
+                       centre across the antimeridian on drag and
+                       zoomend, 35 degrees of longitude from anywhere
+                       this aircraft flies, and it is one more thing
+                       that can move the view unasked.
+
+                       CAUSE 3 - THE OVERLAY IS REBUILT ON EVERY VIEW
+                       CHANGE. NOT FIXED HERE. renderMap() calls
+                       clearLayers() on every group and re-creates the
+                       lot, and it is bound to moveend, zoomend, resize
+                       AND viewreset. So each pan and each zoom destroys
+                       and rebuilds hundreds of markers and lines. That
+                       is the floating: the layers are not being carried
+                       by the map, they are being thrown away and drawn
+                       again a frame later.
+
+                       The fix is to separate "the data changed" from
+                       "the view changed" - a view change should rebuild
+                       NOTHING, because Leaflet already moves what is
+                       there - and it is a build of its own, not
+                       something to bolt on at the end of this one.
+                       zoom.js records the present behaviour as a
+                       measured baseline so that change can be shown to
+                       have worked rather than felt to have.
+
        v245 2026-08-04 Times: File and Clear are two buttons on one
                        line, and Clear arms first.
 
@@ -8902,7 +8957,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v245-ROT';
+  var VERSION = 'v246-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -10170,6 +10225,11 @@ var PROC_META={
      never a guess. The sine-wave model that used to live here fed the
      terrain profile and the per-leg highest-terrain figure, which is
      the worst possible place for an invented number. */
+  /* The app's zoom range, declared once. The map is built with these as
+     its own minZoom/maxZoom and every gesture clamps to them, so there
+     is no second opinion about where zoom stops. */
+  var NMX_ZMIN = 4, NMX_ZMAX = 17;
+
   var TERR_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
   var TERR_MAXNATIVE = 14, TERR_SAMPLE_Z = 11, M2FT = 3.28084;
   var TERR_CACHE_NAME = 'nmplotter-iphone-terrain';
@@ -23338,11 +23398,38 @@ var PROC_META={
     var host = document.getElementById('lmap');
     if (!host){ fail('Map container missing'); return; }
 
+    /* The whole app's zoom range, in one place. Every gesture and the
+       map itself read these; nothing carries its own copy. */
     try {
+      /* ---- zoom limits are OURS, explicitly ------------------------
+         Leaflet derives min/max zoom from whatever layers are on the
+         map when `options.minZoom` / `options.maxZoom` are undefined.
+         _updateZoomLevels() then runs on EVERY layer add and remove,
+         and ends with:
+
+             void 0 === this.options.maxZoom && this._layersMaxZoom
+               && this.getZoom() > this._layersMaxZoom
+               && this.setZoom(this._layersMaxZoom)
+
+         - a setZoom() you did not ask for. Toggle terrain, switch
+         basemap, let the weather layer come or go, and the map can
+         jump to a different zoom on its own. Naming both limits here
+         makes that branch unreachable: `options.maxZoom` is defined,
+         so the test is false whatever the layers say.
+
+         17 and 4 are the range the double-tap-drag already clamped to.
+         They were a second, private opinion about the limits; now
+         there is one, and NMX_ZMIN/NMX_ZMAX are it.
+
+         worldCopyJump is gone with it. It re-projects the centre
+         across the antimeridian on drag and zoomend - which is 35
+         degrees of longitude from anywhere this aircraft goes, and one
+         more thing that can move the view without being asked. */
       LMAP = L.map(host, {
         zoomControl:false, attributionControl:false,
+        minZoom:NMX_ZMIN, maxZoom:NMX_ZMAX,
         zoomSnap:0, zoomDelta:0.5, wheelPxPerZoomLevel:18,
-        fadeAnimation:false, worldCopyJump:true
+        fadeAnimation:false
       }).setView(NMX_REGION.view.center, NMX_REGION.view.zoom);
     } catch(err){ LMAP = null; fail('Map failed to start: ' + (err && err.message)); return; }
 
@@ -23525,7 +23612,7 @@ var PROC_META={
             /* clamp to the range the basemaps actually serve - running off
              the end leaves the vector layer with nothing to draw and the
              map goes black */
-          var z = Math.max(4, Math.min(17, dz.want));
+          var z = Math.max(NMX_ZMIN, Math.min(NMX_ZMAX, dz.want));
           try { LMAP.setZoomAround(dz.ll, z, { animate:false }); } catch(_){ }
         });
       }, { passive:false });
