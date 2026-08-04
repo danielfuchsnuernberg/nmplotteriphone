@@ -22,6 +22,37 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v252 2026-08-04 Map diagnostics. I stop guessing.
+
+                       v250 and v251 changed nothing on the device, and
+                       v251 in particular SHOULD have changed the line
+                       weight whether or not my theory was right -
+                       non-scaling-stroke does that unconditionally to
+                       any SVG path it reaches. That it did nothing
+                       means one of two things, and I cannot tell which
+                       from here:
+
+                         - the build running is not the build I shipped
+                         - those legs are not SVG paths in the overlay
+                           pane, so the rule never reached them
+
+                       The second would explain everything at once. A
+                       CANVAS renderer scales its bitmap on zoom (thick
+                       lines) and draws into a fixed-size buffer
+                       (geometry cut off at its edge), and vector-effect
+                       means nothing to it.
+
+                       So: More > Diagnostics > Map diagnostics. It
+                       reads the live objects and reports the build, the
+                       renderer kind, how many paths and canvases are in
+                       the overlay pane, the COMPUTED stroke-width and
+                       vector-effect on a real route path, the SVG
+                       container's transform, the clip rectangle against
+                       the map size, and _animatingZoom.
+
+                       Three fixes in a row on a theory is three too
+                       many. One screenshot of this panel settles it.
+
        v251 2026-08-04 The pen stops scaling with the map.
 
                        From your ForeFlight screenshots: the magenta and
@@ -8857,6 +8888,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   </div>
 </div>
 
+<!-- Map diagnostics. Read-only. Exists because three fixes in a row
+     changed nothing on the device and I was guessing instead of
+     measuring. -->
+<div class="gpsov" id="mapDiag">
+  <div class="gpswin">
+    <div class="gpsh">
+      <span class="t"><b>MAP</b> &middot; Diagnostics</span>
+      <button class="gpsx" id="mapDiagX" aria-label="Close">&times;</button>
+    </div>
+    <div class="qkbody" id="mapDiagBody"></div>
+  </div>
+</div>
+
 <!-- Times: an activity, opened from the bar or the More list.
      Bottom-anchored .gpsov; the header is .gpsh unchanged. -->
 <div class="tmov" id="tmOv">
@@ -9191,7 +9235,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v251-ROT';
+  var VERSION = 'v252-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -19280,6 +19324,89 @@ var PROC_META={
     if (e.target === $('#tmOv')) hideTimes();
   });
 
+  /* ---- Map diagnostics -----------------------------------------------
+     What the map is ACTUALLY doing, read off the live objects. Every
+     line here answers a question I have been guessing at:
+
+       Renderer      SVG or Canvas. vector-effect only exists for SVG;
+                     a canvas renderer would explain both the thick
+                     lines and the cut-off route on its own.
+       Paths         how many <path> elements are in the overlay pane.
+                     Zero means the route is not drawn as SVG at all.
+       Pen           the COMPUTED stroke-width and vector-effect on a
+                     real route path. If vector-effect is not
+                     non-scaling-stroke, v251 never reached it.
+       Container     the inline transform on the SVG container. A
+                     scale() left in here is the fat line.
+       Bounds        the renderer's clip rectangle against the map
+                     size. Smaller than the map is the cut-off route.
+       Animating     _animatingZoom. Set when it should not be is what
+                     stops the renderer updating.
+     ------------------------------------------------------------------ */
+  function mapDiagHTML(){
+    var L1 = function(k, v){
+      return '<div class="kv"><span class="k">' + k + '</span>'
+           + '<span class="v acc">' + esc(String(v)) + '</span></div>';
+    };
+    var h = '<div class="csec">Build</div>'
+          + L1('Version', VERSION + ' \u00b7 ' + BUILD);
+    if (!LMAP) return h + '<div class="cnote">Leaflet is not running.</div>';
+
+    var r = LMAP._renderer, kind = 'none';
+    if (r) kind = (r._container && r._container.tagName === 'CANVAS') ? 'Canvas' : 'SVG';
+    var pane = LMAP.getPane && LMAP.getPane('overlayPane');
+    var paths = pane ? pane.querySelectorAll('path').length : -1;
+    var cvs   = pane ? pane.querySelectorAll('canvas').length : -1;
+
+    h += '<div class="csec">Renderer</div>'
+      +  L1('Kind', kind)
+      +  L1('Paths in overlay pane', paths)
+      +  L1('Canvases in overlay pane', cvs);
+
+    /* the pen, off a real path */
+    var p0 = pane ? pane.querySelector('path[stroke]') : null;
+    if (p0){
+      var cs = window.getComputedStyle(p0);
+      h += L1('stroke-width', cs.strokeWidth)
+        +  L1('vector-effect', cs.vectorEffect || '(unset)')
+        +  L1('stroke', cs.stroke);
+    } else {
+      h += '<div class="cnote">No stroked path found in the overlay pane.</div>';
+    }
+
+    if (r && r._container){
+      h += '<div class="csec">Container</div>'
+        +  L1('transform', r._container.style.transform || '(none)')
+        +  L1('viewBox', r._container.getAttribute
+              ? (r._container.getAttribute('viewBox') || '(none)') : '(n/a)');
+    }
+
+    var sz = LMAP.getSize();
+    h += '<div class="csec">Bounds</div>' + L1('Map size', sz.x + ' x ' + sz.y);
+    if (r && r._bounds){
+      var bs = r._bounds.getSize();
+      h += L1('Clip size', Math.round(bs.x) + ' x ' + Math.round(bs.y))
+        +  L1('Clip covers map', (bs.x >= sz.x && bs.y >= sz.y) ? 'yes' : 'NO');
+    } else {
+      h += L1('Clip size', '(no _bounds)');
+    }
+
+    h += '<div class="csec">State</div>'
+      +  L1('Zoom', (Math.round(LMAP.getZoom() * 100) / 100))
+      +  L1('_animatingZoom', !!LMAP._animatingZoom)
+      +  L1('Renderers', 1 + Object.keys(LMAP._paneRenderers || {}).length);
+    return h;
+  }
+  function openMapDiag(){
+    closeAll();
+    var el = $('#mapDiag');
+    $('#mapDiagBody').innerHTML = mapDiagHTML();
+    el.classList.add('on');
+  }
+  $('#mapDiagX').addEventListener('click', function(){
+    $('#mapDiag').classList.remove('on');
+  });
+
   function openTimes(){ closeAll(); tmPaint(); $('#tmOv').classList.add('on'); tmApplyH(); renderTabs(); }
   function hideTimes(){ $('#tmOv').classList.remove('on'); renderTabs(); }
   function timesOpen(){ var o = $('#tmOv'); return !!o && o.classList.contains('on'); }
@@ -20449,6 +20576,16 @@ var PROC_META={
        a settings-style row with a chevron sitting under a heading of
        icon rows, which made the last thing in the list the one thing
        that did not belong to it. */
+    /* Diagnostics, under Data, because that is what it is. Read-only. */
+    mh += '<div class="scat">Diagnostics</div>'
+       +  '<div class="srowwrap">'
+       +  '<button class="srow" id="diagGo">'
+       +  '<span class="sq" style="background:#8aa0b5">'
+       +  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+       +  'stroke-linecap="round" stroke-linejoin="round">'
+       +  '<path d="M4 18V10M9 18V6M14 18v-5M19 18v-9"/></svg>'
+       +  '</span><span class="lb">Map diagnostics</span></button>'
+       +  '</div>';
     mh += '<div class="scat">Layout</div>'
        +  '<div class="srowwrap">'
        +  '<button class="srow" id="barsGo">'
@@ -20472,6 +20609,8 @@ var PROC_META={
   function wireMore(){
     var bg = $('#moreList #barsGo');
     if (bg) bg.addEventListener('click', function(){ openBarsSheet(); });
+    var dg = $('#moreList #diagGo');
+    if (dg) dg.addEventListener('click', function(){ openMapDiag(); });
     $$('#moreList .srow[data-go]').forEach(function(r){
       r.addEventListener('click', function(){ goTo(r.getAttribute('data-go')); });
     });

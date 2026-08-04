@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v251 · 4 Aug 2026**.
+Status as of **v252 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -238,6 +238,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Map diagnostics panel, so the next fix is measured | v252 | More > Diagnostics; renderer kind, pen, clip, transform |
 | Stroke width scaled with the map during a zoom | v251 | non-scaling-stroke on every map vector |
 | Route drawn fat and clipped: stale renderer bounds and transform | v250 | Renderers made to catch up before every draw |
 | ~~Route and tracks left for Leaflet to carry~~ | v248, **reverted v249** | Exposed a stale renderer transform: clipped and fattened the route |
