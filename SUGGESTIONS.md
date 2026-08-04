@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v239 · 4 Aug 2026**.
+Status as of **v245 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -45,7 +45,12 @@ against it
   and elapsed; Times gives engine and skids. They are filed separately
   and nothing joins them. If you run both, you get two cards for one
   sortie. Not obviously wrong — leaving it until you have flown it.
-- **[R] Terrain profile: flown vs to-come.** The map has three leg states; the
+- **[D] Sequencing has no arrival announcement and no off-switch.** It moves
+  the live leg and toasts which one; it does not tell you the destination is
+  next, and there is no setting to stop it. Both are cheap. Fly it first.
+- **[R] Terrain profile: flown vs to-come.** Now that the live leg moves on
+  its own, the profile's single undifferentiated fill is the last place the
+  three states are not shown. The map has three leg states; the
   profile is one undifferentiated fill. Shade the flown portion back and drop a
   tick at your actual position.
 - **[R] Airfield label decluttering** — dots at low zoom, labels appearing as
@@ -57,8 +62,16 @@ against it
 - **[D] Marks taken before v239 have no `src`.** They are all screen-centre
   marks but nothing on them says so. Worth deciding whether to leave them,
   label them 'source unknown', or leave well alone.
-- **[R] Edit coordinates on a saved waypoint.** You can rename it, set its
-  elevation and delete it; you cannot nudge its position.
+- **[R] ~~Edit coordinates on a saved waypoint.~~ DECLINED v240.** You asked
+  for the opposite and you are right: a mark records where something was, and
+  a position you can edit is not a record. Struck off rather than left open.
+- **[D] Elevation on the airfield and pin cards too.** v242 fetches it for a
+  mark. Every other card could state the same figure the same way, and the
+  pin window already does its own version. Worth unifying rather than having
+  three answers to one question.
+- **[D] Nothing writes `el` any more.** Marks made before v240 keep whatever
+  you typed and it still shows, labelled. Whether the field should be
+  migrated, shown as legacy, or quietly retired is your call.
 - **[R] Checklists round two** — a per-aircraft *set* (start-up → pre-takeoff →
   shutdown as one group), and duplicate-and-edit so P2-COP can be forked from
   P2-LAW rather than pasted fresh. Now that there is a fleet, a checklist could
@@ -75,6 +88,10 @@ against it
   map; the terrain one was the only modal among them and it was the one you
   work while looking at what it changes. Worth deciding whether any other
   `.gpsov` is really a HUD wearing a modal's clothes.
+- **[D] The same three rules probably belong on the other sheets.** The
+  terrain bar cannot be resized and the GPS window still covers the tab bar.
+  Whether they should all behave like Times now, or whether Times is the odd
+  one because you work it for a whole flight, is your call.
 - **[R] Toolbar declutter and the landscape HUD over real tiles.** Polish.
 - **[R] Measure tool refinements** — nothing specific requested, but total
   bearing end-to-end and a running area would both be cheap.
@@ -113,6 +130,11 @@ against it
   nothing, because a child re-enabled itself. Worth one pass over every other
   place the app disables taps on a container to check none of them is relying
   on inheritance that pointer-events does not have.
+- **[?] No other glyph pair in the app has been measured.** `tiles.js`
+  computes extents and optical squares for these two. The tab bar, the More
+  list tiles and the rail all draw icons that have only ever been eyeballed.
+  One pass with the same measurement would say whether they are siblings or
+  just look like it.
 - **[?] 101 empty `catch` blocks.** Most are legitimate (storage in private
   mode, a DOM node not there yet), but it is a lot of places a fault can die
   quietly. Worth one pass with fresh eyes.
@@ -175,6 +197,12 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Times actions were two full-width rows | v245 | Two buttons on one line; Clear arms first |
+| Downloads/Settings tiles: low glyphs, wrong shape, mismatched sizes | v244 | .tb recipe, gapped row, one 16-unit optical square |
+| Times sheet covered the tab bar; no way to size or flick it away | v243 | Stops above the bar; grip drag; tap above to dismiss |
+| Mark card's elevation read as a dash | v242 | Wrong sampler; terrainAt fetches the tile on demand |
+| Leg colours never changed in flight | v241 | GPS sequences the live leg on waypoint passage |
+| Mark card asked you to type coordinates and elevation | v240 | Name only; ground read from terrain |
 | Mark dropped the waypoint at the screen centre, not at you | v239 | GPS fix, with a named and flagged fallback |
 | Terrain shading window covered the map it was changing | v238 | Bottom bar, non-modal, slider full width |
 | Tapping inside an airspace opened it instead of measuring | v237 | Lockout now outbids Leaflet's own `pointer-events:auto` |

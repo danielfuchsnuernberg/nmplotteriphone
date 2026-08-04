@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v239 · 4 Aug 2026**
+**Status as of v245 · 4 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,12 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v245 | **Times actions are two buttons on one line rather than two full-width rows**, saving ~90 px of a sheet you look past. Clear now arms then fires, since a smaller destructive control sitting beside the one you want costs more on a mis-tap. |
+| v244 | **More sheet's two tiles rebuilt on the toolbar's own icon-button recipe.** Glyphs were sitting low (`display:block` missing), the joined pill said 'pick one state' for two destinations, and the two marks were different optical sizes. Settings mark unified across the sheet, toolbar and landscape HUD. |
+| v243 | **Times sheet: stops above the tab bar, drag-resizable by a grip, dismissed by dragging under the threshold or tapping the map above it.** Drag lifted from the FPL panel rather than written fresh. |
+| v242 | **Mark elevation now fetches its terrain tile instead of reading whatever the shading layer had decoded.** Works offline for a downloaded region; reads 'reading…' until the tile lands and redraws itself when it does. |
+| v241 | **The live leg sequences from GPS.** Waypoint passage is the 90-degree crossing test, forward only, one waypoint per fix, guarded on fix age, groundspeed and cross-track distance. The leg colours were already correct — nothing was moving the index they read. |
+| v240 | **The mark card is a name and a delete.** Coordinate editing and Move to map centre removed; elevation is no longer typed in either host, and is read from the terrain tiles and stated with its source. v262 still lets you type an elevation — the builds differ here on purpose. |
 | v239 | **Mark drops the waypoint at the GPS fix rather than the map centre.** Falls back to the centre with no usable fix, but names and flags it differently so the two cannot be confused. A fix older than 15 s counts as absent. |
 | v238 | **Terrain shading moved from a modal window to a non-modal bottom bar.** The slider and the terrain it shades are now on screen together. Legend, source line and the long advisory paragraph dropped from the control; the framing kept as a one-line caption. v262 still has this as a panel — the two builds now differ here on purpose. |
 | v237 | **Measure tool: tapping inside an airspace now drops a point instead of opening the airspace.** The existing pane lockout never worked — Leaflet sets `pointer-events:auto` on interactive children, which is not overridden by `none` on an ancestor. The lockout now names the same four selectors under `#map.measuring`. |

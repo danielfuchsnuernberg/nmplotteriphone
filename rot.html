@@ -22,6 +22,202 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v245 2026-08-04 Times: File and Clear are two buttons on one
+                       line, and Clear arms first.
+
+                       Two full-width rows plus their hairlines was
+                       about 90 px of sheet spent on two words, on a
+                       sheet whose whole point is that you can still see
+                       the map past it. They are buttons now, side by
+                       side, one touch height, labels centred - and
+                       shortened to File and Clear, because a button
+                       carries a word and a row carries a sentence.
+
+                       The v184 rule puts the destructive one last. On a
+                       line, last is RIGHT, and that is where Clear is.
+
+                       CLEAR NOW ARMS. Making a destructive control
+                       smaller and moving it next to the one you
+                       actually want raises what a mis-tap costs, so it
+                       takes two taps - the same arm-then-fire the
+                       route's Clear has used since it was written, with
+                       the same three-second timeout. A run you have
+                       been stamping all morning is not something a
+                       stray thumb should erase. File does not arm: it
+                       makes a record, it does not destroy one.
+
+       v244 2026-08-04 The two tiles at the top of More, done properly.
+
+                       Three faults, all mine, all in v236.
+
+                       1. THE GLYPHS SAT LOW. .tb svg has carried
+                          display:block since the toolbar was written;
+                          .stile svg did not. An inline SVG sits on a
+                          text baseline and brings the line box's
+                          descender space with it. I built a new icon
+                          button without reading the one the app
+                          already had.
+
+                       2. THE SHAPE SAID THE WRONG THING. It was a
+                          joined pill with a hairline between the two,
+                          and in this app a joined pill means exactly
+                          one thing: pick one of these states. .gpsfmt
+                          is D-M-S against D-M.M; the terrain margin is
+                          500/1,000/2,000; the fleet picker is which
+                          aircraft. Downloads and Settings are two
+                          PLACES, not two states. It is .toolbar/.tb
+                          now - a gapped row of icon buttons that go
+                          somewhere - same background, border, radius
+                          and gap as the toolbar it should have copied.
+
+                       3. THE TWO GLYPHS WERE DIFFERENT SIZES. The cog
+                          stood 18 units of the 24-box, the download
+                          16.8, so they never read as siblings however
+                          well they were centred. Both are redrawn on
+                          one 16-unit optical square centred on 12,12,
+                          same stroke, same round caps and joins.
+
+                       The cog is redrawn as a ring, a hub and eight
+                       teeth - and the toolbar and landscape HUD were
+                       moved onto it too, because leaving them on the
+                       old one would have put two different Settings
+                       marks in one app: the same sibling fault, larger.
+
+                       tiles.js COMPUTES the geometry from the drawing
+                       commands rather than trusting the eye: extents,
+                       centres, optical squares. Run against v242 it
+                       reports 13 faults. It also refuses to measure a
+                       glyph drawn in commands it cannot read, because
+                       the first version of it silently mis-measured the
+                       old cog's arcs and would have passed a bad glyph.
+
+       v243 2026-08-04 Times: the tab bar stays reachable, and the
+                       sheet can be dragged away.
+
+                       THREE THINGS, all from flying it:
+
+                       1. The sheet was pinned to all four edges, so it
+                          covered the bar it was opened from. Times was
+                          the one view you could not leave by tapping
+                          another tab. It stops above the tab bar now -
+                          every other tab visible and live behind it -
+                          and on the safe area in the landscape HUD,
+                          where there is no bar to clear.
+
+                       2. A grip, and a drag. Down shrinks, up grows,
+                          and under TM_SHUT it goes away rather than
+                          fighting you at a floor. The height you leave
+                          it at is remembered.
+
+                       3. A tap on the map above it closes it. A tap ON
+                          the sheet does not: a stamp must never be a
+                          dismiss, so the sheet swallows its own taps
+                          and only the backdrop listens.
+
+                       The drag is the FPL panel's, mirrored. That
+                       gesture has worked on the device since v190;
+                       writing a second one would have been a second set
+                       of bugs. This sheet grows UPWARD, so the sign
+                       flips and nothing else does.
+
+                       jsdom cannot dispatch a real touch. The gate
+                       proves the wiring, the floor, the shut threshold,
+                       the stored height and both dismiss paths - NOT
+                       that the drag feels right under a thumb.
+
+       v242 2026-08-04 The mark card's elevation actually arrives.
+
+                       v240 read it with pinElev, which only looks at
+                       what the SHADING layer happens to have decoded at
+                       the zoom you are currently looking at. So the
+                       figure came and went depending on where the map
+                       was pointed, and on the device it read as a dash.
+                       My mistake: the right function was already in the
+                       file and I used the wrong one.
+
+                       terrainAt() is the one. It FETCHES the Terrarium
+                       tile for the point if it is not resident, and the
+                       service worker serves those from the terrain
+                       cache - so a downloaded region answers with no
+                       signal at all. Until the tile lands the row reads
+                       'reading...' and the card redraws itself when it
+                       arrives, rather than making you close and reopen.
+
+                       Still never a guess: no tile, no number, and the
+                       line under it says why - needs signal, or
+                       download the region.
+
+                       Labelled Elevation, in feet AMSL, under Position.
+                       Nothing to type; the field is gone as of v240 and
+                       stays gone.
+
+       v241 2026-08-04 The live leg follows the aircraft.
+
+                       The colours were never wrong. Magenta flying,
+                       cyan to come, grey flown has been right since
+                       v202 - but `toWpt` decides which leg is which,
+                       and NOTHING ever moved it except a finger. In the
+                       air the picture stayed on the leg you last
+                       tapped while you flew the next three.
+
+                       PASSAGE TEST: you have passed the active waypoint
+                       when you cross the line through it at right
+                       angles to the leg. The angle between the leg
+                       track and the bearing from you to the waypoint
+                       opens past 90 degrees the moment you go by,
+                       whichever side you pass it. Exact, cheap, no
+                       capture radius to miss and no distance-increasing
+                       state to keep.
+
+                       Guards, because this moves the picture under you:
+                         - forward only, one waypoint per fix. It cannot
+                           skip a leg on a bad fix and cannot walk back.
+                         - a fix older than 15 s is not a fix.
+                         - more than 10 nm off the leg you are not
+                           flying it, you are diverting, and a diversion
+                           must not sequence your plan.
+                         - below 5 kt the geometry is noise: sitting
+                           beside a waypoint, the bearing to it swings
+                           through every value there is.
+                         - the destination stays live. Nothing sequences
+                           past the end.
+
+                       It moves which leg is live and nothing else. The
+                       route is not touched.
+
+       v240 2026-08-04 A mark's card is a name and nothing else.
+
+                       Coordinates and Move to map centre are gone. A
+                       mark records where something WAS; editing its
+                       position turns a record of a place into a guess
+                       about one, and the position it held was the whole
+                       point of dropping it. Wrong spot - delete it and
+                       mark again.
+
+                       Elevation is no longer typed ANYWHERE. It was two
+                       controls in two hosts - a text field on the card
+                       and a number pad in the waypoint window - kept in
+                       step by a pair of gate checks. Both are gone,
+                       along with the mine:elev quick-edit branch behind
+                       them, because an unreachable save path is how a
+                       removed feature comes back by accident.
+
+                       The card states the ground instead, read by
+                       pinElev from the decoded terrain tiles - the same
+                       figures the shading uses. It returns null rather
+                       than a guess when the tile for that point has not
+                       been decoded, so the row either names its source
+                       ('from terrain data - shape only, no obstacles')
+                       or says there is none ('terrain not downloaded
+                       for here, or shading off'). No blank box inviting
+                       a number to be invented.
+
+                       Terrain is NOT written into f.el. That field held
+                       a figure a human set; a terrain reading is a
+                       different kind of thing and merging them loses
+                       which is which. Any elevation you set on an older
+                       mark still shows, under its own label.
+
        v239 2026-08-04 Mark drops the waypoint where you ARE.
 
                        It marked the middle of the screen. That is your
@@ -6790,16 +6986,33 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
   padding-bottom:var(--sabp);
 }
 .sheet.on{transform:translateX(0)}
-.sheet .top{display:flex;gap:1px;margin:0 10px 16px;background:var(--border);
-  border:1px solid var(--border);border-radius:8px;overflow:hidden}
-/* Symbol only. A tile that carried both a glyph and its name was the
-   one place in the sheet doing both; the rule is pick one. The names
-   live on aria-label, so the control still announces itself.
-   Height is --mod-b, the app's touch-primary control height, rather
-   than the stack of padding that used to be sized by the caption. */
-.stile{flex:1 1 0;height:var(--mod-b);background:var(--bg-2);
-  display:flex;align-items:center;justify-content:center;color:var(--text-2)}
-.stile svg{width:22px;height:22px}
+/* Two DESTINATIONS, so they are shaped like destinations.
+
+   They were a joined pill with a hairline between them, which in this
+   app means one thing and one thing only: pick one of these states.
+   .gpsfmt is D-M-S against D-M.M; the terrain bar's margin is 500
+   against 1,000 against 2,000; the fleet picker is which aircraft.
+   Downloads and Settings are not two states of anything - they are
+   two places you go - so the pill was the wrong shape and it read
+   wrong even before the glyphs were off.
+
+   This is .toolbar/.tb instead: a gapped row of icon buttons that go
+   somewhere, which is exactly what the top toolbar already is. Same
+   background, same border, same radius, same gap. The only departure
+   is height: --mod-b rather than --mod-a, because these are the two
+   primary targets in the sheet rather than dense chrome. */
+.sheet .top{display:flex;align-items:center;gap:var(--gut);margin:0 10px 16px}
+.stile{flex:1 1 0;height:var(--mod-b);
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg-2);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text-2)}
+.stile:active{background:var(--inset)}
+/* display:block, the same as .tb svg. An inline SVG sits on a text
+   baseline and carries the line box's descender space with it, which
+   drops the glyph a few pixels below the centre of its button. The
+   toolbar has had this since it was written; the tile did not, and
+   that is the whole of why both symbols sat low. */
+.stile svg{width:22px;height:22px;display:block}
 .shead{display:flex;align-items:baseline;justify-content:space-between;padding:0 12px 6px}
 .shead .k{font-size:var(--t-xs);font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:var(--text-fainter)}
@@ -7882,18 +8095,36 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
    Sectors and totals share one three-column grid, so every h:mm
    sits on one vertical and every decimal on another. Amber is
    h:mm, blue is decimal, in the sheet and on the filed card. */
-.tmov{position:fixed;inset:0;z-index:1200;display:none;
+.tmov{position:fixed;left:0;right:0;top:0;
+  /* STOPS AT THE TAB BAR. It used to be pinned to all four edges, so
+     the sheet sat on top of the bar it was opened from and you could
+     not reach Map, Fuel or anything else without closing it first. */
+  bottom:calc(var(--tabbar) + var(--sabp));
+  z-index:1200;display:none;
   align-items:flex-end;justify-content:center;
   padding:calc(16px + env(safe-area-inset-top)) 0 0;
-  background:rgba(3,5,8,.72);
-  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+  background:rgba(3,5,8,.55);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 .tmov.on{display:flex}
+@media (orientation:landscape) and (max-height:500px){
+  /* no tab bar in the landscape HUD, so it sits on the safe area */
+  .tmov{bottom:env(safe-area-inset-bottom,0px)}
+}
 .tmwin{width:100%;max-width:520px;max-height:100%;
   display:flex;flex-direction:column;
   background:var(--panel);border-top:1px solid var(--border-strong);
   border-radius:14px 14px 0 0;overflow:hidden;
-  box-shadow:0 -18px 46px rgba(0,0,0,.7);
-  padding-bottom:var(--sabp)}
+  box-shadow:0 -18px 46px rgba(0,0,0,.7)}
+.tmwin.sizing{transition:none}
+/* Same grip as the FPL panel, same drag, mirrored: this sheet grows
+   upward, so down shrinks. Below TM_SHUT it closes instead of
+   fighting you at a floor. */
+.tmgrip{flex:0 0 auto;height:22px;display:flex;align-items:center;justify-content:center;
+  border-bottom:1px solid var(--border);background:var(--panel);
+  touch-action:none;cursor:ns-resize}
+.tmgrip span{width:46px;height:4px;border-radius:2px;background:var(--border-strong);
+  transition:background .12s}
+.tmgrip.on span{background:var(--accent)}
 .gpsclk{flex:0 0 auto;font-family:var(--mono);font-size:var(--t-xs);
   font-weight:700;letter-spacing:.06em;color:var(--text-dim)}
 .tmb{padding:12px 14px 0;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -7961,15 +8192,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .tmtot.run{border-color:rgba(52,211,153,.42)}
 .tmtot.run .hm,.tmtot.run .dc{color:var(--good)}
 
-/* destructive row last, per the v184 sheet rule */
-.tmacts{margin:16px -14px 0;border-top:1px solid var(--border)}
-.tmact{width:100%;height:var(--mod-b);display:flex;align-items:center;
-  padding:0 14px;font-size:var(--t-sm);font-weight:600;background:none}
-.tmact + .tmact{border-top:1px solid var(--border)}
+/* Two buttons on one line rather than two full-width rows. Two rows of
+   44 px plus their hairlines was 90 px of sheet spent on two words, on
+   a sheet whose whole point is that you can see the map past it.
+
+   The v184 rule says the destructive one comes last. On a line, last is
+   RIGHT, and that is where Clear is.
+
+   Making a destructive control SMALLER and moving it next to the one
+   you actually want raises the cost of a mis-tap, so Clear arms first
+   and fires on the second tap - the same arm-then-fire the route's
+   Clear has used since it was written. Filing does not arm: it makes a
+   record, it does not destroy one. */
+.tmacts{display:grid;grid-template-columns:1fr 1fr;gap:var(--gut);
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.tmact{height:var(--mod-b);display:flex;align-items:center;justify-content:center;
+  background:var(--bg-2);border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  font-size:var(--t-sm);font-weight:700;letter-spacing:.02em;white-space:nowrap}
 .tmact.file{color:var(--accent-2)}
 .tmact.del{color:var(--bad)}
 .tmact:active{background:var(--inset)}
-.tmact[disabled]{color:var(--text-fainter)}
+.tmact[disabled]{color:var(--text-fainter);border-color:var(--border);
+  background:var(--bg)}
+.tmact.del.arm{border-color:var(--bad);background:rgba(240,80,110,.14)}
 
 /* ---- Terrain bar --------------------------------------------
    Was a modal .gpsov, which is wrong for a control you work while
@@ -8063,7 +8309,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       </button>
       <button class="tb" id="tbFpl" aria-label="Flight plan"><span class="txt">FPL</span></button>
       <button class="tb" id="tbSet" aria-label="Settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="12" r="2.7"/><circle cx="12" cy="12" r="6.2"/><path d="M18.2 12h1.8M12 5.8V4M5.8 12H4M12 18.2V20"/><path d="M16.384 7.616l1.273-1.273M7.616 7.616L6.343 6.343M7.616 16.384l-1.273 1.273M16.384 16.384l1.273 1.273"/></svg>
       </button>
       <button class="tb" id="tbTerr" aria-label="Terrain profile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 18l5-7 4 4 4-6 7 9z"/></svg>
@@ -8273,8 +8519,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <!-- More sheet -->
 <div class="sheet" id="sheetMore">
   <div class="top">
-    <button class="stile" id="stDl" aria-label="Downloads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6v11"/><path d="M8 10.6l4 4 4-4"/><path d="M5 17v3.4h14V17"/></svg></button>
-    <button class="stile" id="stSet" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg></button>
+    <button class="stile" id="stDl" aria-label="Downloads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v9.4"/><path d="M8.3 9.7L12 13.4l3.7-3.7"/><path d="M4.4 16.2v3.8h15.2v-3.8"/></svg></button>
+    <button class="stile" id="stSet" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.7"/><circle cx="12" cy="12" r="6.2"/><path d="M18.2 12h1.8M12 5.8V4M5.8 12H4M12 18.2V20"/><path d="M16.384 7.616l1.273-1.273M7.616 7.616L6.343 6.343M7.616 16.384l-1.273 1.273M16.384 16.384l1.273 1.273"/></svg></button>
   </div>
   <div class="shead"><span class="k">Views</span></div>
   <div class="slist" id="moreList"></div>
@@ -8325,7 +8571,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 <!-- Times: an activity, opened from the bar or the More list.
      Bottom-anchored .gpsov; the header is .gpsh unchanged. -->
 <div class="tmov" id="tmOv">
-  <div class="tmwin">
+  <div class="tmwin" id="tmWin">
+    <div class="tmgrip" id="tmGrip" aria-label="Resize"><span></span></div>
     <div class="gpsh">
       <span class="t"><b>Times</b> &middot; Flight</span>
       <span class="gpsclk" id="tmClk">--:--</span>
@@ -8350,8 +8597,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
       </div>
 
       <div class="tmacts">
-        <button class="tmact file" id="tmFile" disabled>File to Flights</button>
-        <button class="tmact del" id="tmClr">Clear all times</button>
+        <button class="tmact file" id="tmFile" disabled>File</button>
+        <button class="tmact del" id="tmClr">Clear</button>
       </div>
     </div>
   </div>
@@ -8591,7 +8838,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
     <button data-hp="fpl" aria-label="Flight plan"><span class="lab">FPL</span></button>
     <button data-hp="terr" aria-label="Terrain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 19l6-9 4 5.5 2.5-3.5L21 19z"/></svg></button>
     <button data-hp="rad" aria-label="Frequencies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"/></svg></button>
-    <button data-hp="set" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg></button>
+    <button data-hp="set" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="12" r="2.7"/><circle cx="12" cy="12" r="6.2"/><path d="M18.2 12h1.8M12 5.8V4M5.8 12H4M12 18.2V20"/><path d="M16.384 7.616l1.273-1.273M7.616 7.616L6.343 6.343M7.616 16.384l-1.273 1.273M16.384 16.384l1.273 1.273"/></svg></button>
   </div>
 
   <!-- slide-out landscape panel opened by the strip -->
@@ -8655,7 +8902,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v239-ROT';
+  var VERSION = 'v245-ROT';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -12328,8 +12575,6 @@ var PROC_META={
       +  '</div>';
     h += '<div class="asec">Waypoint</div><div class="agrp">'
       +    actRow('data-mna','show','show','Show on map')
-      +    actRow('data-mna','elev','elev','Elevation',
-               { sub:(typeof p.el === 'number') ? elevStr(p.el) : 'Not set' })
       +    actRow('data-mna','fav','star',
                isFav(p.id) ? 'In favourites' : 'Add to favourites',
                { fill:isFav(p.id), cls:isFav(p.id) ? 'on' : '' })
@@ -12374,7 +12619,8 @@ var PROC_META={
       return;
     }
     else if (a === 'fav'){ toggleFav(p.id); openMineWin(p.id); drawMine(); return; }
-    else if (a === 'elev'){ closeMineWin(); openQk('mine:elev'); return; }
+    /* v240: elevation is no longer typed anywhere. It is read from the
+       terrain data and shown as a fact on the card, under Position. */
     else if (a === 'rename'){ closeMineWin(); openQk('mine:name'); return; }
     else if (a === 'del'){
       /* a waypoint can be in the active route - say so rather than
@@ -12835,6 +13081,70 @@ var PROC_META={
      nearest point sits, so a list can be ordered the way it is flown
      rather than by proximity. Sampling matches v262: about 3 nm steps,
      capped at 120 a leg. */
+  /* ================================================================
+     LEG SEQUENCING
+
+     The leg colours have been right since v202 - magenta flying, cyan
+     to come, grey flown - and `toWpt` decides which is which. Nothing
+     ever moved it except your finger, so in the air the picture stayed
+     on the leg you last tapped while you flew the next three.
+
+     THE RULE: you have passed the active waypoint when you cross the
+     line through it at right angles to the leg you are on. That is the
+     standard passage test and it is exact - the angle between the leg
+     track and the bearing from you to the waypoint opens past 90 deg
+     the moment you go by, whichever side you pass it. No capture
+     radius to miss, no distance-increasing state to keep.
+
+     Guards, because this moves the picture under you:
+       - forward only, one waypoint per fix. It cannot skip a leg on a
+         bad fix and it cannot walk backwards.
+       - a fix older than SEQ_MAX_AGE is not a fix.
+       - beyond SEQ_MAX_OFF_NM from the leg you are not flying it, you
+         are diverting, and a diversion must not sequence your plan.
+       - below SEQ_MIN_GS the geometry is noise: sitting on the pad
+         next to a waypoint, the bearing to it swings through every
+         value there is.
+       - never past the destination.
+
+     It does NOT touch the route, only which leg is live. Turning it
+     off is a matter of not moving; there is nothing to undo. */
+  var SEQ_MAX_AGE    = 15000;   /* ms - same bar as a mark's fix       */
+  var SEQ_MAX_OFF_NM = 10;      /* off the leg by more than this: no   */
+  var SEQ_MIN_GS     = 5;       /* kt - below this, bearings are noise */
+
+  function seqPassed(pos, from, to){
+    /* angle between the leg track and the bearing from you to the
+       waypoint. Past 90 deg means the waypoint is behind the wing. */
+    var legTrk = trkBetween(from, to);
+    var brg    = trkBetween(pos, to);
+    var d = Math.abs(((brg - legTrk + 540) % 360) - 180);
+    return d > 90;
+  }
+
+  function seqRoute(){
+    if (!ROUTE || ROUTE.length < 2) return false;
+    if (!GPSFIX || GPSFIX.lat == null || GPSFIX.t == null) return false;
+    if (Date.now() - GPSFIX.t > SEQ_MAX_AGE) return false;
+    if (GPSFIX.gs == null || GPSFIX.gs < SEQ_MIN_GS) return false;
+    if (toWpt < 1 || toWpt > ROUTE.length - 1) return false;
+
+    var from = ROUTE[toWpt - 1], to = ROUTE[toWpt];
+    if (!from || !to || typeof to.lat !== 'number') return false;
+    if (toWpt >= ROUTE.length - 1) return false;      /* destination stays */
+
+    var pos = { lat:GPSFIX.lat, lon:GPSFIX.lon };
+    var pr  = projOnRoute(pos, [from, to]);
+    if (!pr || pr.off > SEQ_MAX_OFF_NM) return false;
+
+    if (!seqPassed(pos, from, to)) return false;
+
+    toWpt++;
+    saveRoute();
+    toast('Leg ' + toWpt + ' \u00b7 ' + label(ROUTE[toWpt - 1]) + ' \u2192 ' + label(ROUTE[toWpt]));
+    return true;
+  }
+
   function projOnRoute(pt, pts){
     if (!pts || !pts.length) return null;
     if (pts.length === 1) return { off:nmBetween(pt, pts[0]), along:0 };
@@ -14572,6 +14882,50 @@ var PROC_META={
       +  '<button class="kv cp" data-cp="' + pair + '"><span class="k">Coordinates</span>'
       +    '<span class="v amb">' + pair + '</span>' + CPI + '</button>';
 
+    /* Ground elevation is READ, not typed. pinElev reads the decoded
+       terrain tiles - the same figures the shading uses - and returns
+       null rather than a guess when the tile for that point has not
+       been decoded. So this row says where the number came from, and
+       says plainly when there is no number rather than showing a blank
+       box that invites one to be invented.
+
+       It is deliberately NOT written into f.el. That field holds a
+       figure a human set; a terrain reading is a different kind of
+       thing and merging them loses which is which. */
+    if (f.cat === 'mine'){
+      /* terrainAt, NOT pinElev. pinElev only reads what the shading
+         layer happens to have decoded at the zoom you are looking at,
+         so the figure came and went depending on where the map was
+         pointed - which is why this read as a dash on the device.
+
+         terrainAt fetches the Terrarium tile for the point if it is not
+         already resident, and the service worker serves it from the
+         terrain cache, so a downloaded region answers with no signal.
+         Until the tile lands it returns null, and null is shown as
+         "reading" rather than as a number. Never a guess. */
+      var gnd = terrainAt(f.lat, f.lon);
+      h += '<div class="kv"><span class="k">Elevation</span><span class="v'
+        +  (gnd == null ? '' : ' amb') + '">'
+        +  (gnd == null ? 'reading\u2026' : gnd.toLocaleString() + '\' AMSL')
+        +  '</span></div>'
+        +  '<div class="kv"><span class="k" style="color:var(--text-fainter)">'
+        +  (gnd == null
+             ? 'terrain tile not here yet \u2014 needs signal, or download the region'
+             : 'ground from terrain data \u00b7 shape only, no towers or trees')
+        +  '</span></div>';
+      /* the tile arrives asynchronously; redraw the card once it does,
+         so the figure appears without the card being reopened */
+      if (gnd == null && terrPending > 0 && !terrOnReady){
+        terrOnReady = function(){
+          if (card && card.classList.contains('on')) drawCard();
+        };
+      }
+      if (typeof f.el === 'number'){
+        h += '<div class="kv"><span class="k">Elevation set here</span>'
+          +  '<span class="v">' + f.el.toLocaleString() + '\'</span></div>';
+      }
+    }
+
     if (ROUTE.length){
       var from = ROUTE[Math.max(0, Math.min(toWpt, ROUTE.length - 1))];
       if (from !== f){
@@ -14660,20 +15014,20 @@ var PROC_META={
     }
 
     if (f.cat === 'mine'){
+      /* A mark records where something WAS. The one thing worth changing
+         afterwards is what you call it.
+
+         Coordinates: removed. Editing them turns a record of a place into
+         a guess about one, and the position it held was the whole point.
+         Wrong spot - delete it and mark again.
+         Move to map centre: removed for the same reason. It was the same
+         edit wearing a button.
+         Elevation: removed as an input; it is read from terrain and shown
+         under Position instead. */
       h += '<div class="csec">Waypoint</div>'
         +  '<div class="setrow"><span class="lb">Name</span>'
         +    '<input class="fin wide" data-wp="name" type="text" value="' + f.id + '"></div>'
-        +  '<div class="setrow"><span class="lb">Coordinates</span>'
-        +    '<input class="fin wide" data-wp="coord" type="text" value="'
-        +    ddm(f.lat, true) + ' ' + ddm(f.lon, false) + '"></div>'
-        /* the card and the waypoint window are two hosts for the same
-           edit - a figure set in one has to be there in the other */
-        +  '<div class="setrow"><span class="lb">Elevation</span>'
-        +    '<input class="fin wide" data-wp="elev" type="text" inputmode="numeric" '
-        +    'placeholder="feet AMSL" value="'
-        +    (typeof f.el === 'number' ? f.el : '') + '"></div>'
-        +  '<div class="wpbtns"><button data-wp="here">Move to map centre</button>'
-        +    '<button class="del" data-wp="del">Delete</button></div>';
+        +  '<div class="wpbtns"><button class="del" data-wp="del">Delete</button></div>';
     }
 
     if (f.id && chartsFor(f.id).length){
@@ -15508,44 +15862,8 @@ var PROC_META={
         });
       }
 
-      if (w === 'coord'){
-        /* one field, any format - DDM, decimal, Google brackets, plus code */
-        el.addEventListener('change', function(){
-          var c = parseAnyCoord(el.value);
-          if (!c){
-            toast('Paste a coordinate or a plus code');
-            el.value = ddm(f.lat, true) + ' ' + ddm(f.lon, false);
-            return;
-          }
-          f.lat = c.lat; f.lon = c.lon;
-          ROUTE.forEach(function(p){ if (p.id === f.id){ p.lat = f.lat; p.lon = f.lon; } });
-          saveMarks(); drawCard(); renderMap(); drawFpl();
-        });
-      }
-
-      if (w === 'elev'){
-        el.addEventListener('change', function(){
-          var r = parseElev(el.value);
-          if (!r.ok){
-            toast(ELEV_HINT);
-            el.value = (typeof f.el === 'number') ? f.el : '';
-            return;
-          }
-          if (r.val == null) delete f.el; else f.el = r.val;
-          saveMarks(); drawCard(); drawMine();
-          toast(r.val == null ? 'Elevation cleared' : 'Elevation ' + elevStr(r.val));
-        });
-      }
-
-      if (w === 'here'){
-        el.addEventListener('click', function(){
-          f.lat = (VIEW.n + VIEW.s) / 2;
-          f.lon = (VIEW.w + VIEW.e) / 2;
-          ROUTE.forEach(function(p){ if (p.id === f.id){ p.lat = f.lat; p.lon = f.lon; } });
-          saveMarks(); drawCard(); renderMap(); drawFpl();
-          toast('Moved to ' + ddm(f.lat, true) + ' ' + ddm(f.lon, false));
-        });
-      }
+      /* v240: coord, elev and here went with their controls. A mark's
+         position is not editable and its elevation is read, not typed. */
 
       if (w === 'del'){
         el.addEventListener('click', function(){
@@ -16685,11 +17003,6 @@ var PROC_META={
              (AC.fob == null ? '' : String(AC.fob))],
       /* no hint line: the wheel has no format to explain, and the
          readout above it already shows the value in degrees */
-      'mine:elev': ['Elevation', 'feet above sea level, blank to clear',
-                    (function(){
-                      var p = dbById(MINE_SEL);
-                      return (p && typeof p.el === 'number') ? String(p.el) : '';
-                    })()],
       'mine:name': ['Rename waypoint', 'a short identifier',
                     (function(){ var p = dbById(MINE_SEL); return p ? (p.lb || p.id) : ''; })()],
       'hold:crs': ['Holding course', '', String(HOLD.inb)],
@@ -16713,7 +17026,7 @@ var PROC_META={
     $('#qkLab').textContent = cfg[1];
     $('#qkIn').value = cfg[2];
     /* a figure wants the number pad, a name wants the keyboard */
-    $('#qkIn').setAttribute('inputmode', what === 'mine:elev' ? 'numeric' : 'text');
+    $('#qkIn').setAttribute('inputmode', 'text');
     qkEd.classList.add('on');
     setTimeout(function(){ try{ $('#qkIn').focus(); }catch(e){} }, 60);
   }
@@ -16739,21 +17052,9 @@ var PROC_META={
       toast('Saved');
       return;
     }
-    if (qkWhat === 'mine:elev'){
-      var er = parseElev($('#qkIn').value);
-      if (!er.ok){ toast(ELEV_HINT); return; }
-      var ep = dbById(MINE_SEL);
-      if (ep){
-        if (er.val == null) delete ep.el; else ep.el = er.val;
-        saveMarks();
-      }
-      qkEd.classList.remove('on');
-      drawMine(); renderMap();
-      if (card && card.classList.contains('on')) drawCard();
-      openMineWin(MINE_SEL);          /* straight back to the point you were on */
-      toast(er.val == null ? 'Elevation cleared' : 'Elevation ' + elevStr(er.val));
-      return;
-    }
+    /* v240: the mine:elev branch went with its callers. Elevation is
+       read from the terrain data, not typed. Leaving an unreachable
+       save path here is how a removed feature comes back by accident. */
     if (qkWhat === 'mine:name'){
       var nv = $('#qkIn').value.trim().toUpperCase();
       if (!nv){ toast('Enter a name'); return; }
@@ -18604,14 +18905,110 @@ var PROC_META={
     hideTimes();
   }
 
-  function openTimes(){ closeAll(); tmPaint(); $('#tmOv').classList.add('on'); renderTabs(); }
+  /* ---- height, drag and dismiss ---------------------------------------
+     Three things asked for after flying it:
+       - the sheet must not cover the tab bar (CSS: it stops above it)
+       - drag it down to shrink, and past TM_SHUT it goes away entirely
+       - a tap on the map above it closes it
+
+     The drag is the FPL panel's, mirrored. That gesture has worked on
+     the device since v190; writing a second one would be a second set
+     of bugs. This sheet grows UPWARD, so down shrinks: the sign flips
+     and nothing else does.
+
+     jsdom cannot dispatch a real touch, so the gate proves the wiring,
+     the floor, the shut threshold and the stored height - NOT that the
+     gesture feels right under a thumb. That part needs a finger. */
+  var TMH_KEY = 'nmp.iphone.timesh';
+  var TM_MINH = 180;        /* px - below this there is nothing to read */
+  var TM_SHUT = 120;        /* px - dragged under this, it closes       */
+  var tmHand = null;        /* your height, once you have set one       */
+  (function(){
+    try { var v = parseInt(localStorage.getItem(TMH_KEY), 10);
+          if (isFinite(v) && v >= TM_MINH) tmHand = v; } catch(_){ }
+  })();
+  function tmMaxH(){
+    var ov = $('#tmOv');
+    var r = ov ? ov.getBoundingClientRect().height : 0;
+    return Math.max(TM_MINH, Math.round(r || 520));
+  }
+  function tmApplyH(){
+    var w = $('#tmWin');
+    if (!w) return;
+    if (tmHand == null){ w.style.height = ''; return; }
+    w.style.height = Math.max(TM_MINH, Math.min(tmMaxH(), tmHand)) + 'px';
+  }
+  function tmSaveH(){ try { localStorage.setItem(TMH_KEY, String(tmHand)); } catch(_){ } }
+
+  (function(){
+    var grip = $('#tmGrip'), win = $('#tmWin');
+    if (!grip || !win) return;
+    function begin(clientY){
+      var startY = clientY, startH = win.getBoundingClientRect().height;
+      grip.classList.add('on'); win.classList.add('sizing');
+      var shut = false;
+      function move(y){
+        /* mirrored: dragging DOWN (y increasing) makes it smaller */
+        var h = startH - (y - startY);
+        shut = (h < TM_SHUT);
+        win.style.height = Math.max(TM_SHUT * 0.6, Math.min(tmMaxH(), h)) + 'px';
+      }
+      function tm(ev){ ev.preventDefault(); move(ev.touches[0].clientY); }
+      function mm(ev){ move(ev.clientY); }
+      function end(){
+        grip.classList.remove('on'); win.classList.remove('sizing');
+        document.removeEventListener('touchmove', tm);
+        document.removeEventListener('touchend', end);
+        document.removeEventListener('mousemove', mm);
+        document.removeEventListener('mouseup', end);
+        if (shut){
+          /* dragged off the bottom: gone, and the height you had is
+             kept rather than saved as the stub you let go at */
+          win.style.height = '';
+          hideTimes();
+          return;
+        }
+        tmHand = Math.round(win.getBoundingClientRect().height);
+        tmSaveH();
+      }
+      document.addEventListener('touchmove', tm, { passive:false });
+      document.addEventListener('touchend', end);
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', end);
+    }
+    grip.addEventListener('touchstart', function(e){ e.preventDefault(); begin(e.touches[0].clientY); }, { passive:false });
+    grip.addEventListener('mousedown',  function(e){ e.preventDefault(); begin(e.clientY); });
+  })();
+
+  /* tap the map above the sheet and it goes away. The sheet itself
+     swallows the tap so a stamp is never a dismiss. */
+  $('#tmOv').addEventListener('click', function(e){
+    if (e.target === $('#tmOv')) hideTimes();
+  });
+
+  function openTimes(){ closeAll(); tmPaint(); $('#tmOv').classList.add('on'); tmApplyH(); renderTabs(); }
   function hideTimes(){ $('#tmOv').classList.remove('on'); renderTabs(); }
   function timesOpen(){ var o = $('#tmOv'); return !!o && o.classList.contains('on'); }
 
   $('#tmClose').addEventListener('click', hideTimes);
   $('#tmFile').addEventListener('click', tmFile);
+  /* Arm-then-fire, lifted from the route's Clear. A run you have been
+     stamping all morning is not something a stray thumb should be able
+     to erase, and it is a smaller target than it was. */
+  var tmClrArmed = null;
   $('#tmClr').addEventListener('click', function(){
-    TM = { es:null, ex:null, secs:[] }; tmSave(); tmPaint();
+    var b = $('#tmClr');
+    if (tmClrArmed){
+      clearTimeout(tmClrArmed); tmClrArmed = null; b.classList.remove('arm');
+      TM = { es:null, ex:null, secs:[] }; tmSave(); tmPaint();
+      toast('Times cleared');
+      return;
+    }
+    b.classList.add('arm');
+    toast('Tap again to clear the times');
+    tmClrArmed = setTimeout(function(){
+      tmClrArmed = null; b.classList.remove('arm');
+    }, 3000);
   });
   /* a running total is right on sight rather than a minute stale */
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) tmPaint(); });
@@ -23281,6 +23678,11 @@ var PROC_META={
       }
 
       try { recLog(GPSFIX); } catch(_){ }
+
+      /* the live leg follows the aircraft now, not the last thing you
+         tapped. Before repaint(), so the colours change on the same
+         frame as the position that changed them. */
+      try { if (seqRoute()) drawFpl(); } catch(_){ }
 
       /* a Direct To asked for before we had an origin */
       if (dctPending){
