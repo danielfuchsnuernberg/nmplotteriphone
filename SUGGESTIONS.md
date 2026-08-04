@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v247 · 4 Aug 2026**.
+Status as of **v248 · 4 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -98,7 +98,19 @@ against it
 
 ## Needs a decision from you
 
-- **[R] ZOOM PART TWO — stop rebuilding the overlay on every view change.**
+- **[R] ZOOM PART FOUR — the markers.** v248 stopped the route and tracks
+  being rebuilt on a view change. `G.mk` still is, and legitimately: the
+  declutter is a collision pass in screen space and the rank gates read the
+  zoom, so *which* markers exist changes with the view. The fix is a diff —
+  keep a map of id to marker, compute the wanted set, remove and add only the
+  difference — so a waypoint that is on screen before and after a zoom is
+  never destroyed. Bigger than it sounds because a marker's icon also changes
+  with zoom (dot against dot-plus-label), so the diff key has to carry the
+  label state.
+- **[R] ZOOM PART FIVE — the zones.** `G.box` is geometry except that zone
+  frequency labels are placed inside the *visible* part of their zone. Split
+  the labels from the shapes and the shapes stop being rebuilt too.
+- **[R] ~~ZOOM PART TWO — stop rebuilding the overlay on every view change.~~**
   The measured cause of the floating. `renderMap()` clears every layer group
   and re-creates the lot, bound to `moveend`, `zoomend`, `resize` AND
   `viewreset`. Every pan and every zoom throws away hundreds of markers and
@@ -212,6 +224,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Route and tracks destroyed and rebuilt on every pan and zoom | v248 | View-only render leaves them to Leaflet |
 | Pinch hijacked by an armed drag-zoom; pinch also fired the two-finger step | v247 | Second finger ends the drag; tap told from pinch |
 | Map re-zoomed itself; two gestures, two zoom ranges | v246 | Limits named on the map; one NMX_ZMIN/ZMAX |
 | Times actions were two full-width rows | v245 | Two buttons on one line; Clear arms first |

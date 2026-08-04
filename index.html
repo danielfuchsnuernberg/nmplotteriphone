@@ -22,6 +22,52 @@
      Separate repo. Does NOT touch the live NM Plotter build.
 
      CHANGELOG (newest first):
+       v248 2026-08-04 Zoom, part three: a view change stops destroying
+                       the route.
+
+                       A VIEW CHANGE AND A DATA CHANGE ARE NOT THE SAME
+                       THING, and renderMap treated them as one. It
+                       cleared every overlay group and rebuilt the lot,
+                       and it ran on moveend, zoomend, resize AND
+                       viewreset. Every pan and every zoom destroyed the
+                       route, the tracks, the zones and every marker,
+                       and drew them again a frame later.
+
+                       That is the floating. The layers were never being
+                       CARRIED by the map - they were being thrown away
+                       and redrawn, one frame behind the tiles.
+
+                       Leaflet already moves and scales what is on the
+                       map, in the same frame as the tiles, for free.
+                       Anything whose geometry does not depend on where
+                       you are looking should be left alone on a view
+                       change. Route legs and recorded tracks are
+                       exactly that: latitudes and longitudes, identical
+                       at every zoom. renderMap(true) now hands those
+                       two groups a stub, so nothing clears them and
+                       nothing is added to them - the same SVG paths
+                       Leaflet was already carrying stay carried.
+
+                       WHAT IS STILL REBUILT, and honestly:
+                         G.mk  - the declutter is a collision pass in
+                                 SCREEN space and the rank gates read
+                                 the zoom, so which markers exist really
+                                 does change with the view. Making that
+                                 a diff - keep, add and remove rather
+                                 than clear and rebuild - is the next
+                                 step.
+                         G.box - geometry, except that zone frequency
+                                 labels are placed inside the VISIBLE
+                                 part of their zone. Splitting the
+                                 labels from the shapes comes with it.
+
+                       One thing found on the way: window resize handed
+                       renderMap straight to the listener, so the Event
+                       object arrived as viewOnly. Accidentally the
+                       right answer, which is a worse kind of correct
+                       than being wrong. It says what it wants now, and
+                       the gate refuses a bare listener.
+
        v247 2026-08-04 Zoom, part two: our gestures stop fighting
                        Leaflet's.
 
@@ -8963,7 +9009,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 (function(){
   'use strict';
 
-  var VERSION = 'v247';
+  var VERSION = 'v248';
   var BUILD   = '2026-08-04';
 
   /* The tablet breakpoint is read from three places - the tab bar, the
@@ -22270,7 +22316,38 @@ var PROC_META={
     return L.divIcon({ className:'nmx-di', html:html, iconSize:[0, 0], iconAnchor:[0, 0] });
   }
 
-  function renderMap(){
+  /* renderMap(viewOnly)
+     ------------------------------------------------------------------
+     A VIEW CHANGE AND A DATA CHANGE ARE NOT THE SAME THING, and until
+     v248 this function treated them as one. It cleared every overlay
+     group and rebuilt the lot, and it ran on moveend, zoomend, resize
+     AND viewreset - so every pan and every zoom destroyed the route,
+     the tracks, the zones and every marker and drew them again a frame
+     later. That is what "the layers float" is. They were not being
+     carried by the map; they were being thrown away and redrawn.
+
+     Leaflet already moves and scales what is on the map, for free and
+     in the same frame as the tiles. Anything whose geometry does not
+     depend on where you are looking should therefore be left alone on
+     a view change - and the route legs and the recorded tracks are
+     exactly that: latitudes and longitudes, identical at every zoom.
+
+     So a view-only render leaves G.leg and G.trk untouched. It does it
+     by handing those two a stub for the duration rather than by
+     threading a flag through four hundred lines of builder: nothing
+     clears them, and anything built for them is dropped on the floor
+     unadded (an unadded L.polyline creates no DOM, so this costs an
+     object, not a layout).
+
+     STILL REBUILT on a view change, and honestly so:
+       G.mk  - the declutter is a collision pass in SCREEN space and
+               the rank gates read the zoom, so which markers exist
+               genuinely changes with the view.
+       G.box - mostly geometry, but the zone frequency labels are
+               placed inside the VISIBLE part of their zone, which
+               needs the bounds. Splitting that is the next step.
+     ------------------------------------------------------------------ */
+  function renderMap(viewOnly){
     var map = $('#map'), host = $('#mapLayers');
     if (!map || !host) return;
     if (NMX_setBase) NMX_setBase(LAYERS.base);
@@ -22283,6 +22360,13 @@ var PROC_META={
 
     var G = nmxGroups();
     if (!G) return;                      /* no Leaflet, no overlay */
+    if (viewOnly){
+      /* swallows clearLayers() and addLayer(); the real groups are left
+         exactly as they are, so Leaflet keeps carrying them */
+      var NMX_KEEP = { addLayer:function(){ return this; },
+                       clearLayers:function(){ return this; } };
+      G = { box:G.box, mk:G.mk, ship:G.ship, leg:NMX_KEEP, trk:NMX_KEEP };
+    }
     G.box.clearLayers(); G.leg.clearLayers(); G.mk.clearLayers(); G.trk.clearLayers();
 
     /* APPROACH RING on the field you should be talking to. Lifted from
@@ -22822,7 +22906,12 @@ var PROC_META={
     });
   }
 
-  window.addEventListener('resize', renderMap);
+  /* This used to hand renderMap straight to the listener, which passed
+     the Event object in as viewOnly - accidentally the right answer,
+     and that is a worse kind of correct than being wrong: the next
+     reader has no way to tell it was meant. A resize changes the
+     viewport and not the data, so it now says so out loud. */
+  window.addEventListener('resize', function(){ renderMap(true); });
   drawLayersPop();
   buildRail();
   renderMap();
@@ -23353,9 +23442,12 @@ var PROC_META={
       settle = requestAnimationFrame(function(){
         settle = 0;
         syncVIEW();
+        /* A VIEW CHANGE. The route and the tracks are not rebuilt - see
+           renderMap's header. Everything that changes DATA calls
+           renderMap() with no argument and gets the full pass. */
         /* errors used to vanish here, which is how a broken render kept
            looking like a positioning bug */
-        try { renderMap(); paintShip(); nmxDraws++; }
+        try { renderMap(true); paintShip(); nmxDraws++; }
         catch(err){ nmxErr = (err && err.message) || String(err); }
         nmxDbgPaint();
       });
