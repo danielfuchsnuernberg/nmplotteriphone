@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v267 · 5 Aug 2026**.
+Status as of **v268 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -115,7 +115,15 @@ against it
   place. If they can now, the rebuild is pure cost — and it is the floating.
   Retry it with the renderer sync in place, this time proving the route draws
   correctly at three zooms before shipping.
-- **[R] MARKER DRIFT MEASURED: 76.7 px at z17. NEXT BUILD.** The markers are
+- **[?] MARKER DRIFT: 76.7 px once, 1.4 px on the next reading. Do NOT act on
+  the high number.** The second reading says the markers are glued. The first
+  was almost certainly the instrument sampling a marker in the same frame it
+  was added, before Leaflet positioned it. Harden the instrument to skip a
+  marker on its first frame before trusting any future high reading — and if
+  floating is still reported with drift near zero, the cause is elsewhere:
+  labels re-placing as the declutter changes which markers are drawn, or the
+  terrain tile layer, neither of which is in the diff.
+- **[?] Superseded: MARKER DRIFT MEASURED 76.7 px — next build.** The markers are
   not glued, and the likely cause is v253: the vector renderer re-projects
   every frame so the route is exact, while the markers stay on Leaflet's
   animation transform. Before v253 everything was uniformly wrong together,
@@ -308,6 +316,7 @@ against it
 | Sort switch on Frequencies; sloppy letter band | v223 | By name everywhere; band spans the gutters; ident stops wrapping |
 | Cloud headings crammed against their fields | v222 | Spacing added; labels stop repeating the heading |
 | Airport page jumped to the top on tab switch | v221 | Tab row held in place; tabs pinned |
+| Every dropped pin was named PIN 1 | v268 | Name checked against the route as well as the database |
 | Flights mixed times, tracks and routes in one column | v267 | Three headed, counted sections |
 | Airports, Strips, Terminal areas and Enroute fixes wore the wrong glyphs | v265 | Chart convention; Terminal areas stops drawing a mountain |
 | Fast double tap broke the layout outside the map | v264 | touch-action:manipulation across .app; scroll net |
