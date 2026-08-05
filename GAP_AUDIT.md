@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v271 · 5 Aug 2026**
+**Status as of v272 · 5 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v272 | **`nmxRendererSync` moved to top level, so `renderMap`'s call resolves for the first time since v254** — proved at the AST level, not by eye. The `NMX_ZSYNC` handler was therefore the only thing ever resetting the renderer, and it has been off since v269: three builds with no catch-up at all. Measured at v271: the leg rendered **9.27 CSS px against a declared 3.5** (2.65×) while the AYNZ dot came out 8.67/9 and the LAE BASE square 8.0/8 — markers exact, vectors fat, which is a container scale and nothing else. Separately: **map markers get a 44 px transparent tap pad**, sitting in `markerPane` above the 16 px airway and 18 px route hit lines that used to take a near miss, plus a **Tap** section on the panel measuring how far misses actually land. |
 | v271 | **v270's vector measurement was wrong and is rebuilt.** It read `+63.6, −107.8 px` at a view where the leg visibly met the AYNZ dot; `getScreenCTM()` does not reliably fold CSS transforms on HTML ancestors in WebKit, and Leaflet transforms both the map pane and the SVG container. The `|vx| < 120` guard capped the reported error rather than filtering clipped samples, so a broken instrument read plausible. Rebuilt with no SVG geometry API: the drawn point comes from `leg._parts`, mapped through the container's `getBoundingClientRect()` and `viewBox`; clipping is detected against `_rings`. **Container scale** now reported — the fat stroke as a number. **Pen readout** was reading the casing (weight 5, `#0a0e13`) rather than the visible leg; now reads the leg and names which path it read. |
 | v270 | **The map-zoom "floating" is solved, and it was never Leaflet.** `.rotfix` — the counter-rotation wrapper added in v235 — was `display:inline-block`. Wrapping every divIcon in an inline-level box gave `.nmx-di` a line box, and every map label is `position:absolute` with no `left`/`top`, so its static position dropped one baseline: **15.00 CSS px**, measured identically off two screenshots three zoom levels apart (45.0 device px at 3×, to a tenth of a pixel). `.rotfix` is now `display:block`, which puts ten label classes back on their own coordinates at once and moves the track-up rotation pivot onto the anchor. The drift sampler is out of `nmxRendererSync`, on its own rAF, and reads the visible dot and the drawn end of the last leg instead of the 0×0 icon box. |
 | v269 | **Per-frame vector re-projection disabled behind a flag, as a controlled test.** Since v253 vectors re-projected every zoom frame while markers followed Leaflet's schedule — two clocks for one coordinate, the standing suspect for route legs not meeting their endpoints. |
@@ -231,7 +232,10 @@ separate app for it.
 Both of these are real and both were left untouched in v270 so that build
 changed exactly one thing. Neither is a regression; both predate it.
 
-**`renderMap`'s call into `nmxRendererSync` has never executed.** Proved from
+**~~`renderMap`'s call into `nmxRendererSync` has never executed.~~ Fixed in
+v272** by moving the declaration to top level; `scopeproof.js` now reports the
+`renderMap` reference as RESOLVES. Kept here because the shape of the fault is
+worth not forgetting: Proved from
 the AST, not by eye: `nmxRendererSync` is declared inside the `bootMap()`
 IIFE, `renderMap` is declared outside it, so the identifier cannot resolve in
 `renderMap`'s scope. The guard is `if (typeof nmxRendererSync === 'function')`,

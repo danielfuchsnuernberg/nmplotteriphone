@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v271 · 5 Aug 2026**.
+Status as of **v272 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -105,26 +105,37 @@ against it
 
 ## Needs a decision from you
 
-- **[A] v270 ANSWERED THE FIRST HALF. READ v271 FOR THE SECOND.** Dot offset
-  came back `+0, +0` at rest and `−9, −4` worst over 770 samples across a
-  z7–z14.33 band, and the leg now terminates on the AYNZ dot and the
-  cyan/magenta junction sits on AYGA. That half is closed. The Vector offset
-  number in v270 was mine and was wrong — `getScreenCTM` plus a guard that
-  capped the error instead of filtering it. What I need off v271:
+- **[A] READ CONTAINER SCALE FIRST. IT DECIDES EVERYTHING ELSE.** After v272
+  it should read **1.000** at rest. The renderer catch-up now actually runs on
+  every settle, which is what v250 built it to do and what it has never once
+  done. If it reads 1.000 and the legs are the right weight, the fat leg and
+  most of the float were three builds of having no catch-up at all, and the
+  next question is only whether `NMX_ZSYNC` needs to come back for the pinch
+  itself. If it still reads high, the scale is coming from somewhere I have not
+  looked and I have been wrong twice about this.
 
-  1. **Container scale, last** should read `1.000` at rest. If it does not,
-     something is leaving a scale on the container at a settled view, and that
-     alone is the fat leg.
-  2. **Container scale, worst** during a pinch is the multiplier on the pen.
-     Measured off your stills: the leg is 3.27 CSS px at AYNZ (correct for a
-     3.5 weight) and 4.69 at AYGA — 34% over. If worst reads about 1.34, that
-     is the same fact from the other side and the two agree.
-  3. **Vector samples** reads `kept / attempted`. If most are being dropped,
-     the leg's endpoint is usually outside the clip and I need to sample a
-     different leg rather than trust a thin sample.
-  4. **Vector offset** should now be near zero at rest, because the leg
-     visibly meets the dot. If it is not, the second instrument is wrong too
-     and I would rather know that than build on it.
+- **[A] TAP: send me the numbers before I change the pad size.** 44 px is
+  Apple's minimum, not a measurement of this map. What matters is **Nearest on
+  a miss, mean**. Well under 22 and the pad is greedy — it will cost accuracy
+  around Goroka for nothing, and I would take it down to 30 or so. Up near 22
+  and 44 is right. **Took a path** is the other one worth watching: if it is
+  non-zero, airways and zones are still stealing taps meant for airfields and
+  the pad is not deep enough.
+
+- **[D] Nearest-wins tap resolver, if the pad is not enough.** The pad cannot
+  choose between two markers — Leaflet arbitrates overlapping icons by
+  z-index, taken from the projected y, so the SOUTHERNMOST wins rather than the
+  nearest. A resolver that gathers every marker within a radius and opens the
+  closest fixes that properly, but it is a new interaction pattern and it has
+  to arbitrate against the path handlers rather than sit above them. Only worth
+  building if the panel says clusters are actually a problem.
+
+- **[?] A harness that greps cannot tell you the code runs.** `zoom.js`
+  asserted the exact string `if (typeof nmxRendererSync === 'function')
+  nmxRendererSync();` and passed on it for eighteen versions, against a call
+  that could never resolve. Source text existing is not source text executing.
+  Folding `scopeproof.js` into `checkorder.js` is the general answer and is
+  still on the list below.
 
 - **[?] I broke my own rule inside the build that stated it.** v270's changelog
   says an instrument that cannot fail is not an instrument, and the same build
@@ -304,6 +315,9 @@ against it
 
 | Suggested | Shipped | What |
 |---|---|---|
+| renderMap's renderer sync never ran | v272 | Moved to top level; AST proof says the call resolves |
+| Markers take 2–3 taps to hit | v272 | 44 px transparent pad, above the airway and route hit lines |
+| Pad size is a guess | v272 | Tap section measures how far misses land, so the size comes off data |
 | Vector offset reads nonsense at rest | v271 | `getScreenCTM` replaced with container rect + viewBox; no SVG geometry API |
 | Clipped samples guessed at by magnitude | v271 | Detected against `_rings`, counted and dropped |
 | Fat leg is a feeling, not a number | v271 | Container scale reported, 1.000 at rest |

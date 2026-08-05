@@ -101,8 +101,20 @@ notes.push('a view change still rebuilds G.mk (markers) and G.box (zones);'
    Miss it and paths keep the previous zoom's scale (fat lines) and the
    previous zoom's clip rectangle (route cut off in open ground) -
    whether they are old paths or brand new ones. */
-check('renderMap forces the renderers to update',
-      /if \(typeof nmxRendererSync === 'function'\) nmxRendererSync\(\);/.test(src));
+/* v272: this used to assert the exact string
+     if (typeof nmxRendererSync === 'function') nmxRendererSync();
+   and passed for eighteen versions against a call that could never
+   run - the name was declared inside bootMap and renderMap is not, so
+   typeof returned 'undefined' and the guard swallowed it. Source text
+   existing is not the same as source text executing, and a harness
+   that only greps cannot tell the two apart. Now: the declaration must
+   be at TOP LEVEL, where renderMap can see it, and the call must carry
+   no guard at all. */
+check('the renderer sync is declared at top level, in renderMap\'s scope',
+      /\n  function nmxRendererSync\(\)\{/.test(code));
+check('renderMap forces the renderers to update, unguarded',
+      /\n    nmxRendererSync\(\);/.test(code) &&
+      !/typeof nmxRendererSync === 'function'/.test(code));
 check('and does it BEFORE anything is cleared or drawn',
       src.indexOf('nmxRendererSync();') < src.indexOf('G.box.clearLayers();'));
 /* Two call sites, both deliberate: once at the top of renderMap so
@@ -152,7 +164,7 @@ check('the per-frame sync is switchable, not deleted',
       /var NMX_ZSYNC = false;/.test(src) &&
       /if \(NMX_ZSYNC\) LMAP\.on\('zoom', function\(\)\{/.test(src));
 check('and the renderMap-time sync is untouched',
-      /if \(typeof nmxRendererSync === 'function'\) nmxRendererSync\(\);/.test(src));
+      /\n    nmxRendererSync\(\);/.test(code));
 check('one frame at a time, so zoom events cannot queue up',
       /if \(zsync\) return;[\s\S]{0,120}requestAnimationFrame/.test(src));
 check('the drawn area is padded well past the viewport',
@@ -239,8 +251,10 @@ check('and it is driven by the map, on its own frame',
 /* on `code`, not `src`: the replacement COMMENT inside that function
    names nmxDriftSample, and a harness that counts source literals
    counts them in comments too. Third time that has bitten. */
+/* bounded by the NEXT top-level declaration, not by `var settle` -
+   that lived next door only while the function was inside bootMap. */
 const syncBody = (code.split('function nmxRendererSync(){')[1] || '')
-                   .split('var settle')[0];
+                   .split('\n  function ')[0];
 check('and it is NOT inside nmxRendererSync any more',
       syncBody.length > 0 &&
       syncBody.indexOf('nmxDriftSample') < 0 &&
@@ -289,6 +303,29 @@ check('the panel reports both, signed',
       /L1\('Dot offset, worst'/.test(src) &&
       /L1\('Vector offset, worst'/.test(src) &&
       /L1\('Icon box, worst'/.test(src));
+
+/* v272: the tap target. The dot is 9 px, 6 for a strip, against a 44 px
+   published minimum - and .fld being pointer-events:none meant a near
+   miss fell through to a 16 px airway hit line rather than failing. */
+check('markers carry a transparent hit pad',
+      /\.fld::before\{content:'';position:absolute/.test(code) &&
+      /pointer-events:auto/.test(code));
+check('the pad is sized from one variable, not a magic number',
+      /--tap-pad:\d+px;/.test(code) &&
+      /width:var\(--tap-pad\);height:var\(--tap-pad\)/.test(code));
+check('the pad is centred on the anchor, not hung off it',
+      /margin:calc\(var\(--tap-pad\) \/ -2\) 0 0 calc\(var\(--tap-pad\) \/ -2\)/.test(code));
+check('the label grows by padding, so nothing moves',
+      /\.fld b\{position:absolute;left:0;top:3px;transform:translateX\(-50%\);\s*\n\s*padding:4px 6px;/.test(code));
+check('taps are sampled at capture, so the reading is of the tap',
+      /addEventListener\('click', nmxTapSample, true\)/.test(src));
+check('and the sample records who took it',
+      /t\.closest\('\.nmx-di'\)/.test(src) && /t\.closest\('svg'\)/.test(src));
+check('only a tap no marker took counts toward the miss distance',
+      /if \(kind !== 'marker'\)\{/.test(src));
+check('the panel reports the tap numbers',
+      /L1\('Nearest on a miss, mean'/.test(src) &&
+      /L1\('Took a path', T\.path\)/.test(src));
 
 /* v270: the fix the above exists to prove. An inline-block wrapper gave
    .nmx-di a line box, and every map label is position:absolute with no
