@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v269 · 5 Aug 2026**
+**Status as of v270 · 5 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v270 | **The map-zoom "floating" is solved, and it was never Leaflet.** `.rotfix` — the counter-rotation wrapper added in v235 — was `display:inline-block`. Wrapping every divIcon in an inline-level box gave `.nmx-di` a line box, and every map label is `position:absolute` with no `left`/`top`, so its static position dropped one baseline: **15.00 CSS px**, measured identically off two screenshots three zoom levels apart (45.0 device px at 3×, to a tenth of a pixel). `.rotfix` is now `display:block`, which puts ten label classes back on their own coordinates at once and moves the track-up rotation pivot onto the anchor. The drift sampler is out of `nmxRendererSync`, on its own rAF, and reads the visible dot and the drawn end of the last leg instead of the 0×0 icon box. |
 | v269 | **Per-frame vector re-projection disabled behind a flag, as a controlled test.** Since v253 vectors re-projected every zoom frame while markers followed Leaflet's schedule — two clocks for one coordinate, the standing suspect for route legs not meeting their endpoints. |
 | v268 | **Dropped pins get unique names.** `pinName()` checked only `DB`, but Add-to-route and Insert-as-next push into `ROUTE`, so every pin was named PIN 1. Now checked against both. |
 | v267 | **Flights view split into Times / Flights / Routes**, each headed and counted, newest first within each section. Count line now reads routes · tracks · times. |
@@ -223,6 +224,37 @@ separate app for it.
 ~~**Waypoint library**~~ — **done, v176**. ~~Copy-route~~ — already existed as Duplicate.
 
 **Village pin**, **MBZ editor**, **Open-Meteo model weather**.
+
+## 3b. Known open defects, carried deliberately
+
+Both of these are real and both were left untouched in v270 so that build
+changed exactly one thing. Neither is a regression; both predate it.
+
+**`renderMap`'s call into `nmxRendererSync` has never executed.** Proved from
+the AST, not by eye: `nmxRendererSync` is declared inside the `bootMap()`
+IIFE, `renderMap` is declared outside it, so the identifier cannot resolve in
+`renderMap`'s scope. The guard is `if (typeof nmxRendererSync === 'function')`,
+and `typeof` on an undeclared identifier returns `'undefined'` rather than
+throwing — so a scope error has been silently swallowed since v254, leaving a
+call site that reads as live. The comment above it ("there are three call
+sites into renderMap and this belongs to all of them") describes something
+that does not run. The only live caller was ever the `NMX_ZSYNC` zoom handler.
+
+Consequence for the record: the v254–v258 notes claiming the renderer sync
+runs at settle are describing the zoom-frame handler only. `checkorder.js`
+does not catch this class of fault — a scope-resolution pass would, and
+`scopeproof.js` in the working directory is a working prototype of one.
+
+**`NMX_ZSYNC` is still `false`.** Per-frame vector re-projection remains off
+from v269's experiment. Expect fat strokes and a clipped route during a pinch;
+that is the cost of the experiment, not a regression. Whether it needs to come
+back at all is now an open question rather than an assumption: with the label
+layer no longer 15 px out, the drift panel's **Vector offset** line says
+directly whether the vectors were ever the problem.
+
+The order matters. Fly v270 first, read the panel, and only then decide
+whether to re-arm the sync — re-arming it in the same build would have made
+the measurement uninterpretable, which is how the previous twenty went.
 
 ## 4. What we have that v262 doesn't
 

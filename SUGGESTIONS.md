@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v269 · 5 Aug 2026**.
+Status as of **v270 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -105,47 +105,51 @@ against it
 
 ## Needs a decision from you
 
-- **[A] ZOOM PART FOUR — confirm v250 fixed the fat, clipped route.** The
-  cause was `SVG._update()` refusing to run while `_animatingZoom` is set,
-  leaving stale clip bounds and a stale container transform. If the route now
-  draws at its proper weight and runs to its waypoints at every zoom, that is
-  confirmed — and part five below becomes possible.
-- **[D] If v250 works, retry v248.** The whole reason to rebuild the overlay
-  on every view change was that paths could not be trusted to update in
-  place. If they can now, the rebuild is pure cost — and it is the floating.
-  Retry it with the renderer sync in place, this time proving the route draws
-  correctly at three zooms before shipping.
-- **[A] v269 IS AN EXPERIMENT — read the result before building anything.**
-  Per-frame vector re-projection is off (`NMX_ZSYNC = false`). Prediction, on
-  record: if the leg meets AYNZ again and the floating settles, the mismatch
-  was the two-clock problem introduced in v253, and the stroke fix must be
-  redone so markers and vectors move together. If the leg still misses but
-  strokes go fat mid-pinch again, the mismatch is something else. Expect the
-  fat stroke and clipped route to return during a pinch — that is the cost of
-  the test.
-- **[?] MARKER DRIFT: 76.7 px once, 1.4 px, then 27.5 px. Do NOT act on
-  the high number.** The second reading says the markers are glued. The first
-  was almost certainly the instrument sampling a marker in the same frame it
-  was added, before Leaflet positioned it. Harden the instrument to skip a
-  marker on its first frame before trusting any future high reading — and if
-  floating is still reported with drift near zero, the cause is elsewhere:
-  labels re-placing as the declutter changes which markers are drawn, or the
-  terrain tile layer, neither of which is in the diff.
-- **[?] Superseded: MARKER DRIFT MEASURED 76.7 px — next build.** The markers are
-  not glued, and the likely cause is v253: the vector renderer re-projects
-  every frame so the route is exact, while the markers stay on Leaflet's
-  animation transform. Before v253 everything was uniformly wrong together,
-  which read as consistent. The fix is to give the markers the same treatment
-  the vectors got — repositioned per frame rather than transformed — and to
-  keep the drift instrument running so the number proves it rather than the
-  feel. Do not ship it without re-reading that number afterwards.
-- **[A] ~~WAYPOINTS STILL FLOAT — measurement shipped in v266.~~ Answered.** Marker drift is now measured every zoom frame: the gap between
-  where an icon sits and where its coordinates project to. Near zero means
-  they are welded and the visible effect is something else (most likely labels
-  re-placing as the declutter changes which markers are drawn). Tens of pixels
-  means Leaflet is carrying them on a pane transform while their real position
-  has moved on, and they need what the vectors got in v253 — repositioned per
-  frame rather than transformed. Do not fix until the number is known.
+- **[A] FLY v270 AND READ THE DRIFT PANEL BEFORE ANYTHING ELSE IS BUILT.**
+  Six of the entries that used to sit here have been closed by one CSS
+  property, and the whole of that stack was chasing the wrong layer. The
+  labels were 15.00 CSS px below their own coordinates because `.rotfix` was
+  `display:inline-block`; the route legs were meeting their endpoints all
+  along. What I need off the panel, in this order:
+
+  1. **Dot offset** should now read about `+0.0, +0.0 px`. If it still reads
+     `+0.0, +15.0`, the fix did not take — hard-reset Safari first, the old
+     shell is cached.
+  2. **Vector offset** is the new information. If it is near zero at a settled
+     view and stays near zero *during* a pinch, the vectors were never adrift
+     and `NMX_ZSYNC` does not need to come back at all — the only thing it
+     was ever buying was the stroke width, which is a separate question.
+  3. **Zoom band** should span whatever you pinched through. A number that is
+     identical at both ends of a wide band is a fixed offset; one that grows
+     with zoom is a coordinate error. That distinction is what took twenty
+     builds to get straight, so it is now printed rather than inferred.
+
+- **[D] `NMX_ZSYNC` — does the per-frame vector re-projection come back?**
+  Still `false`. Deliberately not touched in v270 so that build changed one
+  thing. During a pinch you will still see fat strokes and a route clipped in
+  mid-air; that is v269's experiment, not a new fault. The decision is now
+  informed rather than guessed: if Vector offset is near zero, re-arming it
+  only ever addressed the stroke, and there are cheaper ways to hold a stroke
+  width than re-projecting 253 paths a frame.
+
+- **[R] Add a scope-resolution pass to `checkorder.js`.** `renderMap`'s call
+  into `nmxRendererSync` has never executed — the name is declared inside
+  `bootMap()` and `renderMap` is not, and the `typeof` guard turned the scope
+  error into silence. `checkorder.js` counts 559 functions and 389 top-level
+  vars and did not see it. `scopeproof.js` in the working directory walks the
+  AST and reports every identifier reference that cannot resolve; folding it
+  in makes this class of fault impossible to ship again. One evening's work,
+  no blocker, and it would have saved this one.
+
+- **[?] Two of my own diagnostic habits were wrong, and both are worth
+  keeping written down.** The sampler lived inside `nmxRendererSync`, so
+  turning the sync off turned the measurement off and the panel read zero —
+  which looked like an answer and was an absence. And it measured `.nmx-di`,
+  a 0×0 box with `overflow:visible`, which is pinned to the projection by
+  construction and could only ever report success; it read 1.4 px while the
+  visible dot sat 15 px away. An instrument that cannot fail is not an
+  instrument. Both are fixed in v270, but the pattern will recur.
+
 - **[A] MAPS / ZOOM / FLOATING IS NOT CLOSED.** Danny's note, 4 Aug: more
   testing to come, the topic stays open. As of v258 a pan or a zoom rebuilds
   nothing — route and tracks carried by Leaflet, markers and zones diffed —
@@ -291,6 +295,11 @@ against it
 
 | Suggested | Shipped | What |
 |---|---|---|
+| Waypoints float / legs miss their endpoints | v270 | `.rotfix` was inline-block; every label sat one baseline (15.00 px) below its own coordinates |
+| Marker drift instrument reads the wrong box | v270 | Now measures the visible dot and the drawn leg end, not the 0×0 anchor |
+| Drift measurement dies with the sync | v270 | Sampler moved out of `nmxRendererSync` onto its own rAF |
+| Is the gap a fixed offset or a projection error? | v270 | Zoom band now printed, so constancy is read rather than inferred |
+| Track-up rotation pivot | v270 | Was 15 px below the anchor; now on it. Fixed before rotation was ever flown |
 | Point/leg stays in view under the panel | v183 | Map pans to the uncovered area |
 | Mag var on the point card | v185 | Computed from WMM anywhere |
 | Subject re-centres when the panel closes | v187 | Remembered subject, same focus re-run |
