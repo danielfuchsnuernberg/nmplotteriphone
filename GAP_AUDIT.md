@@ -1,6 +1,6 @@
 # NM Plotter — v262 vs iPhone/iPad build
 
-**Status as of v270 · 5 Aug 2026**
+**Status as of v271 · 5 Aug 2026**
 
 Audit done by extracting datasets and capability probes from both files,
 not from memory. Counts are measured.
@@ -32,6 +32,7 @@ enumerates every overlay so coverage is proved, not assumed.
 
 | Version | Closed |
 |---|---|
+| v271 | **v270's vector measurement was wrong and is rebuilt.** It read `+63.6, −107.8 px` at a view where the leg visibly met the AYNZ dot; `getScreenCTM()` does not reliably fold CSS transforms on HTML ancestors in WebKit, and Leaflet transforms both the map pane and the SVG container. The `|vx| < 120` guard capped the reported error rather than filtering clipped samples, so a broken instrument read plausible. Rebuilt with no SVG geometry API: the drawn point comes from `leg._parts`, mapped through the container's `getBoundingClientRect()` and `viewBox`; clipping is detected against `_rings`. **Container scale** now reported — the fat stroke as a number. **Pen readout** was reading the casing (weight 5, `#0a0e13`) rather than the visible leg; now reads the leg and names which path it read. |
 | v270 | **The map-zoom "floating" is solved, and it was never Leaflet.** `.rotfix` — the counter-rotation wrapper added in v235 — was `display:inline-block`. Wrapping every divIcon in an inline-level box gave `.nmx-di` a line box, and every map label is `position:absolute` with no `left`/`top`, so its static position dropped one baseline: **15.00 CSS px**, measured identically off two screenshots three zoom levels apart (45.0 device px at 3×, to a tenth of a pixel). `.rotfix` is now `display:block`, which puts ten label classes back on their own coordinates at once and moves the track-up rotation pivot onto the anchor. The drift sampler is out of `nmxRendererSync`, on its own rAF, and reads the visible dot and the drawn end of the last leg instead of the 0×0 icon box. |
 | v269 | **Per-frame vector re-projection disabled behind a flag, as a controlled test.** Since v253 vectors re-projected every zoom frame while markers followed Leaflet's schedule — two clocks for one coordinate, the standing suspect for route legs not meeting their endpoints. |
 | v268 | **Dropped pins get unique names.** `pinName()` checked only `DB`, but Add-to-route and Insert-as-next push into `ROUTE`, so every pin was named PIN 1. Now checked against both. |

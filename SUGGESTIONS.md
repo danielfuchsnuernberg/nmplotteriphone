@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v270 · 5 Aug 2026**.
+Status as of **v271 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -105,24 +105,33 @@ against it
 
 ## Needs a decision from you
 
-- **[A] FLY v270 AND READ THE DRIFT PANEL BEFORE ANYTHING ELSE IS BUILT.**
-  Six of the entries that used to sit here have been closed by one CSS
-  property, and the whole of that stack was chasing the wrong layer. The
-  labels were 15.00 CSS px below their own coordinates because `.rotfix` was
-  `display:inline-block`; the route legs were meeting their endpoints all
-  along. What I need off the panel, in this order:
+- **[A] v270 ANSWERED THE FIRST HALF. READ v271 FOR THE SECOND.** Dot offset
+  came back `+0, +0` at rest and `−9, −4` worst over 770 samples across a
+  z7–z14.33 band, and the leg now terminates on the AYNZ dot and the
+  cyan/magenta junction sits on AYGA. That half is closed. The Vector offset
+  number in v270 was mine and was wrong — `getScreenCTM` plus a guard that
+  capped the error instead of filtering it. What I need off v271:
 
-  1. **Dot offset** should now read about `+0.0, +0.0 px`. If it still reads
-     `+0.0, +15.0`, the fix did not take — hard-reset Safari first, the old
-     shell is cached.
-  2. **Vector offset** is the new information. If it is near zero at a settled
-     view and stays near zero *during* a pinch, the vectors were never adrift
-     and `NMX_ZSYNC` does not need to come back at all — the only thing it
-     was ever buying was the stroke width, which is a separate question.
-  3. **Zoom band** should span whatever you pinched through. A number that is
-     identical at both ends of a wide band is a fixed offset; one that grows
-     with zoom is a coordinate error. That distinction is what took twenty
-     builds to get straight, so it is now printed rather than inferred.
+  1. **Container scale, last** should read `1.000` at rest. If it does not,
+     something is leaving a scale on the container at a settled view, and that
+     alone is the fat leg.
+  2. **Container scale, worst** during a pinch is the multiplier on the pen.
+     Measured off your stills: the leg is 3.27 CSS px at AYNZ (correct for a
+     3.5 weight) and 4.69 at AYGA — 34% over. If worst reads about 1.34, that
+     is the same fact from the other side and the two agree.
+  3. **Vector samples** reads `kept / attempted`. If most are being dropped,
+     the leg's endpoint is usually outside the clip and I need to sample a
+     different leg rather than trust a thin sample.
+  4. **Vector offset** should now be near zero at rest, because the leg
+     visibly meets the dot. If it is not, the second instrument is wrong too
+     and I would rather know that than build on it.
+
+- **[?] I broke my own rule inside the build that stated it.** v270's changelog
+  says an instrument that cannot fail is not an instrument, and the same build
+  shipped a vector sampler whose guard capped its own error at 120 px. Worth
+  keeping written down: a plausibility guard on a measurement is a way of
+  hiding the measurement failing. Detect the condition you meant to exclude —
+  v271 checks `_rings` against `_parts` — or exclude nothing.
 
 - **[D] `NMX_ZSYNC` — does the per-frame vector re-projection come back?**
   Still `false`. Deliberately not touched in v270 so that build changed one
@@ -295,6 +304,10 @@ against it
 
 | Suggested | Shipped | What |
 |---|---|---|
+| Vector offset reads nonsense at rest | v271 | `getScreenCTM` replaced with container rect + viewBox; no SVG geometry API |
+| Clipped samples guessed at by magnitude | v271 | Detected against `_rings`, counted and dropped |
+| Fat leg is a feeling, not a number | v271 | Container scale reported, 1.000 at rest |
+| Pen readout reports the casing | v271 | Reads the visible leg and names which path it read |
 | Waypoints float / legs miss their endpoints | v270 | `.rotfix` was inline-block; every label sat one baseline (15.00 px) below its own coordinates |
 | Marker drift instrument reads the wrong box | v270 | Now measures the visible dot and the drawn leg end, not the 0×0 anchor |
 | Drift measurement dies with the sync | v270 | Sampler moved out of `nmxRendererSync` onto its own rAF |

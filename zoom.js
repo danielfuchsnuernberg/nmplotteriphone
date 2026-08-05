@@ -252,10 +252,30 @@ check('the marker sample reads the VISIBLE dot, not the 0x0 icon box',
 check('the old icon-box number is kept, so the two can be compared',
       /pick\.l\._icon\.getBoundingClientRect\(\)/.test(src) &&
       /if \(bg > D\.box\) D\.box = bg;/.test(src));
-check('the vector end is taken off the drawn path, through the CTM',
-      /getPointAtLength\(tot\)/.test(src) && /getScreenCTM/.test(src));
-check('a clipped path is discarded rather than reported as drift',
-      /if \(Math\.abs\(vx\) < 120 && Math\.abs\(vy\) < 120\)\{/.test(src));
+/* v271: both of these were rewritten because the thing they asserted
+   was itself the fault. The old pair proved the vector end came from
+   getScreenCTM and that a 120 px cap was applied - and BOTH of those
+   were the bug. A harness that pins an implementation cannot tell you
+   the implementation is wrong; it can only tell you it has not
+   changed. These assert the properties instead. */
+check('the vector end uses NO SVG geometry API',
+      !/getScreenCTM/.test(code) &&
+      !/getPointAtLength/.test(code) &&
+      !/getTotalLength/.test(code));
+check('it maps the drawn point through the container rect and viewBox',
+      /svg\.getBoundingClientRect\(\)/.test(src) &&
+      /getAttribute\('viewBox'\)/.test(src) &&
+      /sr\.left \+ \(pE\.x - vx0\) \* kx/.test(src));
+check('clipping is DETECTED against _rings, not inferred from magnitude',
+      /rE\.x !== pE\.x \|\| rE\.y !== pE\.y/.test(src) &&
+      /D\.vClip\+\+/.test(src));
+check('and no magnitude cap survives anywhere in the sampler',
+      !/Math\.abs\(vx\) < 120/.test(code));
+check('the container scale is reported, so the fat pen is a number',
+      /D\.scale = kx;/.test(src) && /L1\('Container scale, last'/.test(src));
+check('the pen is read off the leg, not the casing under it',
+      /String\(l\.options\.color \|\| ''\)\.toLowerCase\(\) === '#0a0e13'/.test(src) &&
+      /L1\('Pen read from', pSrc\)/.test(src));
 check('both worst cases carry the zoom they happened at',
       /D\.wAt = 'z' \+ z;/.test(src) && /D\.wvAt = 'z' \+ z;/.test(src));
 check('the zoom band sampled is recorded, so constancy is readable',
