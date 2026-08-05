@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v272 · 5 Aug 2026**.
+Status as of **v273 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -104,6 +104,29 @@ against it
   bearing end-to-end and a running area would both be cheap.
 
 ## Needs a decision from you
+
+- **[D] Half screen is 50% of the window. Say if it should be less.** A map
+  tap now opens the card at exactly half the window height, clamped between
+  280 px and the usual ceiling. Your reference screenshot was a little smaller
+  than that — about 47% — because it was a height you had dragged to at some
+  point. 50% is the round number and it is one constant to change if it reads
+  wrong in the air.
+
+- **[D] Route-order actions moved off the map tap.** Tapping a route point
+  with no database entry used to open the route-actions sheet: Direct to,
+  insert before, insert after, move up, move down, remove. It opens a card now,
+  because every other point on the map does. Those actions are unchanged and
+  still on the chip in the FPL panel. If you find yourself reaching for them on
+  the map, the card can carry a row through to that sheet — say so and it is a
+  small addition, not a revert.
+
+- **[?] My harness sweep counted a CRASHED script as a pass.** The one-liner in
+  the gate README tested the last line of output for the word FAIL. `focus.js`
+  threw a ReferenceError, printed a node stack trace, matched nothing, and was
+  reported as fine — for a whole build. There is now a `gate.sh` that checks
+  the exit code as well as the output and reports crashes separately, and I
+  verified it by breaking a harness on purpose. A harness that cannot run is
+  not a harness that passed.
 
 - **[A] READ CONTAINER SCALE FIRST. IT DECIDES EVERYTHING ELSE.** After v272
   it should read **1.000** at rest. The renderer catch-up now actually runs on
@@ -315,6 +338,10 @@ against it
 
 | Suggested | Shipped | What |
 |---|---|---|
+| Tapped point centred above a half-screen card | v273 | Half-window card on a map tap; focus waits for the sheet to settle |
+| Focus measured the card mid-animation | v273 | Samples overlay rects until they stop changing, 400 ms ceiling |
+| Route waypoints opened the wrong sheet | v273 | Every point on the map opens a card now |
+| Gate sweep could not see a crashed harness | v273 | `gate.sh` checks exit codes and reports crashes separately |
 | renderMap's renderer sync never ran | v272 | Moved to top level; AST proof says the call resolves |
 | Markers take 2–3 taps to hit | v272 | 44 px transparent pad, above the airway and route hit lines |
 | Pad size is a guess | v272 | Tap section measures how far misses land, so the size comes off data |
