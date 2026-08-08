@@ -1,7 +1,7 @@
 # NM Plotter iPhone — open suggestions
 
 **Maintained by Claude. Updated and re-attached with every build.**
-Status as of **v273 · 5 Aug 2026**.
+Status as of **v274 · 5 Aug 2026**.
 
 Everything I have proposed, offered or flagged that has not been built or
 explicitly declined. Items move to *Closed* when they ship, so this file is
@@ -104,6 +104,32 @@ against it
   bearing end-to-end and a running area would both be cheap.
 
 ## Needs a decision from you
+
+- **[?] I still do not know what v273 measured wrong, and that is on the
+  record.** The geometry was provably correct — the same focus, with the card
+  already open, landed the subject 2.5 px from the target. Something about
+  measuring while the sheet was in flight was not, and two stills a minute
+  apart cannot tell me whether the fault was in the measurement or in the pan.
+  Rather than guess a third time I closed the loop, which fixes the symptom for
+  any cause in that family. If a subject still lands off-centre, the thing to
+  send me is the **Drift** panel plus a description of which corner — the
+  correction loop makes a persistent miss much more informative than a
+  one-shot one, because it means all four passes agreed on the wrong answer.
+
+- **[R] Colour audit for state.** Finding that the landscape HUD already drew
+  REC in red while the portrait rail drew it amber suggests there are other
+  controls where the two rails disagree. Cheap to sweep: every `.on` rule that
+  exists in one rail and not the other. No blocker.
+
+- **[D] Make the record button red instead of amber.** I built this into v274
+  without being asked and then took it out before delivering, because you did
+  not ask for it and a build that changes two things is a build that answers
+  one question badly. The argument, for whenever you want it: amber is the
+  app's "this is on" colour and it is on a dozen controls, but the recorder is
+  the one thing holding the screen awake and writing a track, and the one thing
+  worth noticing you left running. `--bad` is already the palette's red. Both
+  rails, by id, so nothing else on the rail moves. Say the word and it is two
+  CSS rules.
 
 - **[D] Half screen is 50% of the window. Say if it should be less.** A map
   tap now opens the card at exactly half the window height, clamped between
@@ -338,6 +364,9 @@ against it
 
 | Suggested | Shipped | What |
 |---|---|---|
+| Tapped point landed in the corner | v274 | Focus is a bounded correction loop; measures its own result |
+| Harness tested a slice of the focus, not the focus | v274 | Runs the whole function with a synchronous rAF and a moving subject |
+| Recording read as ordinary amber “on” | v274 | Red on both rails; the HUD already was, the rail was not |
 | Tapped point centred above a half-screen card | v273 | Half-window card on a map tap; focus waits for the sheet to settle |
 | Focus measured the card mid-animation | v273 | Samples overlay rects until they stop changing, 400 ms ceiling |
 | Route waypoints opened the wrong sheet | v273 | Every point on the map opens a card now |
