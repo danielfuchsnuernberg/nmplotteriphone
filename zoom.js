@@ -160,9 +160,17 @@ check('and nothing else sets vector-effect to fight it',
    schedule - is the standing suspect for the leg not meeting its
    endpoint. The wiring stays, behind one flag, so it is one word to put
    back rather than a rewrite. */
+/* v276: this asserted `= false` - the value the EXPERIMENT happened to
+   need - so the harness would have failed the day the experiment ended,
+   which it did. A flag's value is a decision, not a contract; what the
+   harness should hold is that the flag still exists and still gates the
+   wiring, so it stays one word to change either way. The value itself
+   is reported as a note. */
 check('the per-frame sync is switchable, not deleted',
-      /var NMX_ZSYNC = false;/.test(src) &&
+      /var NMX_ZSYNC = (true|false);/.test(src) &&
       /if \(NMX_ZSYNC\) LMAP\.on\('zoom', function\(\)\{/.test(src));
+notes.push('per-frame vector re-projection is '
+     + (/var NMX_ZSYNC = true;/.test(src) ? 'ON' : 'OFF'));
 check('and the renderMap-time sync is untouched',
       /\n    nmxRendererSync\(\);/.test(code));
 check('one frame at a time, so zoom events cannot queue up',
